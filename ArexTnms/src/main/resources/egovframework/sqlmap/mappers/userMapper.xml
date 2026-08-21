@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.user.mapper.UserMapper">
+    <resultMap id="userMap" type="userVO">
+        <id property="userSn" column="USER_SN"/>
+        <result property="userId" column="USER_ID"/>
+        <result property="userNm" column="USER_NM"/>
+        <result property="userEnpswd" column="USER_ENPSWD"/>
+        <result property="ogdpBzentyNm" column="OGDP_BZENTY_NM"/>
+        <result property="deptNm" column="DEPT_NM"/>
+        <result property="telno" column="TELNO"/>
+        <result property="emlAddr" column="EML_ADDR"/>
+        <result property="userSttsNm" column="USER_STTS_NM"/>
+        <result property="pswdExpryYmd" column="PSWD_EXPRY_YMD"/>
+        <result property="lastLgnDt" column="LAST_LGN_DT"/>
+        <result property="lgnFailNocs" column="LGN_FAIL_NOCS"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="authrtSn" column="AUTHRT_SN"/>
+        <result property="authrtNm" column="AUTHRT_NM"/>
+        <result property="regDt" column="REG_DT"/>
+        <result property="mdfcnDt" column="MDFCN_DT"/>
+    </resultMap>
+
+    <sql id="userJoin">
+        SELECT U.USER_SN, U.USER_ID, U.USER_NM, U.USER_ENPSWD, U.OGDP_BZENTY_NM,
+               U.DEPT_NM, U.TELNO, U.EML_ADDR, U.USER_STTS_NM, U.PSWD_EXPRY_YMD,
+               U.LAST_LGN_DT, U.LGN_FAIL_NOCS, U.USE_YN, U.REG_DT, U.MDFCN_DT,
+               A.AUTHRT_SN, A.AUTHRT_NM
+          FROM user_info U
+          LEFT JOIN user_authrt_rel R
+            ON R.USER_SN = U.USER_SN
+           AND R.AUTHRT_BGNG_DT &lt;= NOW()
+           AND (R.AUTHRT_END_DT IS NULL OR R.AUTHRT_END_DT &gt; NOW())
+          LEFT JOIN authrt_info A
+            ON A.AUTHRT_SN = R.AUTHRT_SN
+           AND A.USE_YN = 'Y'
+           AND A.AUTHRT_STTS_NM = '사용'
+    </sql>
+
+    <select id="selectUserList" parameterType="userVO" resultMap="userMap">
+        <include refid="userJoin"/>
+        WHERE U.USE_YN != 'N'
+        <if test="authrtSn != null">AND A.AUTHRT_SN = #{authrtSn}</if>
+        <if test="userSttsNm != null and userSttsNm != ''">AND U.USER_STTS_NM = #{userSttsNm}</if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+            AND (U.USER_ID LIKE CONCAT('%', #{searchKeyword}, '%')
+              OR U.USER_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+              OR U.OGDP_BZENTY_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+              OR U.DEPT_NM LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+        ORDER BY U.REG_DT DESC, U.USER_SN DESC
+    </select>
+
+    <select id="selectUser" parameterType="long" resultMap="userMap">
+        <include refid="userJoin"/>
+        WHERE U.USER_SN = #{_parameter} AND U.USE_YN != 'N'
+    </select>
+
+    <select id="selectLoginUser" parameterType="string" resultMap="userMap">
+        <include refid="userJoin"/>
+        WHERE U.USER_ID = #{_parameter}
+        LIMIT 1
+    </select>
+
+    <select id="countByUserId" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter}
+    </select>
+
+    <insert id="insertUser" parameterType="userVO" useGeneratedKeys="true" keyProperty="userSn" keyColumn="USER_SN">
+        INSERT INTO user_info
+        (USER_ID, USER_NM, USER_ENPSWD, OGDP_BZENTY_NM, DEPT_NM, TELNO, EML_ADDR,
+         USER_STTS_NM, PSWD_EXPRY_YMD, LGN_FAIL_NOCS, USE_YN, RGTR_SN)
+        VALUES
+        (#{userId}, #{userNm}, #{userEnpswd}, #{ogdpBzentyNm}, #{deptNm}, #{telno}, #{emlAddr},
+         #{userSttsNm}, DATE_ADD(CURDATE(), INTERVAL 90 DAY), 0, #{useYn}, #{rgtrSn})
+    </insert>
+
+    <insert id="insertUserAuth" parameterType="userVO">
+        INSERT INTO user_authrt_rel (USER_SN, AUTHRT_SN, AUTHRT_BGNG_DT)
+        VALUES (#{userSn}, #{authrtSn}, NOW())
+    </insert>
+
+    <update id="updateUser" parameterType="userVO">
+        UPDATE user_info
+           SET USER_NM = #{userNm}, OGDP_BZENTY_NM = #{ogdpBzentyNm}, DEPT_NM = #{deptNm},
+               TELNO = #{telno}, EML_ADDR = #{emlAddr}, USER_STTS_NM = #{userSttsNm},
+               USE_YN = #{useYn}, MDFCN_DT = NOW(), MDFR_SN = #{mdfrSn}
+         WHERE USER_SN = #{userSn} AND USE_YN != 'N'
+    </update>
+
+    <update id="updatePassword" parameterType="userVO">
+        UPDATE user_info
+           SET USER_ENPSWD = #{userEnpswd}, PSWD_EXPRY_YMD = DATE_ADD(CURDATE(), INTERVAL 90 DAY),
+               MDFCN_DT = NOW(), MDFR_SN = #{mdfrSn}
+         WHERE USER_SN = #{userSn} AND USE_YN != 'N'
+    </update>
+
+    <delete id="deleteUserAuth" parameterType="long">
+        DELETE FROM user_authrt_rel WHERE USER_SN = #{_parameter}
+    </delete>
+
+    <update id="softDeleteUser" parameterType="userVO">
+        UPDATE user_info SET USE_YN = 'N', USER_STTS_NM = '삭제', MDFCN_DT = NOW(), MDFR_SN = #{mdfrSn}
+         WHERE USER_SN = #{userSn} AND USE_YN != 'N'
+    </update>
+
+    <update id="unlockUser" parameterType="userVO">
+        UPDATE user_info SET USER_STTS_NM = '정상', LGN_FAIL_NOCS = 0, MDFCN_DT = NOW(), MDFR_SN = #{mdfrSn}
+         WHERE USER_SN = #{userSn} AND USE_YN = 'Y' AND USER_STTS_NM = '잠금'
+    </update>
+
+    <update id="increaseLoginFailure" parameterType="long">
+        UPDATE user_info
+           SET LGN_FAIL_NOCS = LGN_FAIL_NOCS + 1,
+               USER_STTS_NM = CASE WHEN LGN_FAIL_NOCS + 1 &gt;= 5 THEN '잠금' ELSE USER_STTS_NM END
+         WHERE USER_SN = #{_parameter}
+    </update>
+
+    <update id="resetLoginFailure" parameterType="long">
+        UPDATE user_info SET LGN_FAIL_NOCS = 0, LAST_LGN_DT = NOW() WHERE USER_SN = #{_parameter}
+    </update>
+
+    <insert id="insertLoginLog" parameterType="userVO">
+        INSERT INTO cntn_log
+        (USER_SN, USER_ID, LGN_IP_ADDR, CNTN_BGNG_DT, CNTN_BRWSR_NM, CNTN_YN, FAIL_RSN)
+        VALUES (#{userSn}, #{userId}, #{loginIp}, NOW(), #{browserNm}, #{loginSuccessYn}, #{failRsn})
+    </insert>
+
+    <update id="updateLogoutLog" parameterType="long">
+        UPDATE cntn_log SET LGT_DT = NOW()
+         WHERE USER_SN = #{_parameter} AND CNTN_YN = 'Y' AND LGT_DT IS NULL
+         ORDER BY CNTN_BGNG_DT DESC LIMIT 1
+    </update>
+</mapper>

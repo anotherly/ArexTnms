@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.audit.mapper.AuditMapper">
+    <insert id="insertJobLog" parameterType="auditVO">
+        INSERT INTO job_log
+        (USER_SN, USER_ID, USER_IP_ADDR, CNTN_MENU_NM, JOB_SE_CD, TRGT_KEY_VAL, LOG_CN,
+         CHG_BFR_CN, CHG_AFTR_CN, JOB_RSLT_CD)
+        VALUES
+        (#{userSn}, #{userId}, #{userIpAddr}, #{cntnMenuNm}, #{jobSeCd}, #{trgtKeyVal}, #{logCn},
+         #{chgBfrCn}, #{chgAftrCn}, #{jobRsltCd})
+    </insert>
+</mapper>

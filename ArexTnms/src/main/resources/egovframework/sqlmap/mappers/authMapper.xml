@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.auth.mapper.AuthMapper">
+    <resultMap id="authMap" type="authVO">
+        <id property="authrtSn" column="AUTHRT_SN"/>
+        <result property="authrtNm" column="AUTHRT_NM"/>
+        <result property="authrtExpln" column="AUTHRT_EXPLN"/>
+        <result property="authrtSttsNm" column="AUTHRT_STTS_NM"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="userNocs" column="USER_NOCS"/>
+        <result property="regDt" column="REG_DT"/>
+        <result property="mdfcnDt" column="MDFCN_DT"/>
+    </resultMap>
+    <resultMap id="menuAuthMap" type="menuAuthVO">
+        <id property="menuSn" column="MENU_SN"/>
+        <result property="authrtSn" column="AUTHRT_SN"/>
+        <result property="upMenuSn" column="UP_MENU_SN"/>
+        <result property="menuNm" column="MENU_NM"/>
+        <result property="menuUrlAddr" column="MENU_URL_ADDR"/>
+        <result property="screenKey" column="SCREEN_KEY"/>
+        <result property="menuSeq" column="MENU_SEQ"/>
+        <result property="listAuthrtYn" column="LIST_AUTHRT_YN"/>
+        <result property="dtlAuthrtYn" column="DTL_AUTHRT_YN"/>
+        <result property="regAuthrtYn" column="REG_AUTHRT_YN"/>
+        <result property="mdfcnAuthrtYn" column="MDFCN_AUTHRT_YN"/>
+        <result property="delAuthrtYn" column="DEL_AUTHRT_YN"/>
+        <result property="ctrlAuthrtYn" column="CTRL_AUTHRT_YN"/>
+    </resultMap>
+
+    <select id="selectAuthList" resultMap="authMap">
+        SELECT A.*,
+               (SELECT COUNT(*) FROM user_authrt_rel R
+                 WHERE R.AUTHRT_SN = A.AUTHRT_SN
+                   AND R.AUTHRT_BGNG_DT &lt;= NOW()
+                   AND (R.AUTHRT_END_DT IS NULL OR R.AUTHRT_END_DT &gt; NOW())) AS USER_NOCS
+          FROM authrt_info A
+         WHERE A.USE_YN = 'Y'
+         ORDER BY A.AUTHRT_SN
+    </select>
+
+    <select id="selectAuth" parameterType="long" resultMap="authMap">
+        SELECT A.*, (SELECT COUNT(*) FROM user_authrt_rel R WHERE R.AUTHRT_SN = A.AUTHRT_SN) AS USER_NOCS
+          FROM authrt_info A WHERE A.AUTHRT_SN = #{_parameter} AND A.USE_YN = 'Y'
+    </select>
+
+    <select id="countAuthName" parameterType="authVO" resultType="int">
+        SELECT COUNT(*) FROM authrt_info
+         WHERE AUTHRT_NM = #{authrtNm} AND USE_YN = 'Y'
+        <if test="authrtSn != null">AND AUTHRT_SN != #{authrtSn}</if>
+    </select>
+
+    <select id="countAuthUsers" parameterType="long" resultType="int">
+        SELECT COUNT(*) FROM user_authrt_rel WHERE AUTHRT_SN = #{_parameter}
+    </select>
+
+    <insert id="insertAuth" parameterType="authVO" useGeneratedKeys="true" keyProperty="authrtSn" keyColumn="AUTHRT_SN">
+        INSERT INTO authrt_info (AUTHRT_NM, AUTHRT_EXPLN, AUTHRT_STTS_NM, USE_YN, RGTR_SN)
+        VALUES (#{authrtNm}, #{authrtExpln}, #{authrtSttsNm}, #{useYn}, #{rgtrSn})
+    </insert>
+
+    <update id="updateAuth" parameterType="authVO">
+        UPDATE authrt_info SET AUTHRT_NM = #{authrtNm}, AUTHRT_EXPLN = #{authrtExpln},
+               AUTHRT_STTS_NM = #{authrtSttsNm}, USE_YN = #{useYn}, MDFCN_DT = NOW(), MDFR_SN = #{mdfrSn}
+         WHERE AUTHRT_SN = #{authrtSn} AND USE_YN = 'Y'
+    </update>
+
+    <delete id="deleteAuthMenus" parameterType="long">
+        DELETE FROM authrt_menu_rel WHERE AUTHRT_SN = #{_parameter}
+    </delete>
+
+    <delete id="deleteAuth" parameterType="long">
+        DELETE FROM authrt_info WHERE AUTHRT_SN = #{_parameter} AND USE_YN = 'Y'
+    </delete>
+
+    <select id="selectMenuAuthList" parameterType="long" resultMap="menuAuthMap">
+        SELECT #{_parameter} AS AUTHRT_SN, M.MENU_SN, M.UP_MENU_SN, M.MENU_NM, M.MENU_URL_ADDR,
+               SUBSTRING_INDEX(M.MENU_URL_ADDR, 'screen=', -1) AS SCREEN_KEY, M.MENU_SEQ,
+               COALESCE(R.LIST_AUTHRT_YN, 'N') AS LIST_AUTHRT_YN,
+               COALESCE(R.DTL_AUTHRT_YN, 'N') AS DTL_AUTHRT_YN,
+               COALESCE(R.REG_AUTHRT_YN, 'N') AS REG_AUTHRT_YN,
+               COALESCE(R.MDFCN_AUTHRT_YN, 'N') AS MDFCN_AUTHRT_YN,
+               COALESCE(R.DEL_AUTHRT_YN, 'N') AS DEL_AUTHRT_YN,
+               COALESCE(R.CTRL_AUTHRT_YN, 'N') AS CTRL_AUTHRT_YN
+          FROM menu_info M
+          LEFT JOIN authrt_menu_rel R ON R.MENU_SN = M.MENU_SN AND R.AUTHRT_SN = #{_parameter}
+         WHERE M.MENU_USE_YN = 'Y'
+           AND EXISTS (
+               SELECT 1
+                 FROM authrt_info A
+                WHERE A.AUTHRT_SN = #{_parameter}
+                  AND A.USE_YN = 'Y'
+                  AND A.AUTHRT_STTS_NM = '사용'
+           )
+         ORDER BY M.MENU_SEQ, M.MENU_SN
+    </select>
+
+    <insert id="insertMenuAuth" parameterType="menuAuthVO">
+        INSERT INTO authrt_menu_rel
+        (AUTHRT_SN, MENU_SN, LIST_AUTHRT_YN, DTL_AUTHRT_YN, REG_AUTHRT_YN,
+         MDFCN_AUTHRT_YN, DEL_AUTHRT_YN, CTRL_AUTHRT_YN)
+        VALUES
+        (#{authrtSn}, #{menuSn}, #{listAuthrtYn}, #{dtlAuthrtYn}, #{regAuthrtYn},
+         #{mdfcnAuthrtYn}, #{delAuthrtYn}, #{ctrlAuthrtYn})
+    </insert>
+</mapper>
