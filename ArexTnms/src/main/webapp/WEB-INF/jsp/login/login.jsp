@@ -12,7 +12,7 @@
         body{margin:0;font-family:"Malgun Gothic","Noto Sans KR",sans-serif;color:var(--navy);background:#eaf2f9;overflow:hidden}
         button,input{font:inherit}
         .login-page{position:relative;width:100%;height:100%;min-height:620px;display:grid;grid-template-columns:minmax(0,61%) minmax(430px,39%);overflow:hidden}
-        .login-visual{position:relative;min-width:0;background:#9dd1f5 url('<%=request.getContextPath()%>/images/tnms/login-airport.jpg') left center/auto 100% no-repeat}
+        .login-visual{position:relative;min-width:0;background:#9dd1f5 url('<%=request.getContextPath()%>/images/tnms/login-airport.jpg') center/cover no-repeat}
         .login-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 72%,rgba(255,255,255,.18))}
         .login-side{position:relative;display:grid;place-items:center;padding:36px;background:linear-gradient(180deg,rgba(250,252,255,.62),rgba(255,255,255,.82));backdrop-filter:blur(6px)}
         .login-card{width:min(430px,100%);padding:44px 38px 38px;border:1px solid rgba(214,222,232,.9);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 24px 70px rgba(12,45,82,.14)}
