@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AREX TNMS 로그인</title>
     <style>
+        @font-face{font-family:Pretendard;src:url('<%=request.getContextPath()%>/fonts/tnms/PretendardVariable.woff2') format('woff2-variations');font-style:normal;font-weight:45 920;font-display:swap}
         :root{--navy:#0b213f;--blue:#1264db;--line:#d8e0ea;--muted:#8995a7}
         *{box-sizing:border-box}
         html,body{width:100%;height:100%}
-        body{margin:0;font-family:"Malgun Gothic","Noto Sans KR",sans-serif;color:var(--navy);background:#eaf2f9;overflow:hidden}
+        body{margin:0;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--navy);background:#eaf2f9;overflow:hidden}
         button,input{font:inherit}
         .login-page{position:relative;width:100%;height:100%;min-height:620px;display:grid;grid-template-columns:minmax(0,61%) minmax(430px,39%);overflow:hidden}
         .login-visual{position:relative;min-width:0;background:#9dd1f5 url('<%=request.getContextPath()%>/images/tnms/login-airport.jpg') center/cover no-repeat}
