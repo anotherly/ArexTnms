@@ -1,0 +1,357 @@
+@font-face{font-family:Pretendard;src:url('../../fonts/tnms/PretendardVariable.woff2') format('woff2-variations');font-style:normal;font-weight:45 920;font-display:swap}
+:root{
+  --navy:#12233C;
+  --muted:#7E899A;
+  --line:#D9E0E8;
+  --input-border:#CCD6E2;
+  --input-focus:#86B6F5;
+  --error:#E13A3E;
+  --blue-a:#0759C9;
+  --blue-b:#0051D7;
+  --signup-blue:#0867DB;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-width:320px;min-height:100%;}
+body{
+  min-height:100svh;
+  overflow:hidden;
+  background:#0A1833;
+  font-family:"Pretendard","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;
+}
+button,input{font:inherit}
+button{appearance:none;-webkit-appearance:none}
+
+.sr-only{
+  position:absolute!important;
+  width:1px!important;height:1px!important;
+  padding:0!important;margin:-1px!important;
+  overflow:hidden!important;clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;border:0!important;
+}
+
+/* 실제 반응형 화면: stage 자체가 현재 브라우저 크기를 사용합니다. */
+.screen,.stage{
+  position:relative;
+  width:100%;
+  height:100svh;
+  min-height:540px;
+  overflow:hidden;
+}
+
+/* SVG의 원본 배경은 화면을 채우되 원본처럼 상단 기준으로 크롭합니다. */
+.hero-photo{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:center top;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+/*
+  SVG 기준: 1920x1080 / 카드 625x890 / right 128 / vertical center.
+  1920x1080에서는 정확히 625px, 우측 128px, top 95px가 됩니다.
+  화면이 줄면 카드 폭만 반응형으로 줄고 배경은 viewport를 채웁니다.
+*/
+.login-card-shell{
+  position:absolute;
+  top:50%;
+  right:clamp(24px,6.6667vw,128px);
+  width:min(625px,32.5521vw,70vh);
+  aspect-ratio:625/890;
+  transform:translateY(-50%);
+}
+
+/* 내부 디자인 좌표는 SVG 카드의 625x890 좌표계를 그대로 유지 */
+.login-card{
+  position:absolute;
+  left:0;
+  top:0;
+  width:625px;
+  height:890px;
+  overflow:hidden;
+  border-radius:22px;
+  background:rgba(255,255,255,.97);
+  transform-origin:left top;
+  transform:scale(var(--card-scale,1));
+}
+
+.arex-logo{
+  position:absolute;
+  left:153px;
+  top:86px;
+  width:320px;
+  height:88px;
+  display:block;
+  object-fit:contain;
+}
+
+#tnms-title{
+  position:absolute;
+  left:0;
+  top:198.5px;
+  width:625px;
+  margin:0;
+  color:var(--navy);
+  text-align:center;
+  font-size:40px;
+  line-height:48px;
+  font-weight:700;
+  letter-spacing:-1.05px;
+  white-space:nowrap;
+  transform:translateX(-4.5px) scaleX(1.143) scaleY(1.07);
+  transform-origin:center center;
+}
+.system-name{
+  position:absolute;
+  left:0;
+  top:265px;
+  width:625px;
+  margin:0;
+  color:var(--navy);
+  text-align:center;
+  font-size:20px;
+  line-height:26px;
+  font-weight:700;
+  letter-spacing:-.65px;
+  white-space:nowrap;
+  transform:translateX(-21.5px) scaleX(.946) scaleY(.90);
+  transform-origin:center center;
+}
+.system-name-en{
+  position:absolute;
+  left:0;
+  top:305.5px;
+  width:625px;
+  margin:0;
+  color:var(--muted);
+  text-align:center;
+  font-size:16px;
+  line-height:20px;
+  font-weight:400;
+  letter-spacing:-.15px;
+  white-space:nowrap;
+  transform:translateX(-12.5px) scaleX(1.033) scaleY(.93);
+  transform-origin:center center;
+}
+.divider{
+  position:absolute;
+  left:285px;
+  top:355px;
+  width:53px;
+  height:1px;
+  background:var(--line);
+}
+
+.login-form{position:absolute;inset:0}
+
+.input-box{
+  position:absolute;
+  left:55px;
+  width:515px;
+  height:78px;
+  border:1.5px solid var(--input-border);
+  border-radius:11px;
+  background:#fff;
+  color:#000;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.id-box{top:395px}
+.pw-box{top:495px}
+
+/* 핵심 수정: input 자체에는 외곽선/테두리를 절대 만들지 않습니다. */
+.input-box input{
+  position:absolute;
+  left:73px;
+  top:0;
+  width:385px;
+  height:76px;
+  margin:0;
+  padding:0;
+  border:0!important;
+  border-radius:0;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  color:var(--navy);
+  font-size:16px;
+  line-height:76px;
+  font-weight:400;
+  letter-spacing:.45px;
+  appearance:none;
+  -webkit-appearance:none;
+}
+.input-box input:focus,
+.input-box input:focus-visible{
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+}
+.input-box input::placeholder{color:var(--muted);opacity:1}
+
+/* 포커스는 바깥 입력 박스 하나에만 표시 */
+.input-box:focus-within{
+  border-color:var(--input-focus);
+  box-shadow:0 0 0 1px var(--input-focus);
+}
+.input-box.is-error{
+  border-color:var(--error);
+  box-shadow:0 0 0 1px rgba(225,58,62,.08);
+}
+
+.icon{
+  position:absolute;
+  display:block;
+  color:#000;
+  overflow:visible;
+  pointer-events:none;
+}
+.user-svg{left:30px;top:29px;width:18px;height:20px}
+.lock-svg{left:30px;top:29px;width:16px;height:20px}
+
+.pw-toggle{
+  position:absolute;
+  right:22px;
+  top:22px;
+  width:34px;
+  height:34px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:6px;
+  outline:0;
+  background:transparent;
+  color:#000;
+  cursor:pointer;
+}
+.pw-toggle svg{
+  position:absolute;
+  left:6px;
+  top:7px;
+  width:22px;
+  height:18px;
+  display:block;
+}
+.pw-toggle[aria-pressed="true"] .eye-slash{display:none}
+.pw-toggle:focus-visible{
+  outline:2px solid rgba(8,103,219,.35);
+  outline-offset:1px;
+}
+
+.error-msg{
+  display:none;
+  position:absolute;
+  left:55px;
+  top:578px;
+  width:515px;
+  margin:0;
+  color:var(--error);
+  font-size:14px;
+  line-height:18px;
+  font-weight:400;
+  letter-spacing:-.15px;
+}
+.error-msg.show{display:block}
+
+.login-btn,.signup-btn{
+  position:absolute;
+  left:55px;
+  width:515px;
+  height:74px;
+  padding:0;
+  margin:0;
+  border-radius:10px;
+  cursor:pointer;
+}
+.login-btn{
+  top:605px;
+  border:0;
+  background:linear-gradient(90deg,var(--blue-a) 0%,var(--blue-b) 100%);
+  color:#fff;
+}
+.signup-btn{
+  top:703px;
+  border:1.5px solid var(--signup-blue);
+  background:#fff;
+  color:#0759BD;
+}
+.login-btn span{
+  position:absolute;
+  left:252px;
+  top:21px;
+  font-size:20px;
+  line-height:28px;
+  font-weight:700;
+  letter-spacing:-.45px;
+  white-space:nowrap;
+  transform:translateY(1px) scaleX(1.02) scaleY(1.06);
+  transform-origin:left center;
+}
+.login-svg{position:absolute;left:209px;top:29px;width:14px;height:16px}
+.signup-btn span{
+  position:absolute;
+  left:242px;
+  top:21px;
+  font-size:20px;
+  line-height:28px;
+  font-weight:700;
+  letter-spacing:-.45px;
+  white-space:nowrap;
+}
+.signup-svg{position:absolute;left:197px;top:27px;width:22px;height:19px}
+
+.login-btn:hover{filter:brightness(1.035)}
+.signup-btn:hover{background:#F7FAFE}
+.login-btn:focus-visible,.signup-btn:focus-visible{
+  outline:3px solid rgba(8,103,219,.28);
+  outline-offset:3px;
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-5px)}
+  50%{transform:translateX(4px)}
+  75%{transform:translateX(-3px)}
+}
+.shake{animation:shake .3s ease}
+
+/* Tablet: 카드가 너무 우측에 붙지 않도록 여백을 줄여줍니다. */
+@media (max-width:1180px){
+  .login-card-shell{
+    right:clamp(24px,4vw,48px);
+    width:min(560px,46vw,68vh);
+  }
+  .hero-photo{object-position:42% top}
+}
+
+/* Mobile / narrow portrait: 로그인 카드가 화면 중앙으로 이동 */
+@media (max-width:900px){
+  body{overflow:auto}
+  .screen,.stage{min-height:100svh;height:100svh}
+  .stage::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:rgba(10,24,51,.14);
+    pointer-events:none;
+  }
+  .hero-photo{object-position:38% top}
+  .login-card-shell{
+    z-index:1;
+    left:50%;
+    right:auto;
+    top:50%;
+    width:min(calc(100vw - 32px),430px,64vh);
+    transform:translate(-50%,-50%);
+  }
+}
+
+/* 매우 낮은 화면에서도 카드가 위/아래로 잘리지 않게 함 */
+@media (max-height:620px){
+  .login-card-shell{width:min(44vw,62vh)}
+}

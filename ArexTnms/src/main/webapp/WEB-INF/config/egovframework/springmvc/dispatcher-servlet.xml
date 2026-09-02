@@ -20,6 +20,7 @@
 	<!-- DispatcherServlet이 / 로 매핑되어 있으므로 화면용 정적 자원을 명시적으로 제공합니다. -->
 	<mvc:resources mapping="/css/**" location="/css/" cache-period="3600"/>
 	<mvc:resources mapping="/images/**" location="/images/" cache-period="3600"/>
+	<mvc:resources mapping="/planner/**" location="/planner/" cache-period="3600"/>
     <!-- 컴포넌트 스캔 (Controller / Service / Repository 자동 등록) -->
 	<context:component-scan base-package="kr.co.TRSolution">
 	    <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>

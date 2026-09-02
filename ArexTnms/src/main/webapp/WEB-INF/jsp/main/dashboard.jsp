@@ -7,6 +7,7 @@
   <title>AREX TNMS 화면 시안</title>
   <style>
     @font-face{font-family:Pretendard;src:url('<%=request.getContextPath()%>/fonts/tnms/PretendardVariable.woff2') format('woff2-variations');font-style:normal;font-weight:45 920;font-display:swap}
+    .planner-dashboard-frame{display:block;width:100%;height:100vh;border:0;background:#eef3f8}
     *{box-sizing:border-box}html,body,#root{width:100%;height:100%}body{margin:0;overflow:hidden;background:#07111f;color:#e8f1fb;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
     .app{width:100%;height:100vh;min-width:1180px;display:grid;grid-template-columns:clamp(220px,13.55vw,260px) minmax(0,1fr);overflow:hidden;background:radial-gradient(circle at 78% 8%,#142b46 0,#091523 34%,#07111f 68%)}
     .sidebar{min-width:0;min-height:0;background:linear-gradient(180deg,#071725 0,#06111d 100%);border-right:1px solid #20334a;padding:24px 16px;display:flex;flex-direction:column;overflow:hidden}
@@ -260,13 +261,17 @@ function dashboardOne(){return `<section class="dashboard-slide active" data-sli
 
 function dashboardSystemCards(){return [['△','CCTV'],['□','교환기'],['▥','SCADA'],['▣','행선안내'],['△','전송']].map(x=>`<div class="dash-system-card"><span class="sys-symbol">${x[0]}</span><span><b>${x[1]}</b><strong>000</strong></span><small>긴급 00</small></div>`).join('')}
 function dashboardTwo(){return `<section class="dashboard-slide" data-slide="1"><div class="dash-system-cards">${dashboardSystemCards()}</div><div class="dash-panel map-dashboard"><div class="map-dashboard-head"><h3>공항철도 노선 · 역사 현황 지도</h3><div class="circle-legend"><span><i></i>정상</span><span><i class="orange"></i>주의</span><span><i class="red"></i>장애</span><span><i class="gray"></i>통신 단절</span></div></div><div class="map-board" role="img" aria-label="공항철도 노선과 역사 상태 지도"></div></div><div class="dash-bottom"><div class="dash-mini-chart"><h4>시간대별 발생 분포 (전체)</h4><div class="heat-grid">${Array.from({length:32},(_,i)=>`<i style="opacity:${.45+(i%5)*.12}"></i>`).join('')}</div></div><div class="dash-mini-chart mini-donut-row"><div><h4>장애 유형 분포</h4><div class="mini-donut"></div></div><div class="cause-ranks"><b>주요 장애 원인 TOP 3</b><div><span>1. 장비 성능 저하</span><i style="width:70px"></i><b>6건</b></div><div><span>2. 전원 불안정</span><i style="width:50px"></i><b>4건</b></div><div><span>3. 네트워크 지연</span><i style="width:35px"></i><b>3건</b></div></div><div class="cause-ranks"><b>유형별 현황</b><div><span>ATS 6건</span><i style="width:65px"></i><b>37%</b></div><div><span>Network 4건</span><i style="width:45px"></i><b>25%</b></div><div><span>설비 3건</span><i style="width:30px"></i><b>18%</b></div></div></div><div class="dash-mini-chart"><h4>반복 고장 상위 역사</h4><div class="cause-ranks"><div><span>TOP 1　계양</span><b></b><strong>5건</strong></div><div><span>TOP 2　김포공항</span><b></b><strong>3건</strong></div><div><span>TOP 3　인천공항T1</span><b></b><strong>2건</strong></div></div></div></div></section>`}
-function modernDashboard(){return modernLayout('dashboard',`<div class="dashboard-shell">${dashboardOne()}${dashboardTwo()}<div class="dash-pager"><button class="dash-dot active" type="button" onclick="setDashboardSlide(0)" aria-label="원형 노선 대시보드"></button><button class="dash-dot" type="button" onclick="setDashboardSlide(1)" aria-label="지도형 대시보드"></button></div></div>`)}
+function modernDashboard(){return `<iframe id="plannerDashboardFrame" class="planner-dashboard-frame" src="${CONTEXT_PATH}/planner/dashboard-map/index.html" title="TNMS 통합 대시보드"></iframe>`}
 function setDashboardSlide(index){
-  document.querySelectorAll('.dashboard-slide').forEach((el,i)=>el.classList.toggle('active',i===index));
-  document.querySelectorAll('.dash-dot').forEach((el,i)=>el.classList.toggle('active',i===index));
-  const app=document.querySelector('.app');
-  if(app){app.classList.toggle('map-theme',index===1)}
+  const frame=document.getElementById('plannerDashboardFrame');
+  if(frame)frame.src=CONTEXT_PATH+(index===0?'/planner/dashboard-map/index.html':'/planner/dashboard-system/index.html');
 }
+
+window.addEventListener('message',function(event){
+  if(event.origin!==location.origin||!event.data||event.data.source!=='tnms-planner')return;
+  if(event.data.type==='dashboard-slide')setDashboardSlide(Number(event.data.index)||0);
+  if(event.data.type==='navigate'&&event.data.key)render(event.data.key);
+});
 
 const facilityStations=['전체','서울역','공덕','홍대입구','DMC','마곡나루','김포공항','계양','검암','청라','영종','운서'];
 function facilityRoute(){return `<div class="card facility-route-card"><h3 class="facility-route-title">역사 현황</h3><div class="facility-route">${facilityStations.map((name,i)=>`<div class="station-node ${i===6?'selected bad':i===7?'warn':''}">${name}<i></i></div>`).join('')}</div><div class="facility-legend"><span>정상</span><span class="warn">주의</span><span class="bad">장애</span><span class="off">통신단절</span></div></div>`}
