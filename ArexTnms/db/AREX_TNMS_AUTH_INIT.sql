@@ -10,12 +10,12 @@ INSERT INTO menu_info
 (MENU_SN, UP_MENU_SN, MENU_NM, MENU_URL_ADDR, MENU_SEQ, MENU_LV, MENU_EXPLN, MENU_USE_YN)
 VALUES
 (1,NULL,'통합 대시보드','/main/dashboard.do?screen=dashboard',1,'1','통합 관제 대시보드','Y'),
-(2,NULL,'역사·선로 현황','/main/dashboard.do?screen=route',2,'1','역사 및 선로 현황','Y'),
+(2,NULL,'역사·선로 현황','/main/dashboard.do?screen=route',2,'1','대시보드 2번으로 대체','N'),
 (3,NULL,'연동시스템 관리','/main/dashboard.do?screen=systems',3,'1','연동시스템 관리','Y'),
 (4,NULL,'장비 관리','/main/dashboard.do?screen=equipment',4,'1','장비 관리','Y'),
 (5,NULL,'교환기 관리','/main/dashboard.do?screen=switch',5,'1','교환기 관리','Y'),
 (6,NULL,'CCTV 상태관리','/main/dashboard.do?screen=cctv',6,'1','CCTV 상태관리','Y'),
-(7,NULL,'CCTV 영상관리','/main/dashboard.do?screen=video',7,'1','CCTV 영상관리','Y'),
+(7,NULL,'CCTV 영상관리','/main/dashboard.do?screen=video',7,'1','사용하지 않는 메뉴','N'),
 (8,NULL,'SCADA 출입보안','/main/dashboard.do?screen=scada',8,'1','SCADA 출입보안','Y'),
 (9,NULL,'연동주기 관리','/main/dashboard.do?screen=cycle',9,'1','연동주기 관리','Y'),
 (10,NULL,'임계치 관리','/main/dashboard.do?screen=threshold',10,'1','임계치 관리','Y'),
@@ -29,11 +29,16 @@ VALUES
 (18,NULL,'사용자 계정 설정','/main/dashboard.do?screen=users',18,'1','사용자 계정 설정','Y'),
 (19,NULL,'권한 관리','/main/dashboard.do?screen=auth',19,'1','메뉴 및 기능 권한 관리','Y'),
 (20,NULL,'계정 신청 현황','/main/dashboard.do?screen=applications',20,'1','계정 신청 현황','Y'),
-(21,NULL,'알림·SMS 설정','/main/dashboard.do?screen=notify',21,'1','알림 및 SMS 설정','Y'),
+(21,NULL,'알림·SMS 설정','/main/dashboard.do?screen=notify',21,'1','사용하지 않는 메뉴','N'),
 (22,NULL,'공통코드·UI 설정','/main/dashboard.do?screen=settings',22,'1','공통코드 및 UI 설정','Y'),
 (23,NULL,'작업로그 조회','/main/dashboard.do?screen=logs',23,'1','사용자 작업로그 조회','Y')
 ON DUPLICATE KEY UPDATE MENU_NM=VALUES(MENU_NM), MENU_URL_ADDR=VALUES(MENU_URL_ADDR),
-MENU_SEQ=VALUES(MENU_SEQ), MENU_EXPLN=VALUES(MENU_EXPLN), MENU_USE_YN='Y';
+MENU_SEQ=VALUES(MENU_SEQ), MENU_EXPLN=VALUES(MENU_EXPLN), MENU_USE_YN=VALUES(MENU_USE_YN);
+
+DELETE R
+  FROM authrt_menu_rel R
+  JOIN menu_info M ON M.MENU_SN = R.MENU_SN
+ WHERE M.MENU_USE_YN = 'N';
 
 INSERT INTO authrt_info
 (AUTHRT_SN, AUTHRT_NM, AUTHRT_EXPLN, AUTHRT_STTS_NM, USE_YN)

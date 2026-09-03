@@ -5,16 +5,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TNMS 2026 - 로그인</title>
-  <link rel="stylesheet" href="<%=request.getContextPath()%>/planner/login/login.css">
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/planner-login.css?v=20260902.3">
 </head>
 <body>
   <main class="screen" aria-label="TNMS 2026 로그인">
     <div class="stage">
-      <img class="hero-photo" src="<%=request.getContextPath()%>/planner/login/assets/login-bg.png" alt="" aria-hidden="true">
+      <img class="hero-photo" src="<%=request.getContextPath()%>/images/tnms/planner-login-bg.png" alt="" aria-hidden="true">
 
       <div class="login-card-shell" id="loginCardShell">
         <section class="login-card" id="loginCard" aria-labelledby="tnms-title">
-          <img class="arex-logo" src="<%=request.getContextPath()%>/planner/login/assets/arex-logo.png" alt="AREX Airport Express">
+          <img class="arex-logo" src="<%=request.getContextPath()%>/images/tnms/planner-arex-logo.png" alt="AREX Airport Express">
 
           <h1 id="tnms-title">TNMS 2026</h1>
           <p class="system-name">통합네트워크 관리시스템</p>
@@ -75,6 +75,17 @@
     const passwordToggle = document.getElementById('pwToggle');
     const errorMessage = document.getElementById('errorMsg');
     const loginButton = loginForm.querySelector('.login-btn');
+    const loginCardShell = document.getElementById('loginCardShell');
+    const loginCard = document.getElementById('loginCard');
+
+    function fitLoginCard() {
+      const scale = Math.min(loginCardShell.clientWidth / 625, loginCardShell.clientHeight / 890);
+      loginCard.style.setProperty('--card-scale', String(scale));
+    }
+
+    fitLoginCard();
+    window.addEventListener('resize', fitLoginCard, {passive:true});
+    if ('ResizeObserver' in window) new ResizeObserver(fitLoginCard).observe(loginCardShell);
 
     passwordToggle.addEventListener('click', function () {
       const show = passwordInput.type === 'password';

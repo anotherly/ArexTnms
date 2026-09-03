@@ -4,35 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>TNMS 공항철도 노선·역사 현황</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260903.4" />
 </head>
-<body>
+<body class="embedded-dashboard">
 <div class="app-shell">
-  <aside class="sidebar" aria-label="주 메뉴">
-    <div class="brand"><img src="assets/image1_2498_2828.png" alt="A'REX Airport Express" /></div>
-    <nav class="nav-list">
-      <button class="nav-item active" type="button"><span class="nav-icon">⌂</span><span>대시보드</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">△</span><span>설비관리</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">⌘</span><span>장애관리</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">◉</span><span>성능관리</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">⌁</span><span>연동관리</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">◇</span><span>보고서</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">▣</span><span>운영관리</span></button>
-      <button class="nav-item" type="button"><span class="nav-icon">■</span><span>설정</span></button>
-    </nav>
-    <button class="collapse-btn" type="button">‹ 메뉴 접기</button>
-  </aside>
-
-  <header class="topbar">
-    <h1>통합망 관리시스템</h1>
-    <div class="topbar-actions">
-      <span class="mail">✉<b>12</b></span>
-      <strong>운영자</strong><span class="divider">|</span>
-      <time>2026-05-22 10:30:45</time>
-      <span class="fullscreen">⌗</span><span class="user-dot">•</span>
-    </div>
-  </header>
-
   <main class="dashboard">
     <section class="kpi-grid" aria-label="시스템 요약">
       <article class="kpi-card kpi-red">
@@ -167,6 +142,6 @@
     <div class="page-dots" aria-label="대시보드 화면 전환"><button class="active" type="button" aria-label="첫 번째 대시보드"></button><button type="button" aria-label="두 번째 대시보드" onclick="parent.postMessage({source:'tnms-planner',type:'dashboard-slide',index:1},location.origin)"></button></div>
   </main>
 </div>
-<script src="app.js"></script>
+<script src="app.js?v=20260903.4"></script>
 </body>
 </html>

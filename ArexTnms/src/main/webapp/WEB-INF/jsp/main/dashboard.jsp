@@ -7,7 +7,7 @@
   <title>AREX TNMS 화면 시안</title>
   <style>
     @font-face{font-family:Pretendard;src:url('<%=request.getContextPath()%>/fonts/tnms/PretendardVariable.woff2') format('woff2-variations');font-style:normal;font-weight:45 920;font-display:swap}
-    .planner-dashboard-frame{display:block;width:100%;height:100vh;border:0;background:#eef3f8}
+    .planner-dashboard-frame{display:block;width:100%;height:100%;border:0;background:#eef3f8}
     *{box-sizing:border-box}html,body,#root{width:100%;height:100%}body{margin:0;overflow:hidden;background:#07111f;color:#e8f1fb;font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
     .app{width:100%;height:100vh;min-width:1180px;display:grid;grid-template-columns:clamp(220px,13.55vw,260px) minmax(0,1fr);overflow:hidden;background:radial-gradient(circle at 78% 8%,#142b46 0,#091523 34%,#07111f 68%)}
     .sidebar{min-width:0;min-height:0;background:linear-gradient(180deg,#071725 0,#06111d 100%);border-right:1px solid #20334a;padding:24px 16px;display:flex;flex-direction:column;overflow:hidden}
@@ -38,11 +38,12 @@
     @media(max-width:1500px){.content{padding:20px}.heading{align-items:flex-start}.kpi .value{font-size:26px}.kpi .sub{max-width:55%;text-align:right}.dashboard-main{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}}
     @media(max-width:1250px){.brand small,.side-footer{display:none}.sidebar{padding:20px 12px}.content{padding:18px}.topbar{padding:0 20px}.heading{flex-wrap:wrap}.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}.span-3,.span-4{grid-column:1/-1}.dashboard-main{grid-template-columns:1fr}.dashboard-main>.card,.dashboard-main>.topology{height:330px}.video-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid{grid-template-columns:120px minmax(0,1fr)}.form-grid .span-3{grid-column:span 1}}
   </style>
-  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/modern-ui.css" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/modern-ui.css?v=20260902.3" />
 </head>
 <body><div id="root"></div>
 <script>
 const CONTEXT_PATH='<%=request.getContextPath()%>';
+const DASHBOARD_ASSET_VERSION='20260903.6';
 let CURRENT_USER={userNm:'사용자'};
 let CSRF_TOKEN='';
 let PERMISSIONS={};
@@ -188,8 +189,8 @@ async function loadAuths(selected){
   try{const list=await api('/auth/list.ajax');const target=selected||CURRENT_AUTH_SN||(list[0]&&list[0].authrtSn);document.getElementById('authRows').innerHTML=list.length?list.map(a=>`<div class="row clickable ${String(a.authrtSn)===String(target)?'sel':''}" onclick="loadAuthDetail(${a.authrtSn})">${escapeHtml(a.authrtNm)} <span class="count">${a.userNocs||0}명</span></div>`).join(''):'<div class="row">등록된 권한이 없습니다.</div>';if(target)await loadAuthDetail(target,false)}catch(e){showToast(e.message,true)}
 }
 async function loadAuthDetail(authrtSn,reloadList=true){
-  try{CURRENT_AUTH_SN=authrtSn;const a=await api('/auth/detail.ajax?authrtSn='+authrtSn);CURRENT_AUTH_DATA={authrtSn:a.authrtSn,authrtNm:a.authrtNm,authrtExpln:a.authrtExpln||''};if(reloadList){document.querySelectorAll('#authRows .row').forEach(x=>x.classList.remove('sel'));const rows=[...document.querySelectorAll('#authRows .row')];const row=rows.find(x=>x.getAttribute('onclick')&&x.getAttribute('onclick').includes('('+authrtSn+')'));if(row)row.classList.add('sel')}
-    document.getElementById('authDetail').innerHTML=`<div class="card-title">메뉴·기능 권한 <small>${escapeHtml(a.authrtNm)}</small></div><div style="display:flex;gap:8px;margin-bottom:12px">${hasPermission('auth','mdfcnAuthrtYn')?`<button class="btn" onclick="openAuthModal(CURRENT_AUTH_DATA)">권한명 수정</button>`:''}${hasPermission('auth','delAuthrtYn')&&a.authrtSn!==1?`<button class="btn danger" onclick="deleteAuth(${a.authrtSn})">권한 삭제</button>`:''}</div><table class="matrix table-wide-xl"><thead><tr><th>메뉴</th><th>목록</th><th>상세</th><th>등록</th><th>수정</th><th>삭제</th><th>제어</th></tr></thead><tbody>${a.menuAuthList.map(m=>`<tr data-menu-sn="${m.menuSn}"><td>${escapeHtml(m.menuNm)}</td>${['listAuthrtYn','dtlAuthrtYn','regAuthrtYn','mdfcnAuthrtYn','delAuthrtYn','ctrlAuthrtYn'].map(k=>`<td><input class="perm-check" type="checkbox" data-key="${k}" ${m[k]==='Y'?'checked':''} ${!hasPermission('auth','mdfcnAuthrtYn')||a.authrtSn===1?'disabled':''}></td>`).join('')}</tr>`).join('')}</tbody></table><div class="callout" style="margin-top:14px">상세·등록·수정·삭제·제어 권한을 선택하면 목록 권한이 자동으로 포함됩니다. 시스템 관리자 권한은 보호됩니다.</div>${hasPermission('auth','mdfcnAuthrtYn')&&a.authrtSn!==1?'<div class="modal-actions"><button class="btn primary" onclick="savePermissions()">권한 저장</button></div>':''}`;enhanceTables(document.getElementById('authDetail'));
+  try{CURRENT_AUTH_SN=authrtSn;const a=await api('/auth/detail.ajax?authrtSn='+authrtSn);const visibleMenuAuth=(a.menuAuthList||[]).filter(m=>!REMOVED_MENU_NAMES.has(m.menuNm));CURRENT_AUTH_DATA={authrtSn:a.authrtSn,authrtNm:a.authrtNm,authrtExpln:a.authrtExpln||''};if(reloadList){document.querySelectorAll('#authRows .row').forEach(x=>x.classList.remove('sel'));const rows=[...document.querySelectorAll('#authRows .row')];const row=rows.find(x=>x.getAttribute('onclick')&&x.getAttribute('onclick').includes('('+authrtSn+')'));if(row)row.classList.add('sel')}
+    document.getElementById('authDetail').innerHTML=`<div class="card-title">메뉴·기능 권한 <small>${escapeHtml(a.authrtNm)}</small></div><div style="display:flex;gap:8px;margin-bottom:12px">${hasPermission('auth','mdfcnAuthrtYn')?`<button class="btn" onclick="openAuthModal(CURRENT_AUTH_DATA)">권한명 수정</button>`:''}${hasPermission('auth','delAuthrtYn')&&a.authrtSn!==1?`<button class="btn danger" onclick="deleteAuth(${a.authrtSn})">권한 삭제</button>`:''}</div><table class="matrix table-wide-xl"><thead><tr><th>메뉴</th><th>목록</th><th>상세</th><th>등록</th><th>수정</th><th>삭제</th><th>제어</th></tr></thead><tbody>${visibleMenuAuth.map(m=>`<tr data-menu-sn="${m.menuSn}"><td>${escapeHtml(m.menuNm)}</td>${['listAuthrtYn','dtlAuthrtYn','regAuthrtYn','mdfcnAuthrtYn','delAuthrtYn','ctrlAuthrtYn'].map(k=>`<td><input class="perm-check" type="checkbox" data-key="${k}" ${m[k]==='Y'?'checked':''} ${!hasPermission('auth','mdfcnAuthrtYn')||a.authrtSn===1?'disabled':''}></td>`).join('')}</tr>`).join('')}</tbody></table><div class="callout" style="margin-top:14px">상세·등록·수정·삭제·제어 권한을 선택하면 목록 권한이 자동으로 포함됩니다. 시스템 관리자 권한은 보호됩니다.</div>${hasPermission('auth','mdfcnAuthrtYn')&&a.authrtSn!==1?'<div class="modal-actions"><button class="btn primary" onclick="savePermissions()">권한 저장</button></div>':''}`;enhanceTables(document.getElementById('authDetail'));
   }catch(e){showToast(e.message,true)}
 }
 function openAuthModal(authData){const a=authData||{};showModal(`<div class="modal-head"><h2>${a.authrtSn?'권한 수정':'권한 등록'}</h2><button class="modal-close" onclick="closeModal()">×</button></div><form id="authForm"><input type="hidden" name="authrtSn" value="${a.authrtSn||''}"><div class="edit-form"><label>권한명 *</label><div class="full"><input class="form-control" name="authrtNm" value="${escapeHtml(a.authrtNm||'')}" maxlength="100" required></div><label>권한 설명</label><div class="full"><input class="form-control" name="authrtExpln" value="${escapeHtml(a.authrtExpln||'')}" maxlength="4000"></div></div><input type="hidden" name="useYn" value="Y"><div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">취소</button><button class="btn primary" type="submit">저장</button></div></form>`);document.getElementById('authForm').addEventListener('submit',saveAuth)}
@@ -207,14 +208,16 @@ Object.assign(S,{
   scada:{menu:'SCADA 출입보안설비',title:'설비관리 > SCADA 출입보안설비',desc:''}
 });
 NAV.splice(0,NAV.length,
-  ['', ['통합 대시보드','역사·선로 현황']],
-  ['설비관리',['전송설비','행선안내설비','SCADA 출입보안설비','전화교환설비','영상감시설비(CCTV)','CCTV 영상관리']],
+  ['', ['통합 대시보드']],
+  ['설비관리',['전송설비','행선안내설비','SCADA 출입보안설비','전화교환설비','영상감시설비(CCTV)']],
   ['장애관리',['실시간 장애','장애이력·조치','장애 예외설정','장애유형 관리']],
   ['성능관리',['성능관리','연동주기 관리','임계치 관리','Raw 데이터 관리']],
   ['보고서',['장애·성능 보고서']],
-  ['운영관리',['사용자 계정 설정','권한 관리','계정 신청 현황','알림·SMS 설정','작업로그 조회']],
+  ['운영관리',['사용자 계정 설정','권한 관리','계정 신청 현황','작업로그 조회']],
   ['설정',['공통코드·UI 설정']]
 );
+const REMOVED_MENU_NAMES=new Set(['역사·선로 현황','CCTV 영상관리','알림·SMS 설정']);
+const REMOVED_SCREEN_KEYS=new Set(['route','video','notify']);
 Object.keys(MENU_KEY).forEach(key=>delete MENU_KEY[key]);
 Object.entries(S).forEach(([key,value])=>MENU_KEY[value.menu]=key);
 
@@ -244,12 +247,25 @@ function headerDateTime(){
   return `${date} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 }
 
-function modernSidebar(active){return `<aside class="sidebar"><div class="brand"><div class="logo">AREX</div><div class="brand-copy"><b>AREX TNMS</b></div></div><div class="nav">${NAV.map(([group,items])=>`${group?`<div class="nav-group">${group}</div>`:''}${items.map(name=>{const key=MENU_KEY[name]||'';const allowed=hasPermission(key,'listAuthrtYn');return `<div class="nav-item ${name===active?'active':''} ${allowed?'':'denied'}" data-key="${key}" title="${allowed?'':'접근 권한 없음'}"><i class="dot">${navIcon(key)}</i>${name}</div>`}).join('')}`).join('')}</div><div class="side-footer"><button class="side-collapse" type="button">← 메뉴 접기</button></div></aside>`}
+function modernSidebar(active){
+  const itemMarkup=name=>{
+    const key=MENU_KEY[name]||'';
+    const allowed=hasPermission(key,'listAuthrtYn');
+    return `<div class="nav-item nav-child ${name===active?'active':''} ${allowed?'':'denied'}" data-key="${key}" title="${allowed?'':'접근 권한 없음'}"><i class="dot">${navIcon(key)}</i><span>${name}</span></div>`;
+  };
+  const navigation=NAV.map(([group,items],index)=>{
+    if(!group)return items.map(name=>itemMarkup(name).replace('nav-child','nav-root-item')).join('');
+    const opened=items.includes(active);
+    const groupIconKey={설비관리:'systems',장애관리:'faults',성능관리:'performance',보고서:'reports',운영관리:'users',설정:'settings'}[group]||'settings';
+    return `<section class="nav-section ${opened?'open':''}" data-nav-section><button class="nav-parent" type="button" aria-expanded="${opened}" aria-controls="nav-group-${index}"><i class="dot">${navIcon(groupIconKey)}</i><span>${group}</span><b class="nav-chevron" aria-hidden="true"></b></button><div class="nav-children" id="nav-group-${index}">${items.map(itemMarkup).join('')}</div></section>`;
+  }).join('');
+  return `<aside class="sidebar"><div class="brand"><div class="logo">AREX</div><div class="brand-copy"><b>AREX TNMS</b></div></div><div class="nav">${navigation}</div><div class="side-footer"><button class="side-collapse" type="button">← 메뉴 접기</button></div></aside>`;
+}
 
 function modernLayout(key,body,actions=''){
   const s=S[key],facility=['systems','equipment','switch','cctv','scada'].includes(key),dashboardPage=key==='dashboard';
   const heading=dashboardPage||facility?'':`<div class="heading"><div><h1>${s.title}</h1><p>${s.desc||''}</p></div><div class="actions">${actions}</div></div>`;
-  return `<div class="app">${modernSidebar(s.menu)}<main class="main"><header class="topbar"><div class="page-title">${s.title}</div><div class="top-right"><span class="header-icon" title="알림"><svg viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z"></path><path d="M10 20h4"></path></svg><em>12</em></span><div class="user"><b>${escapeHtml(CURRENT_USER.userNm||CURRENT_USER.userId||'운영자')}</b></div><span class="header-divider"></span><span class="header-clock">${headerDateTime()}</span><span class="fullscreen-icon" onclick="toggleFullscreen()" title="전체화면"></span><a class="logout" href="${CONTEXT_PATH}/login/logout.do" title="로그아웃">로그아웃</a></div></header><section class="content">${heading}${facility&&actions?`<div class="actions" style="margin-bottom:10px">${actions}</div>`:''}${body}</section></main></div>`;
+  return `<div class="app">${modernSidebar(s.menu)}<main class="main"><header class="topbar"><div class="page-title">${s.title}</div><div class="top-right"><span class="header-icon" title="알림"><svg viewBox="0 0 24 24"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z"></path><path d="M10 20h4"></path></svg><em>12</em></span><div class="user"><b>${escapeHtml(CURRENT_USER.userNm||CURRENT_USER.userId||'운영자')}</b></div><span class="header-divider"></span><span class="header-clock">${headerDateTime()}</span><span class="fullscreen-icon" onclick="toggleFullscreen()" title="전체화면"></span><a class="logout" href="${CONTEXT_PATH}/login/logout.do" title="로그아웃">로그아웃</a></div></header><section class="content ${dashboardPage?'dashboard-content':''}">${heading}${facility&&actions?`<div class="actions" style="margin-bottom:10px">${actions}</div>`:''}${body}</section></main></div>`;
 }
 function toggleFullscreen(){if(!document.fullscreenElement){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}else{document.exitFullscreen&&document.exitFullscreen()}}
 
@@ -261,10 +277,24 @@ function dashboardOne(){return `<section class="dashboard-slide active" data-sli
 
 function dashboardSystemCards(){return [['△','CCTV'],['□','교환기'],['▥','SCADA'],['▣','행선안내'],['△','전송']].map(x=>`<div class="dash-system-card"><span class="sys-symbol">${x[0]}</span><span><b>${x[1]}</b><strong>000</strong></span><small>긴급 00</small></div>`).join('')}
 function dashboardTwo(){return `<section class="dashboard-slide" data-slide="1"><div class="dash-system-cards">${dashboardSystemCards()}</div><div class="dash-panel map-dashboard"><div class="map-dashboard-head"><h3>공항철도 노선 · 역사 현황 지도</h3><div class="circle-legend"><span><i></i>정상</span><span><i class="orange"></i>주의</span><span><i class="red"></i>장애</span><span><i class="gray"></i>통신 단절</span></div></div><div class="map-board" role="img" aria-label="공항철도 노선과 역사 상태 지도"></div></div><div class="dash-bottom"><div class="dash-mini-chart"><h4>시간대별 발생 분포 (전체)</h4><div class="heat-grid">${Array.from({length:32},(_,i)=>`<i style="opacity:${.45+(i%5)*.12}"></i>`).join('')}</div></div><div class="dash-mini-chart mini-donut-row"><div><h4>장애 유형 분포</h4><div class="mini-donut"></div></div><div class="cause-ranks"><b>주요 장애 원인 TOP 3</b><div><span>1. 장비 성능 저하</span><i style="width:70px"></i><b>6건</b></div><div><span>2. 전원 불안정</span><i style="width:50px"></i><b>4건</b></div><div><span>3. 네트워크 지연</span><i style="width:35px"></i><b>3건</b></div></div><div class="cause-ranks"><b>유형별 현황</b><div><span>ATS 6건</span><i style="width:65px"></i><b>37%</b></div><div><span>Network 4건</span><i style="width:45px"></i><b>25%</b></div><div><span>설비 3건</span><i style="width:30px"></i><b>18%</b></div></div></div><div class="dash-mini-chart"><h4>반복 고장 상위 역사</h4><div class="cause-ranks"><div><span>TOP 1　계양</span><b></b><strong>5건</strong></div><div><span>TOP 2　김포공항</span><b></b><strong>3건</strong></div><div><span>TOP 3　인천공항T1</span><b></b><strong>2건</strong></div></div></div></div></section>`}
-function modernDashboard(){return `<iframe id="plannerDashboardFrame" class="planner-dashboard-frame" src="${CONTEXT_PATH}/planner/dashboard-map/index.html" title="TNMS 통합 대시보드"></iframe>`}
+function dashboardAsset(path){return `${CONTEXT_PATH}${path}?v=${DASHBOARD_ASSET_VERSION}`}
+function prepareDashboardFrame(frame){
+  try{
+    const doc=frame.contentDocument||(frame.contentWindow&&frame.contentWindow.document);
+    if(!doc||!doc.body)return;
+    doc.body.classList.add('embedded-dashboard');
+    if(!doc.getElementById('tnms-embed-guard')){
+      const guard=doc.createElement('style');
+      guard.id='tnms-embed-guard';
+      guard.textContent='html,body{width:100%;height:100%;min-height:0}body>.app-shell{height:100%;min-height:0;padding:0!important}body .sidebar,body .topbar{display:none!important}';
+      doc.head.appendChild(guard);
+    }
+  }catch(e){console.warn('대시보드 본문 모드 적용 실패',e)}
+}
+function modernDashboard(){return modernLayout('dashboard',`<div class="dashboard-embed-shell"><iframe id="plannerDashboardFrame" class="planner-dashboard-frame" src="${dashboardAsset('/css/tnms/planner-dashboard-map/index.html')}" onload="prepareDashboardFrame(this)" title="TNMS 통합 대시보드"></iframe></div>`)}
 function setDashboardSlide(index){
   const frame=document.getElementById('plannerDashboardFrame');
-  if(frame)frame.src=CONTEXT_PATH+(index===0?'/planner/dashboard-map/index.html':'/planner/dashboard-system/index.html');
+  if(frame)frame.src=dashboardAsset(index===0?'/css/tnms/planner-dashboard-map/index.html':'/css/tnms/planner-dashboard-system/index.html');
 }
 
 window.addEventListener('message',function(event){
@@ -300,8 +330,9 @@ cctv=()=>facilityScreen(cctvConfig);
 scada=()=>facilityScreen(scadaConfig);
 
 function enhanceTables(scope=document){scope.querySelectorAll('table').forEach(table=>{const columns=table.querySelectorAll('tr:first-child > th').length;if(columns>=8)table.classList.add('table-wide-xl');else if(columns>=6)table.classList.add('table-wide');if(!table.parentElement.classList.contains('table-scroll')){const scroll=document.createElement('div');scroll.className='table-scroll';table.parentNode.insertBefore(scroll,table);scroll.appendChild(table)}})}
-const pages={dashboard,route:routeScreen,systems,equipment,switch:switchScreen,cctv,video,scada,cycle,threshold,performance:performanceScreen,raw,faults,faultHistory,exceptions,faultTypes,reports,users:usersScreen,auth,applications,notify,settings,logs};
+const pages={dashboard,systems,equipment,switch:switchScreen,cctv,scada,cycle,threshold,performance:performanceScreen,raw,faults,faultHistory,exceptions,faultTypes,reports,users:usersScreen,auth,applications,settings,logs};
 function render(key){
+  if(REMOVED_SCREEN_KEYS.has(key))key='dashboard';
   if(!hasPermission(key,'listAuthrtYn'))key=hasPermission('dashboard','listAuthrtYn')?'dashboard':Object.keys(PERMISSIONS).find(k=>hasPermission(k,'listAuthrtYn'))||'dashboard';
   document.getElementById('root').innerHTML=(pages[key]||dashboard)();
   enhanceTables();
@@ -315,6 +346,11 @@ function render(key){
   document.querySelectorAll('.nav-item[data-key]').forEach(el=>{
     el.onclick=()=>{const next=el.dataset.key;if(!next)return;if(!hasPermission(next,'listAuthrtYn')){showToast('해당 화면에 대한 접근 권한이 없습니다.',true);return}history.replaceState(null,'',`?screen=${next}`);render(next)};
   });
+  document.querySelectorAll('.nav-parent').forEach(button=>{
+    button.onclick=()=>{const section=button.closest('.nav-section'),open=!section.classList.contains('open');section.classList.toggle('open',open);button.setAttribute('aria-expanded',String(open))};
+  });
+  const collapseButton=document.querySelector('.side-collapse');
+  if(collapseButton)collapseButton.onclick=()=>document.querySelector('.app').classList.toggle('menu-collapsed');
   if(key==='users'){loadAuthOptions().then(loadUsers).catch(e=>showToast(e.message,true))}
   if(key==='auth')loadAuths();
 }
