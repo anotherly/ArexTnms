@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TNMS 공항철도 노선·역사 현황</title>
+  <link rel="stylesheet" href="style.css?v=20260904.1" />
+</head>
+<body class="embedded-dashboard">
+<div class="app-shell">
+  <main class="dashboard">
+    <section class="kpi-grid" aria-label="시스템 요약">
+      <article class="kpi-card kpi-red">
+        <span class="kpi-symbol kpi-symbol--cctv" aria-hidden="true"></span><div><b>CCTV</b><strong>000</strong></div><span class="urgent">긴급 00</span>
+      </article>
+      <article class="kpi-card kpi-green">
+        <span class="kpi-symbol kpi-symbol--pbx" aria-hidden="true"></span><div><b>교환기</b><strong>000</strong></div><span class="urgent">긴급 00</span>
+      </article>
+      <article class="kpi-card kpi-green">
+        <span class="kpi-symbol kpi-symbol--scada" aria-hidden="true"></span><div><b>SCADA</b><strong>000</strong></div><span class="urgent">긴급 00</span>
+      </article>
+      <article class="kpi-card kpi-purple">
+        <span class="kpi-symbol kpi-symbol--pids" aria-hidden="true"></span><div><b>행선안내</b><strong>000</strong></div><span class="urgent">긴급 00</span>
+      </article>
+      <article class="kpi-card kpi-orange">
+        <span class="kpi-symbol kpi-symbol--transmission" aria-hidden="true"></span><div><b>전송</b><strong>000</strong></div><span class="urgent">긴급 00</span>
+      </article>
+    </section>
+
+    <section class="map-card">
+      <header class="card-head">
+        <h2>공항철도 노선 · 역사 현황 지도</h2>
+        <div class="legend" aria-label="상태 범례">
+          <span><i class="dot green"></i>정상</span>
+          <span><i class="dot orange"></i>주의</span>
+          <span><i class="dot red"></i>장애</span>
+          <span><i class="dot gray"></i>통신 단절</span>
+        </div>
+      </header>
+
+      <div class="map-wrap" id="routeMap">
+        <img class="map-bg" src="assets/image0_2498_2828.png" alt="공항철도 역사 현황 배경 지도" />
+        <svg class="route-svg" viewBox="252.461 303.148 1606 582.666" preserveAspectRatio="none" aria-hidden="true">
+          <path class="route-halo" d="M410.664 726.066C422.24 704.458 441.534 681.305 470.088 678.218C499.415 679.762 527.969 692.11 555.752 698.284C590.48 697.512 623.665 677.447 639.872 654.294C656.079 630.37 651.448 606.446 677.687 588.696C707.785 573.261 756.405 604.903 795.764 597.185C828.949 567.087 862.134 534.674 900.721 520.011C944.711 490.685 986.385 477.565 1041.18 478.337C1074.36 478.337 1096.74 482.967 1123.76 484.511H1211.73C1272.7 486.826 1293.54 526.185 1344.47 561.685C1379.2 569.403 1428.59 565.544 1482.62 551.652C1518.89 550.109 1548.21 556.283 1576.77 567.087C1610.73 584.837 1619.99 610.305 1643.91 612.62C1668.61 614.164 1694.07 611.077 1718 611.077"/>
+          <path class="route-line" d="M410.664 726.066C422.24 704.458 441.534 681.305 470.088 678.218C499.415 679.762 527.969 692.11 555.752 698.284C590.48 697.512 623.665 677.447 639.872 654.294C656.079 630.37 651.448 606.446 677.687 588.696C707.785 573.261 756.405 604.903 795.764 597.185C828.949 567.087 862.134 534.674 900.721 520.011C944.711 490.685 986.385 477.565 1041.18 478.337C1074.36 478.337 1096.74 482.967 1123.76 484.511H1211.73C1272.7 486.826 1293.54 526.185 1344.47 561.685C1379.2 569.403 1428.59 565.544 1482.62 551.652C1518.89 550.109 1548.21 556.283 1576.77 567.087C1610.73 584.837 1619.99 610.305 1643.91 612.62C1668.61 614.164 1694.07 611.077 1718 611.077"/>
+          <g class="route-nodes">
+            <circle class="route-node" data-node="인천공항2터미널" cx="410.669" cy="726.059" r="8.489"/>
+            <circle class="route-node" data-node="인천공항1터미널" cx="470.091" cy="678.216" r="8.489"/>
+            <circle class="route-node" data-node="공항화물청사" cx="555.755" cy="698.278" r="8.489"/>
+            <circle class="route-node" data-node="운서" cx="695.442" cy="587.145" r="8.489"/>
+            <circle class="route-node" data-node="영종" cx="795.770" cy="597.184" r="8.489"/>
+            <circle class="route-node" data-node="청라국제도시" cx="900.724" cy="520.005" r="8.489"/>
+            <circle class="route-node" data-node="검암" cx="1041.18" cy="478.333" r="8.489"/>
+            <circle class="route-node" data-node="계양" cx="1123.76" cy="484.505" r="8.489"/>
+            <circle class="gimpo-ring route-node" data-node="김포공항" cx="1170.07" cy="482.966" r="19"/>
+            <circle class="gimpo-core route-node" data-node="김포공항" cx="1170.07" cy="482.966" r="9"/>
+            <circle class="route-node" data-node="마곡나루" cx="1202.47" cy="484.505" r="8.489"/>
+            <circle class="route-node" data-node="디지털미디어시티" cx="1482.62" cy="551.645" r="8.489"/>
+            <circle class="route-node" data-node="홍대입구" cx="1576.77" cy="567.083" r="8.489"/>
+            <circle class="route-node" data-node="공덕" cx="1643.91" cy="612.614" r="8.489"/>
+            <circle class="route-node" data-node="서울역" cx="1718" cy="611.075" r="8.489"/>
+          </g>
+        </svg>
+
+        <!-- 역사명 + 노선 마커 모두 클릭 가능 -->
+        <button class="station station-select below" data-location="인천공항2터미널" type="button" style="--x:9.85%;--y:72.58%">인천공항2터미널</button>
+        <button class="station station-select above" data-location="인천공항1터미널" type="button" style="--x:13.55%;--y:64.37%">인천공항1터미널</button>
+        <button class="station station-select below" data-location="공항화물청사" type="button" style="--x:18.89%;--y:67.81%">공항화물청사</button>
+        <button class="station station-select above" data-location="운서" type="button" style="--x:27.58%;--y:48.74%">운서</button>
+        <button class="station station-select below" data-location="영종" type="button" style="--x:33.83%;--y:50.46%">영종</button>
+        <button class="station station-select above" data-location="청라국제도시" type="button" style="--x:40.37%;--y:37.22%">청라국제도시</button>
+        <button class="station station-select above" data-location="검암" type="button" style="--x:49.11%;--y:30.07%">검암</button>
+        <button class="station station-select below" data-location="계양" type="button" style="--x:54.25%;--y:31.13%">계양</button>
+        <button class="station station-select gimpo above" data-location="김포공항" type="button" style="--x:57.14%;--y:30.86%">김포공항</button>
+        <button class="station station-select below" data-location="마곡나루" type="button" style="--x:59.15%;--y:31.13%">마곡나루</button>
+        <button class="station station-select above" data-location="디지털미디어시티" type="button" style="--x:76.60%;--y:42.65%">디지털미디어시티</button>
+        <button class="station station-select below" data-location="홍대입구" type="button" style="--x:82.46%;--y:45.30%">홍대입구</button>
+        <button class="station station-select below" data-location="공덕" type="button" style="--x:86.64%;--y:53.11%">공덕</button>
+        <button class="station station-select above" data-location="서울역" type="button" style="--x:91.25%;--y:52.85%">서울역</button>
+
+        <!-- 노선 마커의 실제 클릭 영역 -->
+        <button class="node-hotspot" data-location="인천공항2터미널" type="button" style="--x:9.85%;--y:72.58%" aria-label="인천공항2터미널 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="인천공항1터미널" type="button" style="--x:13.55%;--y:64.37%" aria-label="인천공항1터미널 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="공항화물청사" type="button" style="--x:18.89%;--y:67.81%" aria-label="공항화물청사 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="운서" type="button" style="--x:27.58%;--y:48.74%" aria-label="운서 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="영종" type="button" style="--x:33.83%;--y:50.46%" aria-label="영종 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="청라국제도시" type="button" style="--x:40.37%;--y:37.22%" aria-label="청라국제도시 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="검암" type="button" style="--x:49.11%;--y:30.07%" aria-label="검암 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="계양" type="button" style="--x:54.25%;--y:31.13%" aria-label="계양 시스템 상태 보기"></button>
+        <button class="node-hotspot gimpo-hotspot" data-location="김포공항" type="button" style="--x:57.14%;--y:30.86%" aria-label="김포공항 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="마곡나루" type="button" style="--x:59.15%;--y:31.13%" aria-label="마곡나루 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="디지털미디어시티" type="button" style="--x:76.60%;--y:42.65%" aria-label="디지털미디어시티 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="홍대입구" type="button" style="--x:82.46%;--y:45.30%" aria-label="홍대입구 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="공덕" type="button" style="--x:86.64%;--y:53.11%" aria-label="공덕 시스템 상태 보기"></button>
+        <button class="node-hotspot" data-location="서울역" type="button" style="--x:91.25%;--y:52.85%" aria-label="서울역 시스템 상태 보기"></button>
+
+        <aside class="station-panel" id="detailPanel" aria-hidden="true">
+          <div class="station-panel-head">
+            <div><span class="big-status"></span><div><h3 id="detailTitle">김포공항역</h3><p id="detailSummary">전체 시스템 5 · 정상 3 · 주의 1 · 장애 1</p></div></div>
+            <button id="closePanel" class="close-panel" type="button" aria-label="상세 패널 닫기">×</button>
+          </div>
+          <div class="system-list">
+            <article class="system-row danger"><span class="system-ico">↔</span><div><b>전송설비</b><small>CPU 28% · MEM 42% · 21ms</small></div><em>장애</em></article>
+            <article class="system-row success"><span class="system-ico">▣</span><div><b>행선안내설비</b><small>표시기 18/18 · 장애 0건</small></div><em>정상</em></article>
+            <article class="system-row warn"><span class="system-ico">⌑</span><div><b>SCADA출입보안설비</b><small>출입문 1개 응답 지연</small></div><em>주의</em></article>
+            <article class="system-row danger"><span class="system-ico">Ⅱ</span><div><b>전화교환설비</b><small>교환기 1대 통신 단절</small></div><em>장애</em></article>
+            <article class="system-row success"><span class="system-ico">▣</span><div><b>영상감시설비</b><small>CCTV 42/42 · 녹화 정상</small></div><em>정상</em></article>
+          </div>
+        </aside>
+
+        <div class="watch-strip" aria-label="지도 외 감시 지점 7곳">
+          <strong>지도 외 감시 지점 7</strong>
+          <button class="watch-chip point-select" data-location="기지SS" type="button"><i class="dot green"></i>기지SS</button>
+          <button class="watch-chip point-select" data-location="차량기지" type="button"><i class="dot green"></i>차량기지</button>
+          <button class="watch-chip point-select" data-location="운서SSP" type="button"><i class="dot green"></i>운서SSP</button>
+          <button class="watch-chip point-select" data-location="SIG2" type="button"><i class="dot green"></i>SIG2</button>
+          <button class="watch-chip point-select" data-location="청라SSP" type="button"><i class="dot green"></i>청라SSP</button>
+          <button class="watch-chip point-select" data-location="통신통제실" type="button"><i class="dot green"></i>통신통제실</button>
+          <button class="watch-chip point-select warn-chip" data-location="계양SS" type="button"><i class="dot orange"></i>계양SS</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="analytics-grid">
+      <article class="analytics-card heatmap-card">
+        <h3>시간대별 발생 분포 (전체)</h3>
+        <div class="heatmap-wrap">
+          <div class="hm-labels"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span></div>
+          <div class="heatmap"><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l2"></i><i class="l1"></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l2"></i><i class="l1"></i></div>
+          <div class="hm-scale"><span>적음</span><b></b><span>많음</span></div>
+        </div>
+      </article>
+
+      <article class="analytics-card fault-card">
+        <div class="fault-left"><h3>장애 유형 분포 (전체)</h3><small>최근 30일</small><div class="donut"><b>총 16건</b></div></div>
+        <ul class="fault-legend"><li><i class="dot red"></i>ATS 6건 (37.5%)</li><li><i class="dot orange"></i>Network 4건 (25.0%)</li><li><i class="dot yellow"></i>설비 3건 (18.8%)</li><li><i class="dot green"></i>전원 2건 (12.5%)</li></ul>
+        <div class="cause-list"><h3>주요 장애 원인 TOP 3</h3><p><span>1. 장비 성능 저하</span><b style="--w:80%"></b><em>6건</em></p><p><span>2. 전원 불안정</span><b style="--w:55%"></b><em>4건</em></p><p><span>3. 네트워크 지연</span><b style="--w:38%"></b><em>3건</em></p></div>
+      </article>
+
+      <article class="analytics-card repeat-card"><h3>반복 고장 상위 역사 <small>최근 30일</small></h3><p><b>TOP 1</b><span class="blue">계양</span><strong>5건</strong></p><p><b>TOP 2</b><span>김포공항</span><strong>3건</strong></p><p><b>TOP 3</b><span>인천공항1터미널</span><strong>2건</strong></p></article>
+    </section>
+    <div class="page-dots" aria-label="대시보드 화면 전환"><button class="active" type="button" aria-label="첫 번째 대시보드"></button><button type="button" aria-label="두 번째 대시보드" onclick="parent.postMessage({source:'tnms-planner',type:'dashboard-slide',index:1},location.origin)"></button></div>
+  </main>
+</div>
+<script src="app.js?v=20260903.4"></script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TNMS - 시스템 → 역사 기준 조회</title>
+  <link rel="stylesheet" href="style.css?v=20260904.1">
+</head>
+<body class="embedded-dashboard">
+  <div class="app-shell" id="appShell">
+    <main class="dashboard">
+      <section class="kpi-grid" aria-label="시스템 요약">
+        <article class="kpi-card kpi-red"><span class="kpi-symbol kpi-symbol--cctv" aria-hidden="true"></span><div><b>CCTV</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-green"><span class="kpi-symbol kpi-symbol--pbx" aria-hidden="true"></span><div><b>교환기</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-green"><span class="kpi-symbol kpi-symbol--scada" aria-hidden="true"></span><div><b>SCADA</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-purple"><span class="kpi-symbol kpi-symbol--pids" aria-hidden="true"></span><div><b>행선안내</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-orange"><span class="kpi-symbol kpi-symbol--transmission" aria-hidden="true"></span><div><b>전송</b><strong>000</strong></div><em>긴급 00</em></article>
+      </section>
+
+      <section class="main-card">
+        <div class="lookup-panel">
+          <header class="title-row">
+            <h2>시스템 → 역사 기준 조회</h2>
+            <p>시스템을 선택하고 역사를 선택하면 해당 역사 장비를 확인할 수 있습니다</p>
+          </header>
+
+          <section class="system-step">
+            <div class="step-label"><span>1</span><strong>조회 시스템 선택</strong></div>
+            <div class="system-tabs" role="tablist" aria-label="조회 시스템">
+              <button type="button" role="tab" data-system="전송설비">전송설비</button>
+              <button type="button" role="tab" data-system="행선안내설비">행선안내설비</button>
+              <button type="button" role="tab" data-system="SCADA 출입보안설비">SCADA 출입보안설비</button>
+              <button type="button" role="tab" data-system="전화교환설비">전화교환설비</button>
+              <button type="button" role="tab" data-system="영상감시설비" class="active" aria-selected="true">영상감시설비</button>
+            </div>
+          </section>
+
+          <section class="station-section">
+            <div class="station-heading">
+              <div class="step-label"><span>2</span><strong>역사 선택</strong></div>
+              <div class="station-legend" aria-label="상태 범례">
+                <span><i class="dot green"></i>정상</span><span><i class="dot orange"></i>주의</span><span><i class="dot red"></i>장애</span><span><i class="dot gray"></i>통신 단절</span>
+              </div>
+            </div>
+            <div class="station-network" id="stationNetwork" aria-label="전체 역사 및 시스템 연결 상태"><div class="station-nodes" id="stationNodes"></div></div>
+          </section>
+        </div>
+
+        <aside class="station-detail" id="stationDetail" aria-live="polite">
+          <header class="detail-heading">
+            <button type="button" class="back-button" aria-label="기본 역사인 김포공항역 선택" title="김포공항역으로 돌아가기" id="clearStation">←</button>
+            <div><h2 id="detailStation">김포공항역</h2><p>최근 수집시간 2026-05-22 10:29:45</p></div>
+            <span class="status-chip danger">장애</span><span class="status-chip warning">주의</span>
+          </header>
+          <p class="detail-meta" id="detailMeta">선택 시스템　SCADA 출입보안설비　·　EMS ID : 16</p>
+          <h3>시스템 상태</h3>
+
+          <article class="detail-section config-card">
+            <h4 id="configTitle">SCADA 출입보안설비 구성정보</h4>
+            <dl>
+              <div><dt>장비명</dt><dd id="deviceName">SCADA 장비</dd></div>
+              <div><dt>역사</dt><dd id="stationName">김포공항</dd></div>
+              <div><dt>장비 IP / 종류</dt><dd id="deviceType">연동 수신값 표시</dd></div>
+            </dl>
+          </article>
+
+          <article class="detail-section performance-card">
+            <h4>성능 정보</h4>
+            <div class="meter-row"><strong>CPU 사용률</strong><span class="meter"><i style="--value:38%"></i></span><small>수신값</small></div>
+            <div class="meter-row"><strong>MEMORY 사용률</strong><span class="meter"><i style="--value:52%"></i></span><small>수신값</small></div>
+            <p>※ PERF-SEND: 접속 5분 후부터 5분 간격</p>
+          </article>
+
+          <article class="detail-section event-card">
+            <h4>현재 장애 / 이벤트</h4>
+            <div class="event-line"><i class="dot red" id="eventDot1"></i><div><strong id="eventPrimary">컨트롤러 통신 장애</strong><small id="eventMeta">장애발생일시 · 장애등급 · 장애시간 · 설명</small></div></div>
+            <div class="event-line"><i class="dot orange"></i><div><strong id="eventSecondary">이벤트 발생</strong><small>EVENT-SEND / EVENT-CURRENT 수신정보</small></div></div>
+          </article>
+
+          <h3 class="history-title">최근 장애 이력</h3>
+          <article class="detail-section history-card">
+            <dl>
+              <div><dt>장애종류</dt><dd id="history1">SCADA 장애 이력</dd></div>
+              <div><dt>발생/해제</dt><dd id="history2">EVENT-HISTORY 수신값</dd></div>
+              <div><dt>조치내역</dt><dd id="history3">EVENT-ACTION 수신값</dd></div>
+            </dl>
+          </article>
+          <button class="detail-button" type="button" id="detailButton">역 상세 페이지 보기</button>
+        </aside>
+      </section>
+
+      <section class="analytics-grid" aria-label="장애 분석 요약">
+        <article class="analytics-card heat-card">
+          <div class="analytics-head"><h3>시간대별 발생 분포 (전체)</h3><small>00~04　04~08　08~12　12~16　16~20　20~24</small></div>
+          <div class="heatmap-area"><span class="days">월<br>화<br>수<br>목<br>금</span><div class="heatmap">
+            <i></i><i class="l1"></i><i class="l2"></i><i class="l1"></i><i></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l2"></i><i></i>
+          </div></div>
+          <div class="heat-scale"><span>적음</span><b></b><span>많음</span></div>
+        </article>
+
+        <article class="analytics-card fault-card">
+          <div class="fault-title"><h3>장애 유형 분포 (전체)</h3><small>최근 30일</small></div>
+          <div class="donut"><strong>총 16건</strong></div>
+          <ul class="fault-legend"><li><i class="dot red"></i>ATS 6건 (37.5%)</li><li><i class="dot orange"></i>Network 4건 (25.0%)</li><li><i class="dot yellow"></i>설비 3건 (18.8%)</li><li><i class="dot green"></i>전원 2건 (12.5%)</li></ul>
+          <div class="cause-list"><h4>주요 장애 원인 TOP 3</h4><p><span>1. 장비 성능 저하</span><b style="--w:82%"></b><em>6건</em></p><p><span>2. 전원 불안정</span><b style="--w:62%"></b><em>4건</em></p><p><span>3. 네트워크 지연</span><b style="--w:45%"></b><em>3건</em></p></div>
+        </article>
+
+        <article class="analytics-card repeat-card">
+          <div class="analytics-head"><h3>반복 고장 상위 역사</h3><small>최근 30일</small></div>
+          <p><span>TOP 1</span><strong>계양</strong><b>5건</b></p><p><span>TOP 2</span><strong>김포공항</strong><b>3건</b></p><p><span>TOP 3</span><strong>인천공항1터미널</strong><b>2건</b></p>
+        </article>
+      </section>
+
+      <div class="page-dots" aria-label="대시보드 화면 전환"><button type="button" aria-label="첫 번째 대시보드" onclick="parent.postMessage({source:'tnms-planner',type:'dashboard-slide',index:0},location.origin)"></button><button class="active" type="button" aria-label="두 번째 대시보드"></button></div>
+    </main>
+  </div>
+
+  <dialog class="detail-modal" id="detailModal">
+    <button type="button" class="modal-close" id="modalClose" aria-label="닫기">×</button><h2 id="modalTitle">김포공항역 상세</h2><p id="modalBody">선택한 역사와 시스템의 상세 화면 연결 영역입니다.</p><button type="button" class="modal-ok" id="modalOk">확인</button>
+  </dialog>
+
+  <script src="app.js?v=20260903.6"></script>
+</body>
+</html>
