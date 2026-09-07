@@ -96,7 +96,7 @@
     });
 
     document.getElementById('signupBtn').addEventListener('click', function () {
-      errorMessage.textContent = '계정신청 기능은 발주처 협의 후 제공될 예정입니다.';
+      location.href = contextPath + '/login/account-application.do';
     });
 
     loginForm.addEventListener('submit', async function (event) {

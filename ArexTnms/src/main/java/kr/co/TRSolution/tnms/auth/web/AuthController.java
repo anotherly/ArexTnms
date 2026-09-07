@@ -30,6 +30,9 @@ public class AuthController extends BaseController {
     @Resource(name = "authService") private AuthService authService;
     @Resource(name = "auditService") private AuditService auditService;
 
+    @RequestMapping(value = "/auth/list.do", method = RequestMethod.GET)
+    public String authPage() { return "auth/list"; }
+
     @RequestMapping(value = {"/auth/list.ajax", "/auth/options.ajax"}, method = RequestMethod.GET)
     public ModelAndView list() {
         try { return success(authService.selectAuthList()); }

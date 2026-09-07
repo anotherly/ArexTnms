@@ -27,6 +27,12 @@ public class UserController extends BaseController {
     @Resource(name = "userService") private UserService userService;
     @Resource(name = "auditService") private AuditService auditService;
 
+    @RequestMapping(value = "/user/list.do", method = RequestMethod.GET)
+    public String userPage() { return "user/list"; }
+
+    @RequestMapping(value = "/user/applications.do", method = RequestMethod.GET)
+    public String applicationsPage() { return "user/applications"; }
+
     @RequestMapping(value = "/user/list.ajax", method = RequestMethod.GET)
     public ModelAndView list(@ModelAttribute UserVO searchVO) {
         try { return success(userService.selectUserList(searchVO)); }

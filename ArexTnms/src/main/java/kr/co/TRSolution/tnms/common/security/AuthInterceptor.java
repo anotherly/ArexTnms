@@ -41,10 +41,6 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
-        if ("/main/dashboard.do".equals(path)) {
-            String screen = request.getParameter("screen");
-            requirement = new Requirement(screen == null || screen.length() == 0 ? "dashboard" : screen, "LIST");
-        }
         if (requirement == null) return true;
         MenuAuthVO permission = permissionMap.get(requirement.screenKey);
         if (permission != null && permission.permits(requirement.action)) return true;
@@ -75,6 +71,30 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
     private static Map<String, Requirement> createRequirements() {
         Map<String, Requirement> map = new HashMap<String, Requirement>();
+        map.put("/main/dashboard.do", new Requirement("dashboard", "LIST"));
+        map.put("/facility/transmission.do", new Requirement("systems", "LIST"));
+        map.put("/facility/pids.do", new Requirement("equipment", "LIST"));
+        map.put("/facility/pbx.do", new Requirement("switch", "LIST"));
+        map.put("/facility/cctv.do", new Requirement("cctv", "LIST"));
+        map.put("/facility/scada.do", new Requirement("scada", "LIST"));
+        map.put("/performance/overview.do", new Requirement("performance", "LIST"));
+        map.put("/performance/cycle.do", new Requirement("cycle", "LIST"));
+        map.put("/performance/threshold.do", new Requirement("threshold", "LIST"));
+        map.put("/performance/raw.do", new Requirement("raw", "LIST"));
+        map.put("/fault/realtime.do", new Requirement("faults", "LIST"));
+        map.put("/fault/history.do", new Requirement("faultHistory", "LIST"));
+        map.put("/fault/exceptions.do", new Requirement("exceptions", "LIST"));
+        map.put("/fault/types.do", new Requirement("faultTypes", "LIST"));
+        map.put("/report/fault-performance.do", new Requirement("reports", "LIST"));
+        map.put("/user/list.do", new Requirement("users", "LIST"));
+        map.put("/auth/list.do", new Requirement("auth", "LIST"));
+        map.put("/user/applications.do", new Requirement("applications", "LIST"));
+        map.put("/user/applications/list.ajax", new Requirement("applications", "LIST"));
+        map.put("/user/applications/detail.ajax", new Requirement("applications", "DTL"));
+        map.put("/user/applications/approve.ajax", new Requirement("applications", "MDFCN"));
+        map.put("/user/applications/reject.ajax", new Requirement("applications", "MDFCN"));
+        map.put("/setting/common-ui.do", new Requirement("settings", "LIST"));
+        map.put("/audit/job-log.do", new Requirement("logs", "LIST"));
         map.put("/user/list.ajax", new Requirement("users", "LIST"));
         map.put("/user/detail.ajax", new Requirement("users", "DTL"));
         map.put("/user/idCheck.ajax", new Requirement("users", "REG"));
