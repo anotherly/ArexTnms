@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "역할별 화면 조회·등록·수정
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/auth/auth.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/auth/auth.js?v=20260910.1"></script>
 </body>
 </html>

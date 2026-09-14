@@ -60,46 +60,46 @@ public class UserAccountApplicationController extends BaseController {
     }
 
     @RequestMapping(value = "/user/applications/detail.ajax", method = RequestMethod.GET)
-    public ModelAndView detail(@RequestParam("aplySn") Long aplySn) {
+    public ModelAndView detail(@RequestParam("aplyNo") String aplyNo) {
         try {
-            return success(applicationService.selectApplication(aplySn));
+            return success(applicationService.selectApplication(aplyNo));
         } catch (Exception e) {
             return fail(message(e));
         }
     }
 
     @RequestMapping(value = "/user/applications/approve.ajax", method = RequestMethod.POST)
-    public ModelAndView approve(@RequestParam("aplySn") Long aplySn, HttpServletRequest request) {
+    public ModelAndView approve(@RequestParam("aplyNo") String aplyNo, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            UserAccountApplicationVO application = applicationService.selectApplication(aplySn);
-            applicationService.approve(aplySn, actor);
+            UserAccountApplicationVO application = applicationService.selectApplication(aplyNo);
+            applicationService.approve(aplyNo, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "계정 신청 현황", "MDFCN",
                     application.getAplyNo(), "계정 신청 승인", "SUCCESS");
             return success("계정 신청을 승인했습니다.", null);
         } catch (Exception e) {
-            logger.warn("계정 신청 승인 실패. aplySn=" + aplySn, e);
+            logger.warn("계정 신청 승인 실패. aplyNo=" + aplyNo, e);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "계정 신청 현황", "MDFCN",
-                    String.valueOf(aplySn), message(e), "FAIL");
+                    aplyNo, message(e), "FAIL");
             return fail(message(e));
         }
     }
 
     @RequestMapping(value = "/user/applications/reject.ajax", method = RequestMethod.POST)
-    public ModelAndView reject(@RequestParam("aplySn") Long aplySn,
+    public ModelAndView reject(@RequestParam("aplyNo") String aplyNo,
                                @RequestParam("rfslRsn") String rfslRsn,
                                HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            UserAccountApplicationVO application = applicationService.selectApplication(aplySn);
-            applicationService.reject(aplySn, rfslRsn, actor);
+            UserAccountApplicationVO application = applicationService.selectApplication(aplyNo);
+            applicationService.reject(aplyNo, rfslRsn, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "계정 신청 현황", "MDFCN",
                     application.getAplyNo(), "계정 신청 반려", "SUCCESS");
             return success("계정 신청을 반려했습니다.", null);
         } catch (Exception e) {
-            logger.warn("계정 신청 반려 실패. aplySn=" + aplySn, e);
+            logger.warn("계정 신청 반려 실패. aplyNo=" + aplyNo, e);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "계정 신청 현황", "MDFCN",
-                    String.valueOf(aplySn), message(e), "FAIL");
+                    aplyNo, message(e), "FAIL");
             return fail(message(e));
         }
     }

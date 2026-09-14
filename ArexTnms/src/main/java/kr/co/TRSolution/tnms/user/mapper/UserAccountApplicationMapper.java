@@ -10,9 +10,9 @@ public interface UserAccountApplicationMapper {
     int countUnavailableUserId(String userId);
     int insertAccountApplication(UserAccountApplicationVO application);
     List<UserAccountApplicationVO> selectApplicationList(UserAccountApplicationVO searchVO);
-    UserAccountApplicationVO selectApplication(Long aplySn);
-    UserAccountApplicationVO selectApplicationForUpdate(Long aplySn);
-    Long selectAuthrtSnByName(String authrtNm);
+    UserAccountApplicationVO selectApplication(String aplyNo);
+    UserAccountApplicationVO selectApplicationForUpdate(String aplyNo);
+    int countActiveAuthrt(String authrtCd);
     int approveApplication(UserAccountApplicationVO application);
     int rejectApplication(UserAccountApplicationVO application);
 }

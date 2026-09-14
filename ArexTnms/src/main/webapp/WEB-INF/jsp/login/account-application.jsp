@@ -69,8 +69,8 @@
           <span class="row-label">소속 <em>*</em></span>
           <div class="field-area">
             <div class="radio-group">
-              <label><input type="radio" name="userSeNm" value="내부" checked><span></span>내부</label>
-              <label><input type="radio" name="userSeNm" value="외부"><span></span>외부</label>
+              <label><input type="radio" name="userSeCd" value="INTERNAL" checked><span></span>내부</label>
+              <label><input type="radio" name="userSeCd" value="EXTERNAL"><span></span>외부</label>
             </div>
             <input id="affiliation" name="affiliation" type="text" maxlength="100" placeholder="소속을 입력해 주세요" required>
             <div class="affiliation-help">
@@ -124,6 +124,6 @@
   </main>
 
   <script>window.TNMS_CONTEXT_PATH = '<%=request.getContextPath()%>';</script>
-  <script src="<%=request.getContextPath()%>/js/tnms/pages/login/account-application.js?v=20260904.1"></script>
+  <script src="<%=request.getContextPath()%>/js/tnms/pages/login/account-application.js?v=20260910.1"></script>
 </body>
 </html>

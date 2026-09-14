@@ -23,7 +23,6 @@ public class AuditServiceImpl implements AuditService {
                        String target, String message, String result) {
         AuditVO audit = new AuditVO();
         if (user != null) {
-            audit.setUserSn(user.getUserSn());
             audit.setUserId(user.getUserId());
         }
         audit.setUserIpAddr(ip);

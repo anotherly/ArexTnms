@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "TNMS 사용자 계정의 상태·소속
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/user/users.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/user/users.js?v=20260910.1"></script>
 </body>
 </html>

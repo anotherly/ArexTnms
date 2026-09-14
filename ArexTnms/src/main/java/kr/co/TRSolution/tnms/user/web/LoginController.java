@@ -49,16 +49,16 @@ public class LoginController extends BaseController {
                 userService.recordLoginFailure(null, ip, request.getHeader("User-Agent"), "등록되지 않은 아이디");
                 return fail("아이디 또는 비밀번호가 올바르지 않습니다.");
             }
-            if (!"Y".equals(user.getUseYn()) || "삭제".equals(user.getUserSttsNm()) ||
-                    "중지".equals(user.getUserSttsNm())) {
+            if (!"Y".equals(user.getUseYn()) || "DELETED".equals(user.getUserSttsCd()) ||
+                    "SUSPENDED".equals(user.getUserSttsCd())) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "미사용 계정");
                 return fail("사용할 수 없는 계정입니다. 관리자에게 문의해 주세요.");
             }
-            if ("잠금".equals(user.getUserSttsNm())) {
+            if ("LOCKED".equals(user.getUserSttsCd())) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "잠금 계정");
                 return fail("로그인 실패 5회로 잠긴 계정입니다. 관리자에게 문의해 주세요.");
             }
-            if (user.getAuthrtSn() == null) {
+            if (user.getAuthrtCd() == null) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "권한 미지정");
                 return fail("권한이 지정되지 않은 계정입니다. 관리자에게 문의해 주세요.");
             }
@@ -71,7 +71,7 @@ public class LoginController extends BaseController {
             user.setUserEnpswd(null);
             HttpSession session = request.getSession(true);
             request.changeSessionId();
-            Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(user.getAuthrtSn());
+            Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(user.getAuthrtCd());
             session.setAttribute("loginUser", user);
             session.setAttribute("menuAuthMap", permissionMap);
             session.setAttribute("csrfToken", UUID.randomUUID().toString());

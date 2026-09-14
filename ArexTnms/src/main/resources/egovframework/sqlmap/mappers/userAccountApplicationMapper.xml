@@ -2,109 +2,87 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="kr.co.TRSolution.tnms.user.mapper.UserAccountApplicationMapper">
     <resultMap id="applicationMap" type="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
-        <id property="aplySn" column="APLY_SN"/>
-        <result property="aplyNo" column="APLY_NO"/>
+        <id property="aplyNo" column="APLY_NO"/>
         <result property="userId" column="USER_ID"/>
         <result property="userNm" column="USER_NM"/>
         <result property="userEnpswd" column="USER_ENPSWD"/>
-        <result property="userSeNm" column="USER_SE_NM"/>
+        <result property="userSeCd" column="USER_SE_CD"/>
         <result property="ogdpBzentyNm" column="OGDP_BZENTY_NM"/>
         <result property="deptNm" column="DEPT_NM"/>
         <result property="mobileNo" column="MBL_TELNO"/>
         <result property="telno" column="TELNO"/>
         <result property="emlAddr" column="EML_ADDR"/>
+        <result property="dmndAuthrtCd" column="DMND_AUTHRT_CD"/>
         <result property="dmndAuthrtNm" column="DMND_AUTHRT_NM"/>
         <result property="aplyRsn" column="APLY_RSN"/>
         <result property="aplyDt" column="APLY_DT"/>
-        <result property="aplySttsNm" column="APLY_STTS_NM"/>
-        <result property="aprvUserSn" column="APRV_USER_SN"/>
+        <result property="aplySttsCd" column="APLY_STTS_CD"/>
+        <result property="aprvUserId" column="APRV_USER_ID"/>
         <result property="aprvDt" column="APRV_DT"/>
         <result property="rfslRsn" column="RFSL_RSN"/>
     </resultMap>
 
-    <sql id="applicationColumns">
-        APLY_SN, APLY_NO, USER_ID, USER_NM, USER_ENPSWD, USER_SE_NM,
-        OGDP_BZENTY_NM, DEPT_NM, MBL_TELNO, TELNO, EML_ADDR, DMND_AUTHRT_NM,
-        APLY_RSN, APLY_DT, APLY_STTS_NM, APRV_USER_SN, APRV_DT, RFSL_RSN
+    <sql id="applicationSelect">
+        SELECT U.APLY_NO, U.USER_ID, U.USER_NM, U.USER_ENPSWD, U.USER_SE_CD,
+               U.OGDP_BZENTY_NM, U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR,
+               U.DMND_AUTHRT_CD, A.AUTHRT_NM AS DMND_AUTHRT_NM,
+               U.APLY_RSN, U.APLY_DT, U.APLY_STTS_CD, U.APRV_USER_ID, U.APRV_DT, U.RFSL_RSN
+          FROM user_acnt_aply_info U
+          LEFT JOIN authrt_info A ON A.AUTHRT_CD = U.DMND_AUTHRT_CD
     </sql>
 
     <select id="countUnavailableUserId" parameterType="string" resultType="int">
-        SELECT
-            (SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter})
-          + (SELECT COUNT(*)
-               FROM user_acnt_aply_info
-              WHERE USER_ID = #{_parameter}
-                AND APLY_STTS_NM IN ('승인대기', '승인완료'))
+        SELECT (SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter})
+             + (SELECT COUNT(*) FROM user_acnt_aply_info
+                 WHERE USER_ID = #{_parameter} AND APLY_STTS_CD IN ('WAITING', 'APPROVED'))
     </select>
 
-    <insert id="insertAccountApplication"
-            parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO"
-            useGeneratedKeys="true" keyProperty="aplySn" keyColumn="APLY_SN">
+    <insert id="insertAccountApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
         INSERT INTO user_acnt_aply_info
-        (APLY_NO, USER_ID, USER_NM, USER_ENPSWD, USER_SE_NM, OGDP_BZENTY_NM, DEPT_NM,
-         MBL_TELNO, TELNO, EML_ADDR, DMND_AUTHRT_NM, APLY_RSN, APLY_DT, APLY_STTS_NM)
+        (APLY_NO, USER_ID, USER_NM, USER_ENPSWD, USER_SE_CD, OGDP_BZENTY_NM, DEPT_NM,
+         MBL_TELNO, TELNO, EML_ADDR, DMND_AUTHRT_CD, APLY_RSN, APLY_DT, APLY_STTS_CD)
         VALUES
-        (#{aplyNo}, #{userId}, #{userNm}, #{userEnpswd}, #{userSeNm}, #{ogdpBzentyNm}, #{deptNm},
-         #{mobileNo}, #{telno}, #{emlAddr}, #{dmndAuthrtNm}, #{aplyRsn}, NOW(), #{aplySttsNm})
+        (#{aplyNo}, #{userId}, #{userNm}, #{userEnpswd}, #{userSeCd}, #{ogdpBzentyNm}, #{deptNm},
+         #{mobileNo}, #{telno}, #{emlAddr}, #{dmndAuthrtCd}, #{aplyRsn}, NOW(), #{aplySttsCd})
     </insert>
 
-    <select id="selectApplicationList"
-            parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO"
-            resultMap="applicationMap">
-        SELECT <include refid="applicationColumns"/>
-          FROM user_acnt_aply_info
+    <select id="selectApplicationList" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
          WHERE 1 = 1
-        <if test="aplySttsNm != null and aplySttsNm != ''">
-           AND APLY_STTS_NM = #{aplySttsNm}
-        </if>
+        <if test="aplySttsCd != null and aplySttsCd != ''">AND U.APLY_STTS_CD = #{aplySttsCd}</if>
         <if test="searchKeyword != null and searchKeyword != ''">
-           AND (
-                USER_ID LIKE CONCAT('%', #{searchKeyword}, '%')
-             OR USER_NM LIKE CONCAT('%', #{searchKeyword}, '%')
-             OR OGDP_BZENTY_NM LIKE CONCAT('%', #{searchKeyword}, '%')
-             OR DEPT_NM LIKE CONCAT('%', #{searchKeyword}, '%')
-           )
+           AND (U.USER_ID LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.USER_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.OGDP_BZENTY_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.DEPT_NM LIKE CONCAT('%', #{searchKeyword}, '%'))
         </if>
-         ORDER BY APLY_DT DESC, APLY_SN DESC
+         ORDER BY U.APLY_DT DESC, U.APLY_NO DESC
     </select>
 
-    <select id="selectApplication" parameterType="long" resultMap="applicationMap">
-        SELECT <include refid="applicationColumns"/>
-          FROM user_acnt_aply_info
-         WHERE APLY_SN = #{_parameter}
+    <select id="selectApplication" parameterType="string" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
+         WHERE U.APLY_NO = #{_parameter}
     </select>
 
-    <select id="selectApplicationForUpdate" parameterType="long" resultMap="applicationMap">
-        SELECT <include refid="applicationColumns"/>
-          FROM user_acnt_aply_info
-         WHERE APLY_SN = #{_parameter}
+    <select id="selectApplicationForUpdate" parameterType="string" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
+         WHERE U.APLY_NO = #{_parameter}
          FOR UPDATE
     </select>
 
-    <select id="selectAuthrtSnByName" parameterType="string" resultType="long">
-        SELECT AUTHRT_SN
-          FROM authrt_info
-         WHERE AUTHRT_NM = #{_parameter}
-           AND USE_YN = 'Y'
-           AND AUTHRT_STTS_NM = '사용'
-         LIMIT 1
+    <select id="countActiveAuthrt" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM authrt_info WHERE AUTHRT_CD = #{_parameter} AND USE_YN = 'Y'
     </select>
 
     <update id="approveApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
         UPDATE user_acnt_aply_info
-           SET APLY_STTS_NM = '승인완료',
-               APRV_USER_SN = #{aprvUserSn},
-               APRV_DT = NOW(),
-               RFSL_RSN = NULL
-         WHERE APLY_SN = #{aplySn}
-           AND APLY_STTS_NM = '승인대기'
+           SET APLY_STTS_CD = 'APPROVED', APRV_USER_ID = #{aprvUserId}, APRV_DT = NOW(), RFSL_RSN = NULL
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
     </update>
 
     <update id="rejectApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
         UPDATE user_acnt_aply_info
-           SET APLY_STTS_NM = '반려',
-               RFSL_RSN = #{rfslRsn}
-         WHERE APLY_SN = #{aplySn}
-           AND APLY_STTS_NM = '승인대기'
+           SET APLY_STTS_CD = 'REJECTED', RFSL_RSN = #{rfslRsn}
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
     </update>
 </mapper>

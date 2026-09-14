@@ -40,8 +40,8 @@ public class AuthController extends BaseController {
     }
 
     @RequestMapping(value = "/auth/detail.ajax", method = RequestMethod.GET)
-    public ModelAndView detail(@RequestParam("authrtSn") Long authrtSn) {
-        try { return success(authService.selectAuth(authrtSn)); }
+    public ModelAndView detail(@RequestParam("authrtCd") String authrtCd) {
+        try { return success(authService.selectAuth(authrtCd)); }
         catch (Exception e) { return fail(message(e)); }
     }
 
@@ -49,9 +49,9 @@ public class AuthController extends BaseController {
     public ModelAndView insert(@ModelAttribute AuthVO authVO, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            AuthVO created = authService.createAuth(authVO, actor.getUserSn());
+            AuthVO created = authService.createAuth(authVO, actor.getUserId());
             auditService.record(actor, ClientIpUtil.getClientIp(request), "권한 관리", "REG",
-                    String.valueOf(created.getAuthrtSn()), "권한 등록", "SUCCESS");
+                    created.getAuthrtCd(), "권한 등록", "SUCCESS");
             return success("권한을 등록했습니다.", created);
         } catch (Exception e) { logger.warn("권한 등록 실패", e); return fail(message(e)); }
     }
@@ -60,33 +60,32 @@ public class AuthController extends BaseController {
     public ModelAndView update(@ModelAttribute AuthVO authVO, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            authService.updateAuth(authVO, actor.getUserSn());
+            authService.updateAuth(authVO, actor.getUserId());
             auditService.record(actor, ClientIpUtil.getClientIp(request), "권한 관리", "MDFCN",
-                    String.valueOf(authVO.getAuthrtSn()), "권한 정보 수정", "SUCCESS");
+                    authVO.getAuthrtCd(), "권한 정보 수정", "SUCCESS");
             return success("권한 정보를 수정했습니다.", null);
         } catch (Exception e) { return fail(message(e)); }
     }
 
     @RequestMapping(value = "/auth/delete.ajax", method = RequestMethod.POST)
-    public ModelAndView delete(@RequestParam("authrtSn") Long authrtSn, HttpServletRequest request) {
+    public ModelAndView delete(@RequestParam("authrtCd") String authrtCd, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            authService.deleteAuth(authrtSn);
+            authService.deleteAuth(authrtCd, actor.getUserId());
             auditService.record(actor, ClientIpUtil.getClientIp(request), "권한 관리", "DEL",
-                    String.valueOf(authrtSn), "권한 삭제", "SUCCESS");
+                    authrtCd, "권한 삭제", "SUCCESS");
             return success("권한을 삭제했습니다.", null);
         } catch (Exception e) { return fail(message(e)); }
     }
 
-    @RequestMapping(value = "/auth/savePermissions.ajax", method = RequestMethod.POST,
-                    consumes = "application/json")
+    @RequestMapping(value = "/auth/savePermissions.ajax", method = RequestMethod.POST, consumes = "application/json")
     public ModelAndView savePermissions(@RequestBody AuthVO requestVO, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            authService.saveMenuPermissions(requestVO.getAuthrtSn(), requestVO.getMenuAuthList());
+            authService.saveMenuPermissions(requestVO.getAuthrtCd(), requestVO.getMenuAuthList());
             auditService.record(actor, ClientIpUtil.getClientIp(request), "권한 관리", "MDFCN",
-                    String.valueOf(requestVO.getAuthrtSn()), "메뉴·기능 권한 저장", "SUCCESS");
-            refreshOwnPermissions(request, actor, requestVO.getAuthrtSn());
+                    requestVO.getAuthrtCd(), "메뉴·기능 권한 저장", "SUCCESS");
+            refreshOwnPermissions(request, actor, requestVO.getAuthrtCd());
             return success("메뉴·기능 권한을 저장했습니다.", null);
         } catch (Exception e) { return fail(message(e)); }
     }
@@ -95,7 +94,7 @@ public class AuthController extends BaseController {
     public ModelAndView myPermissions(HttpServletRequest request) {
         try {
             UserVO user = loginUser(request);
-            Map<String, MenuAuthVO> permissions = authService.selectPermissionMap(user.getAuthrtSn());
+            Map<String, MenuAuthVO> permissions = authService.selectPermissionMap(user.getAuthrtCd());
             request.getSession().setAttribute("menuAuthMap", permissions);
             Map<String, Object> result = new HashMap<String, Object>();
             result.put("user", user);
@@ -108,9 +107,9 @@ public class AuthController extends BaseController {
         }
     }
 
-    private void refreshOwnPermissions(HttpServletRequest request, UserVO actor, Long changedAuthrtSn) {
-        if (actor.getAuthrtSn().equals(changedAuthrtSn)) {
-            request.getSession().setAttribute("menuAuthMap", authService.selectPermissionMap(changedAuthrtSn));
+    private void refreshOwnPermissions(HttpServletRequest request, UserVO actor, String changedAuthrtCd) {
+        if (actor.getAuthrtCd() != null && actor.getAuthrtCd().equals(changedAuthrtCd)) {
+            request.getSession().setAttribute("menuAuthMap", authService.selectPermissionMap(changedAuthrtCd));
         }
     }
 

@@ -36,7 +36,7 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
             }
         }
 
-        Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(loginUser.getAuthrtSn());
+        Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(loginUser.getAuthrtCd());
         session.setAttribute("menuAuthMap", permissionMap);
 
         String path = request.getRequestURI().substring(request.getContextPath().length());

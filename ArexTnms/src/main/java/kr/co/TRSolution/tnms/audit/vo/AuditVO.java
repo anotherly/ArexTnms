@@ -4,7 +4,6 @@ import kr.co.TRSolution.tnms.common.BaseVO;
 
 public class AuditVO extends BaseVO {
     private static final long serialVersionUID = 1L;
-    private Long userSn;
     private String userId;
     private String userIpAddr;
     private String cntnMenuNm;
@@ -15,8 +14,6 @@ public class AuditVO extends BaseVO {
     private String chgAftrCn;
     private String jobRsltCd;
 
-    public Long getUserSn() { return userSn; }
-    public void setUserSn(Long userSn) { this.userSn = userSn; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getUserIpAddr() { return userIpAddr; }

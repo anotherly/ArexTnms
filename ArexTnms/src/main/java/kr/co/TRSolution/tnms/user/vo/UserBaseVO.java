@@ -13,8 +13,10 @@ public class UserBaseVO extends BaseVO {
     private String userEnpswd;
     private String password;
     private String passwordConfirm;
+    private String userSeCd;
     private String ogdpBzentyNm;
     private String deptNm;
+    private String mobileNo;
     private String telno;
     private String emlAddr;
 
@@ -28,10 +30,14 @@ public class UserBaseVO extends BaseVO {
     public void setPassword(String password) { this.password = password; }
     public String getPasswordConfirm() { return passwordConfirm; }
     public void setPasswordConfirm(String passwordConfirm) { this.passwordConfirm = passwordConfirm; }
+    public String getUserSeCd() { return userSeCd; }
+    public void setUserSeCd(String userSeCd) { this.userSeCd = userSeCd; }
     public String getOgdpBzentyNm() { return ogdpBzentyNm; }
     public void setOgdpBzentyNm(String ogdpBzentyNm) { this.ogdpBzentyNm = ogdpBzentyNm; }
     public String getDeptNm() { return deptNm; }
     public void setDeptNm(String deptNm) { this.deptNm = deptNm; }
+    public String getMobileNo() { return mobileNo; }
+    public void setMobileNo(String mobileNo) { this.mobileNo = mobileNo; }
     public String getTelno() { return telno; }
     public void setTelno(String telno) { this.telno = telno; }
     public String getEmlAddr() { return emlAddr; }

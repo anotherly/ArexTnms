@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "사용자 계정 사용 신청을 검�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/user/applications.js?v=20260904.2"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/user/applications.js?v=20260910.1"></script>
 </body>
 </html>
