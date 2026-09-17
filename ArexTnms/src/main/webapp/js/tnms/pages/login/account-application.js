@@ -40,7 +40,7 @@
       ['affiliation', value('affiliation').length > 0, '소속을 입력해 주세요.'],
       ['mobileNo', /^\d{10,11}$/.test(value('mobileNo')), '핸드폰번호는 하이픈 없이 숫자 10~11자로 입력해 주세요.'],
       ['telno', value('telno') === '' || /^\d{9,11}$/.test(value('telno')), '전화번호는 하이픈 없이 숫자 9~11자로 입력해 주세요.'],
-      ['emlAddr', /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value('emlAddr')), '이메일 주소 형식이 올바르지 않습니다.']
+      ['emlAddr', value('emlAddr') === '' || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value('emlAddr')), '이메일 주소 형식이 올바르지 않습니다.']
     ];
     let firstInvalid = null;
     checks.forEach(function (check) {

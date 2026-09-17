@@ -18,6 +18,6 @@ UPDATE menu_info SET MENU_URL_ADDR='/fault/types.do?screen=faultTypes' WHERE MEN
 UPDATE menu_info SET MENU_URL_ADDR='/report/fault-performance.do?screen=reports' WHERE MENU_SN=17;
 UPDATE menu_info SET MENU_URL_ADDR='/user/list.do?screen=users' WHERE MENU_SN=18;
 UPDATE menu_info SET MENU_URL_ADDR='/auth/list.do?screen=auth' WHERE MENU_SN=19;
-UPDATE menu_info SET MENU_URL_ADDR='/user/applications.do?screen=applications' WHERE MENU_SN=20;
+UPDATE menu_info SET USE_YN='N', MENU_EXPLN='계정관리 화면으로 통합' WHERE MENU_SN=20;
 UPDATE menu_info SET MENU_URL_ADDR='/setting/common-ui.do?screen=settings' WHERE MENU_SN=22;
 UPDATE menu_info SET MENU_URL_ADDR='/audit/job-log.do?screen=logs' WHERE MENU_SN=23;

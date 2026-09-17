@@ -87,9 +87,19 @@ public class UserAccountApplicationServiceImpl implements UserAccountApplication
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approve(String aplyNo, UserVO actor) {
+    public void approve(String aplyNo, String authrtCd, UserVO actor) {
         requireActor(actor);
         UserAccountApplicationVO application = getPendingApplicationForUpdate(aplyNo);
+        String selectedAuthrtCd = upper(trim(authrtCd));
+        if (selectedAuthrtCd != null && !selectedAuthrtCd.equals(application.getDmndAuthrtCd())) {
+            if (applicationMapper.countActiveAuthrt(selectedAuthrtCd) != 1) {
+                throw new IllegalArgumentException("선택한 권한 정보를 찾을 수 없습니다: " + selectedAuthrtCd);
+            }
+            application.setDmndAuthrtCd(selectedAuthrtCd);
+            if (applicationMapper.updateRequestedAuthrt(application) != 1) {
+                throw new IllegalStateException("승인 권한 변경에 실패했습니다.");
+            }
+        }
         if (application.getUserEnpswd() == null || application.getUserEnpswd().trim().length() == 0) {
             throw new IllegalStateException("신청 계정의 비밀번호 정보가 없어 승인할 수 없습니다.");
         }
@@ -159,7 +169,7 @@ public class UserAccountApplicationServiceImpl implements UserAccountApplication
         if (application.getAffiliation() == null || application.getAffiliation().length() > 100) throw new IllegalArgumentException("소속을 100자 이내로 입력해 주세요.");
         if (application.getMobileNo() == null || !MOBILE.matcher(application.getMobileNo()).matches()) throw new IllegalArgumentException("핸드폰번호는 하이픈 없이 숫자 10~11자로 입력해 주세요.");
         if (application.getTelno() != null && !TELEPHONE.matcher(application.getTelno()).matches()) throw new IllegalArgumentException("전화번호는 하이픈 없이 숫자 9~11자로 입력해 주세요.");
-        if (application.getEmlAddr() == null || application.getEmlAddr().length() > 320 || !EMAIL.matcher(application.getEmlAddr()).matches()) throw new IllegalArgumentException("이메일 주소 형식이 올바르지 않습니다.");
+        if (application.getEmlAddr() != null && (application.getEmlAddr().length() > 320 || !EMAIL.matcher(application.getEmlAddr()).matches())) throw new IllegalArgumentException("이메일 주소 형식이 올바르지 않습니다.");
     }
 
     private void clearPasswordHashes(List<UserAccountApplicationVO> list) {

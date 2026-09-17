@@ -2,7 +2,7 @@
 <%
 request.setAttribute("pageKey", "settings");
 request.setAttribute("pageTitle", "공통코드·UI 설정");
-request.setAttribute("pageDescription", "이벤트 등급 색상, 목록 행수와 공통코드를 관리합니다.");
+request.setAttribute("pageDescription", "이벤트 등급 색상, 역사 대표색 우선순위, 목록 행수와 공통코드를 관리합니다.");
 %>
 <!doctype html>
 <html lang="ko">
@@ -16,7 +16,7 @@ request.setAttribute("pageDescription", "이벤트 등급 색상, 목록 행수�
     <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
     <section class="content">
       <div class="heading">
-        <div><h1>공통코드·UI 설정</h1><p>이벤트 등급 색상, 목록 행수와 공통코드를 관리합니다.</p></div>
+        <div><h1>공통코드·UI 설정</h1><p>이벤트 등급 색상, 역사 대표색 우선순위, 목록 행수와 공통코드를 관리합니다.</p></div>
         <div class="actions page-actions" id="pageActions"></div>
       </div>
       <div id="pageBody"></div>
@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "이벤트 등급 색상, 목록 행수�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/setting/common-ui.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/setting/common-ui.js?v=20260917.1"></script>
 </body>
 </html>

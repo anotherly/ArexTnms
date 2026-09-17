@@ -22,7 +22,9 @@ function titleFor(name) {
 }
 
 function summaryFor(name) {
-  return '전체 시스템 5 · 정상 3 · 주의 1 · 장애 1';
+  const station = (window.TNMS_DASHBOARD_DATA && window.TNMS_DASHBOARD_DATA.stations || []).find(item => item.stnNm === name);
+  if (!station) return '전체 시스템 상태를 조회 중입니다.';
+  return `등록장비 ${station.totalNocs || 0} · ${dashboardPalette.NORMAL.label} ${station.normalNocs || 0} · ${dashboardPalette.CAUTION.label} ${station.cautionNocs || 0} · ${dashboardPalette.CRITICAL.label} ${station.criticalNocs || 0} · ${dashboardPalette.UNKNOWN.label} ${station.unknownNocs || 0}`;
 }
 
 function setPanelContent(name) {
@@ -74,6 +76,8 @@ function openLocation(name, control) {
   panel.classList.remove('open');
   updateAria(false);
   setPanelContent(name);
+  const station = (window.TNMS_DASHBOARD_DATA && window.TNMS_DASHBOARD_DATA.stations || []).find(item => item.stnNm === name);
+  if (station && window.parent !== window) window.parent.postMessage({source:'tnms-planner',type:'station-detail',stnCd:station.stnCd}, location.origin);
 
   // 재클릭 시에도 CSS animation을 처음부터 재생한다.
   void mapWrap.offsetWidth;
@@ -170,4 +174,108 @@ document.querySelectorAll('.nav-item').forEach(function(item){
     const label=(item.querySelector('span:last-child')||item).textContent.trim();
     parent.postMessage({source:'tnms-planner',type:'navigate',key:keyMap[label]||'dashboard'},location.origin);
   });
+});
+
+function dashboardStatusClass(code) {
+  if (code === 'CRITICAL') return 'danger';
+  if (code === 'CAUTION' || code === 'WARNING') return 'warn';
+  if (code === 'OFFLINE' || code === 'UNKNOWN' || code === 'NO_DATA') return 'off';
+  return 'success';
+}
+function normalizeStatusCode(code){
+  if (code === 'WARNING') return 'CAUTION';
+  if (code === 'OFFLINE' || code === 'NO_DATA') return 'UNKNOWN';
+  return code;
+}
+function applyStatusClass(control, statusCode, fixedMnls){
+  control.classList.remove('db-normal','db-warning','db-critical','db-offline','db-unknown','db-mnls');
+  if (fixedMnls) {
+    control.classList.add('db-mnls');
+    return;
+  }
+  const code = normalizeStatusCode(statusCode);
+  control.classList.add(code === 'CRITICAL' ? 'db-critical' : code === 'CAUTION' ? 'db-warning' : code === 'UNKNOWN' || code === 'NO_DATA' ? 'db-unknown' : 'db-normal');
+}
+const dashboardPalette={
+  NORMAL:{label:'정상',color:'#10A05D'},CAUTION:{label:'주의',color:'#FF9418'},
+  CRITICAL:{label:'장애',color:'#FF2B22'},UNKNOWN:{label:'통신단절',color:'#718096'}
+};
+function hexToRgba(hex,alpha){
+  const value=String(hex||'').replace('#','');
+  if(!/^[0-9a-f]{6}$/i.test(value))return `rgba(113,128,150,${alpha})`;
+  const n=parseInt(value,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+}
+function setStatusSoftColors(root){
+  [['normal','NORMAL'],['warning','CAUTION'],['critical','CRITICAL'],['unknown','UNKNOWN']].forEach(function(pair){
+    const color=dashboardPalette[pair[1]].color;
+    root.setProperty(`--${pair[0]}-color`,color);
+    root.setProperty(`--${pair[0]}-soft`,hexToRgba(color,.07));
+    root.setProperty(`--${pair[0]}-chip`,hexToRgba(color,.13));
+    root.setProperty(`--${pair[0]}-border`,hexToRgba(color,.32));
+  });
+}
+function applyDashboardPalette(items){
+  const hasCaution=(items||[]).some(item=>item.comCd==='CAUTION');
+  (items||[]).forEach(function(item){
+    if(item.comCd==='WARNING' && hasCaution)return;
+    const code=normalizeStatusCode(item.comCd);
+    if(!dashboardPalette[code])return;
+    if(/^#[0-9a-f]{6}$/i.test(item.ext1Cn||''))dashboardPalette[code].color=item.ext1Cn.toUpperCase();
+    if(item.comCdNm)dashboardPalette[code].label=item.comCdNm;
+  });
+  const root=document.documentElement.style;
+  root.setProperty('--green',dashboardPalette.NORMAL.color);
+  root.setProperty('--orange',dashboardPalette.CAUTION.color);
+  root.setProperty('--red',dashboardPalette.CRITICAL.color);
+  root.setProperty('--unknown',dashboardPalette.UNKNOWN.color);
+  setStatusSoftColors(root);
+  const legend=document.querySelector('.legend');
+  if(legend){
+    const ordered=(items||[])
+      .filter(x=>!(x.comCd==='WARNING' && hasCaution))
+      .map(x=>normalizeStatusCode(x.comCd))
+      .filter((code,index,list)=>dashboardPalette[code]&&list.indexOf(code)===index);
+    const codes=ordered.length?ordered:['CRITICAL','CAUTION','NORMAL','UNKNOWN'];
+    legend.innerHTML=codes.map(code=>`<span><i class="dot" style="background:${dashboardPalette[code].color}"></i>${dashboardPalette[code].label}</span>`).join('');
+  }
+}
+function applyDashboardData(data) {
+  window.TNMS_DASHBOARD_DATA = data || {systems:[],stations:[]};
+  applyDashboardPalette(window.TNMS_DASHBOARD_DATA.statusCodes);
+  (window.TNMS_DASHBOARD_DATA.systems || []).forEach(function(item){
+    const card=document.querySelector('[data-system-code="'+item.linkSysCd+'"]');
+    if (!card) return;
+    const total=card.querySelector('strong'), urgent=card.querySelector('.urgent');
+    if(total) total.textContent=String(item.totalNocs || 0).padStart(3,'0');
+    if(urgent) urgent.textContent='긴급 '+String(item.criticalNocs || 0).padStart(2,'0');
+  });
+  (window.TNMS_DASHBOARD_DATA.stations || []).forEach(function(item){
+    const controls=[...stationButtons,...watchButtons].filter(x=>x.dataset.location===item.stnNm);
+    controls.forEach(function(control){
+      const fixedMnls = item.mnlsStnYn === 'Y' && control.classList.contains('watch-chip');
+      applyStatusClass(control, item.sttsCd, fixedMnls);
+    });
+  });
+}
+function applyStationDetail(items) {
+  const rows=[...document.querySelectorAll('.system-list .system-row')];
+  const order=['EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'];
+  rows.forEach(function(row,index){
+    const item=(items||[]).find(x=>x.linkSysCd===order[index]);
+    if(!item)return;
+    row.classList.remove('danger','warn','success','off');
+    row.classList.add(dashboardStatusClass(item.sttsCd));
+    const small=row.querySelector('small'), em=row.querySelector('em');
+    if(small)small.textContent='등록 '+(item.totalNocs||0)+' · '+dashboardPalette.NORMAL.label+' '+(item.normalNocs||0)+' · '+dashboardPalette.CAUTION.label+' '+(item.cautionNocs||0)+' · '+dashboardPalette.CRITICAL.label+' '+(item.criticalNocs||0)+' · '+dashboardPalette.UNKNOWN.label+' '+(item.unknownNocs||0);
+    if(em){const code=normalizeStatusCode(item.sttsCd);em.textContent=(dashboardPalette[code]||dashboardPalette.NORMAL).label}
+  });
+}
+window.addEventListener('message',function(event){
+  if(event.origin!==location.origin||!event.data||event.data.source!=='tnms-shell')return;
+  if(event.data.type==='dashboard-state'){
+    document.body.classList.toggle('dashboard-expanded',event.data.mode==='expanded');
+    if(event.data.data)applyDashboardData(event.data.data);
+  }
+  if(event.data.type==='station-detail')applyStationDetail(event.data.data);
 });

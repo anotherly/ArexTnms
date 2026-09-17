@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TNMS - 시스템 → 역사 기준 조회</title>
-  <link rel="stylesheet" href="style.css?v=20260904.1">
+  <link rel="stylesheet" href="style.css?v=20260917.1">
 </head>
 <body class="embedded-dashboard">
   <div class="app-shell" id="appShell">
     <main class="dashboard">
       <section class="kpi-grid" aria-label="시스템 요약">
-        <article class="kpi-card kpi-red"><span class="kpi-symbol kpi-symbol--cctv" aria-hidden="true"></span><div><b>CCTV</b><strong>000</strong></div><em>긴급 00</em></article>
-        <article class="kpi-card kpi-green"><span class="kpi-symbol kpi-symbol--pbx" aria-hidden="true"></span><div><b>교환기</b><strong>000</strong></div><em>긴급 00</em></article>
-        <article class="kpi-card kpi-green"><span class="kpi-symbol kpi-symbol--scada" aria-hidden="true"></span><div><b>SCADA</b><strong>000</strong></div><em>긴급 00</em></article>
-        <article class="kpi-card kpi-purple"><span class="kpi-symbol kpi-symbol--pids" aria-hidden="true"></span><div><b>행선안내</b><strong>000</strong></div><em>긴급 00</em></article>
-        <article class="kpi-card kpi-orange"><span class="kpi-symbol kpi-symbol--transmission" aria-hidden="true"></span><div><b>전송</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-red" data-system-code="VMS"><span class="kpi-symbol kpi-symbol--cctv" aria-hidden="true"></span><div><b>CCTV</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-green" data-system-code="PBX"><span class="kpi-symbol kpi-symbol--pbx" aria-hidden="true"></span><div><b>교환기</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-green" data-system-code="SCADA_SEC"><span class="kpi-symbol kpi-symbol--scada" aria-hidden="true"></span><div><b>SCADA</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-purple" data-system-code="EMS_PIDS"><span class="kpi-symbol kpi-symbol--pids" aria-hidden="true"></span><div><b>행선안내</b><strong>000</strong></div><em>긴급 00</em></article>
+        <article class="kpi-card kpi-orange" data-system-code="EMS_TX"><span class="kpi-symbol kpi-symbol--transmission" aria-hidden="true"></span><div><b>전송</b><strong>000</strong></div><em>긴급 00</em></article>
       </section>
 
       <section class="main-card">
@@ -27,11 +27,11 @@
           <section class="system-step">
             <div class="step-label"><span>1</span><strong>조회 시스템 선택</strong></div>
             <div class="system-tabs" role="tablist" aria-label="조회 시스템">
-              <button type="button" role="tab" data-system="전송설비">전송설비</button>
-              <button type="button" role="tab" data-system="행선안내설비">행선안내설비</button>
-              <button type="button" role="tab" data-system="SCADA 출입보안설비">SCADA 출입보안설비</button>
-              <button type="button" role="tab" data-system="전화교환설비">전화교환설비</button>
-              <button type="button" role="tab" data-system="영상감시설비" class="active" aria-selected="true">영상감시설비</button>
+              <button type="button" role="tab" data-system="전송설비" data-system-code="EMS_TX">전송설비</button>
+              <button type="button" role="tab" data-system="행선안내설비" data-system-code="EMS_PIDS">행선안내설비</button>
+              <button type="button" role="tab" data-system="SCADA 출입보안설비" data-system-code="SCADA_SEC">SCADA 출입보안설비</button>
+              <button type="button" role="tab" data-system="전화교환설비" data-system-code="PBX">전화교환설비</button>
+              <button type="button" role="tab" data-system="영상감시설비" data-system-code="VMS" class="active" aria-selected="true">영상감시설비</button>
             </div>
           </section>
 
@@ -39,7 +39,7 @@
             <div class="station-heading">
               <div class="step-label"><span>2</span><strong>역사 선택</strong></div>
               <div class="station-legend" aria-label="상태 범례">
-                <span><i class="dot green"></i>정상</span><span><i class="dot orange"></i>주의</span><span><i class="dot red"></i>장애</span><span><i class="dot gray"></i>통신 단절</span>
+                <span><i class="dot green"></i>정상</span><span><i class="dot orange"></i>주의</span><span><i class="dot red"></i>장애</span><span><i class="dot unknown"></i>통신단절</span>
               </div>
             </div>
             <div class="station-network" id="stationNetwork" aria-label="전체 역사 및 시스템 연결 상태"><div class="station-nodes" id="stationNodes"></div></div>
@@ -49,8 +49,8 @@
         <aside class="station-detail" id="stationDetail" aria-live="polite">
           <header class="detail-heading">
             <button type="button" class="back-button" aria-label="기본 역사인 김포공항역 선택" title="김포공항역으로 돌아가기" id="clearStation">←</button>
-            <div><h2 id="detailStation">김포공항역</h2><p>최근 수집시간 2026-05-22 10:29:45</p></div>
-            <span class="status-chip danger">장애</span><span class="status-chip warning">주의</span>
+            <div><h2 id="detailStation">김포공항역</h2><p id="detailCollectedAt">최근 수집시간 -</p></div>
+            <span id="detailStatusChip" class="status-chip danger">장애</span>
           </header>
           <p class="detail-meta" id="detailMeta">선택 시스템　SCADA 출입보안설비　·　EMS ID : 16</p>
           <h3>시스템 상태</h3>
@@ -74,7 +74,7 @@
           <article class="detail-section event-card">
             <h4>현재 장애 / 이벤트</h4>
             <div class="event-line"><i class="dot red" id="eventDot1"></i><div><strong id="eventPrimary">컨트롤러 통신 장애</strong><small id="eventMeta">장애발생일시 · 장애등급 · 장애시간 · 설명</small></div></div>
-            <div class="event-line"><i class="dot orange"></i><div><strong id="eventSecondary">이벤트 발생</strong><small>EVENT-SEND / EVENT-CURRENT 수신정보</small></div></div>
+            <div class="event-line"><i class="dot" id="eventDot2"></i><div><strong id="eventSecondary">이벤트 발생</strong><small>EVENT-SEND / EVENT-CURRENT 수신정보</small></div></div>
           </article>
 
           <h3 class="history-title">최근 장애 이력</h3>
@@ -119,6 +119,6 @@
     <button type="button" class="modal-close" id="modalClose" aria-label="닫기">×</button><h2 id="modalTitle">김포공항역 상세</h2><p id="modalBody">선택한 역사와 시스템의 상세 화면 연결 영역입니다.</p><button type="button" class="modal-ok" id="modalOk">확인</button>
   </dialog>
 
-  <script src="app.js?v=20260903.6"></script>
+  <script src="app.js?v=20260917.2"></script>
 </body>
 </html>

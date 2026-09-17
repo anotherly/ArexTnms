@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 <%
 request.setAttribute("pageKey", "logs");
-request.setAttribute("pageTitle", "작업로그 조회");
+request.setAttribute("pageTitle", "운영관리 > 작업로그 조회");
 request.setAttribute("pageDescription", "사용자의 로그인 및 웹 화면 작업 이력을 추적합니다.");
 %>
 <!doctype html>
@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "사용자의 로그인 및 웹 화면 �
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/audit/job-log.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/audit/job-log.js?v=20260917.2"></script>
 </body>
 </html>

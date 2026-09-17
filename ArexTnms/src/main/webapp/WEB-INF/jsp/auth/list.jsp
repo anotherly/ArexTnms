@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 <%
 request.setAttribute("pageKey", "auth");
-request.setAttribute("pageTitle", "권한 관리");
+request.setAttribute("pageTitle", "설정 > 권한관리");
 request.setAttribute("pageDescription", "역할별 화면 조회·등록·수정·삭제·제어 권한을 설정합니다.");
 %>
 <!doctype html>
@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "역할별 화면 조회·등록·수정
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/auth/auth.js?v=20260910.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/auth/auth.js?v=20260917.2"></script>
 </body>
 </html>

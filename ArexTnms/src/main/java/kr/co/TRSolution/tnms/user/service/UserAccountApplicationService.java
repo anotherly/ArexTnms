@@ -9,6 +9,6 @@ public interface UserAccountApplicationService {
     String submit(UserAccountApplicationVO application);
     List<UserAccountApplicationVO> selectApplicationList(UserAccountApplicationVO searchVO);
     UserAccountApplicationVO selectApplication(String aplyNo);
-    void approve(String aplyNo, UserVO actor);
+    void approve(String aplyNo, String authrtCd, UserVO actor);
     void reject(String aplyNo, String reason, UserVO actor);
 }

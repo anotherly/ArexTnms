@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "장애 조치 및 성능 통계를 기�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/report/fault-performance.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/report/fault-performance.js?v=20260914.1"></script>
 </body>
 </html>

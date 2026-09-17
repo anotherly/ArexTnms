@@ -74,6 +74,12 @@
         SELECT COUNT(*) FROM authrt_info WHERE AUTHRT_CD = #{_parameter} AND USE_YN = 'Y'
     </select>
 
+    <update id="updateRequestedAuthrt" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        UPDATE user_acnt_aply_info
+           SET DMND_AUTHRT_CD = #{dmndAuthrtCd}
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
+    </update>
+
     <update id="approveApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
         UPDATE user_acnt_aply_info
            SET APLY_STTS_CD = 'APPROVED', APRV_USER_ID = #{aprvUserId}, APRV_DT = NOW(), RFSL_RSN = NULL

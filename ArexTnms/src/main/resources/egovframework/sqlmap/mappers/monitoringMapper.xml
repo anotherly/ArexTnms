@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper">
+    <resultMap id="equipmentMap" type="equipmentVO">
+        <id property="eqpmntSn" column="EQPMNT_SN"/>
+        <result property="eqpmntMngNo" column="EQPMNT_MNG_NO"/>
+        <result property="eqpmntNm" column="EQPMNT_NM"/>
+        <result property="eqpmntSeCd" column="EQPMNT_SE_CD"/>
+        <result property="eqpmntClsfCd" column="EQPMNT_CLSF_CD"/>
+        <result property="eqpmntClsfNm" column="EQPMNT_CLSF_NM"/>
+        <result property="linkSysCd" column="LINK_SYS_CD"/>
+        <result property="linkSysNm" column="LINK_SYS_NM"/>
+        <result property="emsId" column="EMS_ID"/>
+        <result property="stnCd" column="STN_CD"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="instlPlcNm" column="INSTL_PLC_NM"/>
+        <result property="eqpmntIpAddr" column="EQPMNT_IP_ADDR"/>
+        <result property="macAddr" column="MAC_ADDR"/>
+        <result property="eqpmntMdlNm" column="EQPMNT_MDL_NM"/>
+        <result property="eqpmntExpln" column="EQPMNT_EXPLN"/>
+        <result property="cntnYn" column="CNTN_YN"/>
+        <result property="pingRspnsMs" column="PING_RSPNS_MS"/>
+        <result property="sttsCd" column="STTS_CD"/>
+        <result property="sttsNm" column="STTS_NM"/>
+        <result property="sttsExpln" column="STTS_EXPLN"/>
+        <result property="lastRspnsDt" column="LAST_RSPNS_DT"/>
+        <result property="clctDt" column="CLCT_DT"/>
+        <result property="totalNocs" column="TOTAL_NOCS"/>
+        <result property="normalNocs" column="NORMAL_NOCS"/>
+        <result property="cautionNocs" column="CAUTION_NOCS"/>
+        <result property="criticalNocs" column="CRITICAL_NOCS"/>
+        <result property="offlineNocs" column="OFFLINE_NOCS"/>
+        <result property="unknownNocs" column="UNKNOWN_NOCS"/>
+        <result property="flrNm" column="FLR_NM"/>
+        <result property="cmraQty" column="CMRA_QTY"/>
+        <result property="pbxEqpmNm" column="PBX_EQPM_NM"/>
+        <result property="cmpntNm" column="CMPNT_NM"/>
+        <result property="mtbfHr" column="MTBF_HR"/>
+        <result property="cpuUsgrt" column="CPU_USGRT"/>
+        <result property="mmryUsgrt" column="MMRY_USGRT"/>
+        <result property="ifUseNocs" column="IF_USE_NOCS"/>
+        <result property="ifTotalNocs" column="IF_TOTAL_NOCS"/>
+        <result property="lseEqpmntSnsCsv" column="LSE_EQPMNT_SNS_CSV"/>
+        <result property="lseEqpmntNms" column="LSE_EQPMNT_NMS"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="regDt" column="REG_DT"/>
+        <result property="mdfcnDt" column="MDFCN_DT"/>
+    </resultMap>
+
+    <resultMap id="stationMap" type="stationStatusVO">
+        <id property="stnCd" column="STN_CD"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="stnSeq" column="STN_SEQ"/>
+        <result property="mnlsStnYn" column="MNLS_STN_YN"/>
+        <result property="sttsCd" column="STTS_CD"/>
+        <result property="totalNocs" column="TOTAL_NOCS"/>
+        <result property="normalNocs" column="NORMAL_NOCS"/>
+        <result property="cautionNocs" column="CAUTION_NOCS"/>
+        <result property="criticalNocs" column="CRITICAL_NOCS"/>
+        <result property="offlineNocs" column="OFFLINE_NOCS"/>
+        <result property="unknownNocs" column="UNKNOWN_NOCS"/>
+        <result property="lastClctDt" column="LAST_CLCT_DT"/>
+    </resultMap>
+
+    <resultMap id="equipmentLinkMap" type="kr.co.TRSolution.tnms.monitoring.vo.EquipmentLinkVO">
+        <result property="fromEqpmntSn" column="FROM_EQPMNT_SN"/>
+        <result property="fromEqpmntNm" column="FROM_EQPMNT_NM"/>
+        <result property="toEqpmntSn" column="TO_EQPMNT_SN"/>
+        <result property="toEqpmntNm" column="TO_EQPMNT_NM"/>
+        <result property="linkTypeCd" column="LINK_TYPE_CD"/>
+        <result property="linkNm" column="LINK_NM"/>
+    </resultMap>
+
+    <resultMap id="scadaEventMap" type="kr.co.TRSolution.tnms.monitoring.vo.ScadaEventVO">
+        <id property="enexEvntSn" column="ENEX_EVNT_SN"/>
+        <result property="eqpmntSn" column="EQPMNT_SN"/>
+        <result property="eqpmntNm" column="EQPMNT_NM"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="evntCd" column="EVNT_CD"/>
+        <result property="evntNm" column="EVNT_NM"/>
+        <result property="enexDt" column="ENEX_DT"/>
+        <result property="enexRsltCd" column="ENEX_RSLT_CD"/>
+        <result property="aprvYn" column="APRV_YN"/>
+        <result property="evntCn" column="EVNT_CN"/>
+    </resultMap>
+
+    <sql id="effectiveStatus">
+        CASE
+          WHEN E.EQPMNT_SN IS NULL THEN 'NO_DATA'
+          WHEN C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL THEN 'UNKNOWN'
+          WHEN E.EQPMNT_MNG_NO LIKE 'UIUX-SAMPLE-%' THEN
+               CASE
+                 WHEN C.CNTN_YN = 'N' THEN 'UNKNOWN'
+                 WHEN C.STTS_CD = 'OFFLINE' THEN 'UNKNOWN'
+                 WHEN C.STTS_CD = 'WARNING' THEN 'CAUTION'
+                 ELSE COALESCE(C.STTS_CD, 'UNKNOWN')
+               END
+          WHEN C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(
+               (SELECT CAST(U.UI_STNG_VL AS UNSIGNED) FROM ui_stng_info U
+                 WHERE U.UI_STNG_CD = 'DASHBOARD_OFFLINE_MIN' AND U.USE_YN = 'Y'), 5) MINUTE) THEN 'UNKNOWN'
+          WHEN C.STTS_CD = 'OFFLINE' THEN 'UNKNOWN'
+          WHEN C.STTS_CD = 'WARNING' THEN 'CAUTION'
+          ELSE COALESCE(C.STTS_CD, 'UNKNOWN')
+        END
+    </sql>
+
+    <sql id="performanceJoins">
+          LEFT JOIN eqpmnt_perf_stts CPU ON CPU.EQPMNT_SN = E.EQPMNT_SN AND CPU.PERF_IDCT_CD = 'CPU_USGRT'
+          LEFT JOIN eqpmnt_perf_stts MMRY ON MMRY.EQPMNT_SN = E.EQPMNT_SN AND MMRY.PERF_IDCT_CD = 'MMRY_USGRT'
+          LEFT JOIN eqpmnt_perf_stts IFU ON IFU.EQPMNT_SN = E.EQPMNT_SN AND IFU.PERF_IDCT_CD = 'IF_USE_NOCS'
+          LEFT JOIN eqpmnt_perf_stts IFT ON IFT.EQPMNT_SN = E.EQPMNT_SN AND IFT.PERF_IDCT_CD = 'IF_TOTAL_NOCS'
+    </sql>
+
+    <sql id="pidsRelationJoin">
+          LEFT JOIN (
+                SELECT R.EQPMNT_SN,
+                       GROUP_CONCAT(CAST(R.LSE_EQPMNT_SN AS CHAR) ORDER BY R.LSE_EQPMNT_SN SEPARATOR ',') AS LSE_EQPMNT_SNS_CSV,
+                       GROUP_CONCAT(LSE.EQPMNT_NM ORDER BY LSE.EQPMNT_NM SEPARATOR ', ') AS LSE_EQPMNT_NMS
+                  FROM pids_eqpmnt_lse_rel R
+                  JOIN eqpmnt_info LSE ON LSE.EQPMNT_SN = R.LSE_EQPMNT_SN AND LSE.USE_YN = 'Y'
+                 GROUP BY R.EQPMNT_SN
+          ) PR ON PR.EQPMNT_SN = E.EQPMNT_SN
+    </sql>
+
+    <select id="selectSystemSummary" resultMap="equipmentMap">
+        SELECT S.LINK_SYS_CD, S.LINK_SYS_NM,
+               COUNT(E.EQPMNT_SN) AS TOTAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) AS NORMAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               0 AS OFFLINE_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               MAX(C.CLCT_DT) AS LAST_CLCT_DT,
+               CASE
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
+                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
+                 ELSE 'UNKNOWN'
+               END AS STTS_CD
+          FROM link_sys_info S
+          LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = S.LINK_SYS_CD AND E.USE_YN = 'Y'
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+         WHERE S.USE_YN = 'Y'
+         GROUP BY S.LINK_SYS_CD, S.LINK_SYS_NM
+         ORDER BY FIELD(S.LINK_SYS_CD, 'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    </select>
+
+    <select id="selectStationSummary" parameterType="equipmentVO" resultMap="stationMap">
+        SELECT S.STN_CD, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN,
+               COUNT(E.EQPMNT_SN) AS TOTAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) AS NORMAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               0 AS OFFLINE_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               MAX(C.CLCT_DT) AS LAST_CLCT_DT,
+               CASE
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
+                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
+                 ELSE 'UNKNOWN'
+               END AS STTS_CD
+          FROM stn_info S
+          LEFT JOIN eqpmnt_info E ON E.STN_CD = S.STN_CD AND E.USE_YN = 'Y'
+          <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD = #{linkSysCd}</if>
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+         WHERE S.USE_YN = 'Y'
+         GROUP BY S.STN_CD, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN
+         ORDER BY S.STN_SEQ
+    </select>
+
+    <select id="selectEquipmentList" parameterType="equipmentVO" resultMap="equipmentMap">
+        SELECT E.EQPMNT_SN, E.EQPMNT_MNG_NO, E.EQPMNT_NM, E.EQPMNT_SE_CD,
+               E.EQPMNT_CLSF_CD, F.EQPMNT_CLSF_NM, E.LINK_SYS_CD, L.LINK_SYS_NM,
+               E.EMS_ID, E.STN_CD, S.STN_NM, E.INSTL_PLC_NM, E.EQPMNT_IP_ADDR,
+               E.MAC_ADDR, E.EQPMNT_MDL_NM, E.EQPMNT_EXPLN, C.CNTN_YN,
+               V.FLR_NM, V.CMRA_QTY, P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
+               CPU.MSRMT_VL AS CPU_USGRT, MMRY.MSRMT_VL AS MMRY_USGRT,
+               CAST(IFU.MSRMT_VL AS UNSIGNED) AS IF_USE_NOCS,
+               CAST(IFT.MSRMT_VL AS UNSIGNED) AS IF_TOTAL_NOCS,
+               PR.LSE_EQPMNT_SNS_CSV, PR.LSE_EQPMNT_NMS,
+               C.PING_RSPNS_MS, <include refid="effectiveStatus"/> AS STTS_CD,
+               COALESCE((SELECT CC.COM_CD_NM
+                           FROM com_cd_info CC
+                          WHERE CC.COM_CD_GROUP_ID = 'SYS_STTS'
+                            AND CC.COM_CD = <include refid="effectiveStatus"/>
+                            AND CC.COM_CD_USE_YN = 'Y'
+                          LIMIT 1), <include refid="effectiveStatus"/>) AS STTS_NM,
+               C.STTS_EXPLN, C.LAST_RSPNS_DT, C.CLCT_DT, E.USE_YN, E.REG_DT, E.MDFCN_DT
+          FROM eqpmnt_info E
+          JOIN link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
+          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+          LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
+          <include refid="performanceJoins"/>
+          <include refid="pidsRelationJoin"/>
+         WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
+        <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+          AND (E.EQPMNT_MNG_NO LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR E.EQPMNT_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+         ORDER BY COALESCE(S.STN_SEQ, 999), E.EQPMNT_MNG_NO
+         LIMIT 200
+    </select>
+
+    <select id="selectEquipmentSummary" parameterType="equipmentVO" resultMap="equipmentMap">
+        SELECT COUNT(E.EQPMNT_SN) AS TOTAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) AS NORMAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               0 AS OFFLINE_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               ROUND(AVG(CPU.MSRMT_VL), 1) AS CPU_USGRT,
+               ROUND(AVG(MMRY.MSRMT_VL), 1) AS MMRY_USGRT,
+               CAST(COALESCE(SUM(IFU.MSRMT_VL), 0) AS UNSIGNED) AS IF_USE_NOCS,
+               CAST(COALESCE(SUM(IFT.MSRMT_VL), 0) AS UNSIGNED) AS IF_TOTAL_NOCS
+          FROM eqpmnt_info E
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          <include refid="performanceJoins"/>
+         WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
+        <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+          AND (E.EQPMNT_MNG_NO LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR E.EQPMNT_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+    </select>
+
+    <select id="selectStationSystemSummary" parameterType="string" resultMap="equipmentMap">
+        SELECT L.LINK_SYS_CD, L.LINK_SYS_NM, COUNT(E.EQPMNT_SN) AS TOTAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) AS NORMAL_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
+               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               0 AS OFFLINE_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               MAX(C.CLCT_DT) AS LAST_CLCT_DT,
+               CASE
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
+                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
+                 ELSE 'UNKNOWN'
+               END AS STTS_CD
+          FROM link_sys_info L
+          LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = L.LINK_SYS_CD AND E.STN_CD = #{_parameter} AND E.USE_YN = 'Y'
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+         WHERE L.USE_YN = 'Y'
+         GROUP BY L.LINK_SYS_CD, L.LINK_SYS_NM
+         ORDER BY FIELD(L.LINK_SYS_CD, 'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    </select>
+
+    <select id="selectEquipment" parameterType="long" resultMap="equipmentMap">
+        SELECT E.*, L.LINK_SYS_NM, S.STN_NM, F.EQPMNT_CLSF_NM,
+               V.FLR_NM, V.CMRA_QTY, P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
+               CPU.MSRMT_VL AS CPU_USGRT, MMRY.MSRMT_VL AS MMRY_USGRT,
+               CAST(IFU.MSRMT_VL AS UNSIGNED) AS IF_USE_NOCS,
+               CAST(IFT.MSRMT_VL AS UNSIGNED) AS IF_TOTAL_NOCS,
+               PR.LSE_EQPMNT_SNS_CSV, PR.LSE_EQPMNT_NMS,
+               C.CNTN_YN, C.PING_RSPNS_MS,
+               <include refid="effectiveStatus"/> AS STTS_CD, C.STTS_EXPLN, C.LAST_RSPNS_DT, C.CLCT_DT
+          FROM eqpmnt_info E
+          JOIN link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
+          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+          LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
+          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
+          <include refid="performanceJoins"/>
+          <include refid="pidsRelationJoin"/>
+         WHERE E.EQPMNT_SN = #{_parameter} AND E.USE_YN = 'Y'
+    </select>
+
+    <select id="selectPidsLseCandidates" parameterType="equipmentVO" resultMap="equipmentMap">
+        SELECT E.EQPMNT_SN, E.EQPMNT_MNG_NO, E.EQPMNT_NM, E.EQPMNT_SE_CD,
+               E.LINK_SYS_CD, E.STN_CD, S.STN_NM, E.INSTL_PLC_NM, E.EQPMNT_IP_ADDR,
+               E.EQPMNT_EXPLN, E.USE_YN
+          FROM eqpmnt_info E
+          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+         WHERE E.USE_YN = 'Y'
+           AND E.LINK_SYS_CD = 'EMS_PIDS'
+           AND (UPPER(E.EQPMNT_SE_CD) = 'LSE' OR UPPER(E.EQPMNT_NM) LIKE '%LSE%')
+        <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
+         ORDER BY COALESCE(S.STN_SEQ, 999), E.EQPMNT_NM
+    </select>
+
+    <select id="selectEquipmentLinks" parameterType="equipmentVO" resultMap="equipmentLinkMap">
+        SELECT R.FROM_EQPMNT_SN, F.EQPMNT_NM AS FROM_EQPMNT_NM,
+               R.TO_EQPMNT_SN, T.EQPMNT_NM AS TO_EQPMNT_NM,
+               R.LINK_TYPE_CD, R.LINK_NM
+          FROM eqpmnt_lnk_rel R
+          JOIN eqpmnt_info F ON F.EQPMNT_SN = R.FROM_EQPMNT_SN AND F.USE_YN = 'Y'
+          JOIN eqpmnt_info T ON T.EQPMNT_SN = R.TO_EQPMNT_SN AND T.USE_YN = 'Y'
+         WHERE R.USE_YN = 'Y'
+           AND F.LINK_SYS_CD = #{linkSysCd}
+           AND T.LINK_SYS_CD = #{linkSysCd}
+        <if test="stnCd != null and stnCd != ''">AND (F.STN_CD = #{stnCd} OR T.STN_CD = #{stnCd})</if>
+         ORDER BY R.REG_DT, R.FROM_EQPMNT_SN, R.TO_EQPMNT_SN
+         LIMIT 100
+    </select>
+
+    <select id="selectRecentScadaEvents" parameterType="equipmentVO" resultMap="scadaEventMap">
+        SELECT H.ENEX_EVNT_SN, H.EQPMNT_SN, E.EQPMNT_NM, S.STN_NM,
+               H.EVNT_CD, H.EVNT_NM, DATE_FORMAT(H.ENEX_DT, '%Y-%m-%d %H:%i:%s') AS ENEX_DT,
+               H.ENEX_RSLT_CD, H.APRV_YN, H.EVNT_CN
+          FROM enex_evnt_hstry H
+          JOIN eqpmnt_info E ON E.EQPMNT_SN = H.EQPMNT_SN AND E.USE_YN = 'Y'
+          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+         WHERE E.LINK_SYS_CD = 'SCADA_SEC'
+        <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
+         ORDER BY H.ENEX_DT DESC, H.ENEX_EVNT_SN DESC
+         LIMIT 8
+    </select>
+
+    <insert id="insertEquipment" parameterType="equipmentVO" useGeneratedKeys="true" keyProperty="eqpmntSn" keyColumn="EQPMNT_SN">
+        INSERT INTO eqpmnt_info
+        (EQPMNT_MNG_NO, EQPMNT_NM, EQPMNT_SE_CD, EQPMNT_CLSF_CD, LINK_SYS_CD,
+         EMS_ID, STN_CD, INSTL_PLC_NM, EQPMNT_IP_ADDR, MAC_ADDR, EQPMNT_MDL_NM,
+         EQPMNT_EXPLN, PING_MNTR_YN, PING_CYCLE_SEC, USE_YN, RGTR_ID)
+        VALUES
+        (#{eqpmntMngNo}, #{eqpmntNm}, #{eqpmntSeCd}, #{eqpmntClsfCd}, #{linkSysCd},
+         #{emsId}, #{stnCd}, #{instlPlcNm}, #{eqpmntIpAddr}, #{macAddr}, #{eqpmntMdlNm},
+         #{eqpmntExpln}, 'Y', 30, #{useYn}, #{rgtrId})
+    </insert>
+
+    <update id="updateEquipment" parameterType="equipmentVO">
+        UPDATE eqpmnt_info
+           SET EQPMNT_MNG_NO = #{eqpmntMngNo}, EQPMNT_NM = #{eqpmntNm},
+               EQPMNT_SE_CD = #{eqpmntSeCd}, EQPMNT_CLSF_CD = #{eqpmntClsfCd},
+               LINK_SYS_CD = #{linkSysCd}, EMS_ID = #{emsId}, STN_CD = #{stnCd},
+               INSTL_PLC_NM = #{instlPlcNm}, EQPMNT_IP_ADDR = #{eqpmntIpAddr},
+               MAC_ADDR = #{macAddr}, EQPMNT_MDL_NM = #{eqpmntMdlNm},
+               EQPMNT_EXPLN = #{eqpmntExpln},
+               MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+         WHERE EQPMNT_SN = #{eqpmntSn} AND USE_YN = 'Y'
+    </update>
+
+    <update id="disableEquipment" parameterType="equipmentVO">
+        UPDATE eqpmnt_info SET USE_YN = 'N', MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+         WHERE EQPMNT_SN = #{eqpmntSn} AND USE_YN = 'Y'
+    </update>
+
+    <delete id="deletePidsLseRelations" parameterType="long">
+        DELETE FROM pids_eqpmnt_lse_rel WHERE EQPMNT_SN = #{_parameter}
+    </delete>
+
+    <insert id="insertPidsLseRelation" parameterType="equipmentVO">
+        INSERT INTO pids_eqpmnt_lse_rel (EQPMNT_SN, LSE_EQPMNT_SN, REG_DT)
+        SELECT #{eqpmntSn}, #{lseEqpmntSn}, NOW()
+          FROM eqpmnt_info P, eqpmnt_info L
+         WHERE P.EQPMNT_SN = #{eqpmntSn}
+           AND L.EQPMNT_SN = #{lseEqpmntSn}
+           AND P.LINK_SYS_CD = 'EMS_PIDS'
+           AND L.LINK_SYS_CD = 'EMS_PIDS'
+           AND (UPPER(L.EQPMNT_SE_CD) = 'LSE' OR UPPER(L.EQPMNT_NM) LIKE '%LSE%')
+        ON DUPLICATE KEY UPDATE REG_DT = VALUES(REG_DT)
+    </insert>
+</mapper>

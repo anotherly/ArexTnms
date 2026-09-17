@@ -69,11 +69,13 @@ public class UserAccountApplicationController extends BaseController {
     }
 
     @RequestMapping(value = "/user/applications/approve.ajax", method = RequestMethod.POST)
-    public ModelAndView approve(@RequestParam("aplyNo") String aplyNo, HttpServletRequest request) {
+    public ModelAndView approve(@RequestParam("aplyNo") String aplyNo,
+                                @RequestParam(value = "authrtCd", required = false) String authrtCd,
+                                HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
             UserAccountApplicationVO application = applicationService.selectApplication(aplyNo);
-            applicationService.approve(aplyNo, actor);
+            applicationService.approve(aplyNo, authrtCd, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "계정 신청 현황", "MDFCN",
                     application.getAplyNo(), "계정 신청 승인", "SUCCESS");
             return success("계정 신청을 승인했습니다.", null);

@@ -98,9 +98,9 @@
         </div>
 
         <div class="form-row">
-          <label for="emlAddr">이메일 <em>*</em></label>
+          <label for="emlAddr">이메일</label>
           <div class="field-area">
-            <input id="emlAddr" name="emlAddr" type="email" maxlength="320" autocomplete="email" placeholder="이메일을 입력해 주세요" required>
+            <input id="emlAddr" name="emlAddr" type="email" maxlength="320" autocomplete="email" placeholder="이메일을 입력해 주세요 (선택)">
             <p class="field-error" data-error-for="emlAddr"></p>
           </div>
         </div>
@@ -124,6 +124,6 @@
   </main>
 
   <script>window.TNMS_CONTEXT_PATH = '<%=request.getContextPath()%>';</script>
-  <script src="<%=request.getContextPath()%>/js/tnms/pages/login/account-application.js?v=20260910.1"></script>
+  <script src="<%=request.getContextPath()%>/js/tnms/pages/login/account-application.js?v=20260914.1"></script>
 </body>
 </html>

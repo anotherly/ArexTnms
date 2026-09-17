@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isELIgnored="true" %>
 <%
 request.setAttribute("pageKey", "cctv");
-request.setAttribute("pageTitle", "설비관리 > 영상감시설비(CCTV)");
+request.setAttribute("pageTitle", "설비관리 > 영상감시설비");
 request.setAttribute("pageDescription", "");
 %>
 <!doctype html>
@@ -20,6 +20,6 @@ request.setAttribute("pageDescription", "");
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/facility/facility.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/facility/facility.js?v=20260917.5"></script>
 </body>
 </html>

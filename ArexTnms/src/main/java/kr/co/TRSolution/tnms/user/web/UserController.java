@@ -31,7 +31,7 @@ public class UserController extends BaseController {
     public String userPage() { return "user/list"; }
 
     @RequestMapping(value = "/user/applications.do", method = RequestMethod.GET)
-    public String applicationsPage() { return "user/applications"; }
+    public String applicationsPage() { return "redirect:/user/list.do?screen=users"; }
 
     @RequestMapping(value = "/user/list.ajax", method = RequestMethod.GET)
     public ModelAndView list(@ModelAttribute UserVO searchVO) {

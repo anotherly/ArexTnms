@@ -4,25 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>TNMS 공항철도 노선·역사 현황</title>
-  <link rel="stylesheet" href="style.css?v=20260904.1" />
+  <link rel="stylesheet" href="style.css?v=20260917.1" />
 </head>
 <body class="embedded-dashboard">
 <div class="app-shell">
   <main class="dashboard">
     <section class="kpi-grid" aria-label="시스템 요약">
-      <article class="kpi-card kpi-red">
+      <article class="kpi-card kpi-red" data-system-code="VMS">
         <span class="kpi-symbol kpi-symbol--cctv" aria-hidden="true"></span><div><b>CCTV</b><strong>000</strong></div><span class="urgent">긴급 00</span>
       </article>
-      <article class="kpi-card kpi-green">
+      <article class="kpi-card kpi-green" data-system-code="PBX">
         <span class="kpi-symbol kpi-symbol--pbx" aria-hidden="true"></span><div><b>교환기</b><strong>000</strong></div><span class="urgent">긴급 00</span>
       </article>
-      <article class="kpi-card kpi-green">
+      <article class="kpi-card kpi-green" data-system-code="SCADA_SEC">
         <span class="kpi-symbol kpi-symbol--scada" aria-hidden="true"></span><div><b>SCADA</b><strong>000</strong></div><span class="urgent">긴급 00</span>
       </article>
-      <article class="kpi-card kpi-purple">
+      <article class="kpi-card kpi-purple" data-system-code="EMS_PIDS">
         <span class="kpi-symbol kpi-symbol--pids" aria-hidden="true"></span><div><b>행선안내</b><strong>000</strong></div><span class="urgent">긴급 00</span>
       </article>
-      <article class="kpi-card kpi-orange">
+      <article class="kpi-card kpi-orange" data-system-code="EMS_TX">
         <span class="kpi-symbol kpi-symbol--transmission" aria-hidden="true"></span><div><b>전송</b><strong>000</strong></div><span class="urgent">긴급 00</span>
       </article>
     </section>
@@ -63,7 +63,7 @@
         </svg>
 
         <!-- 역사명 + 노선 마커 모두 클릭 가능 -->
-        <button class="station station-select below" data-location="인천공항2터미널" type="button" style="--x:9.85%;--y:72.58%">인천공항2터미널</button>
+        <button class="station station-select above t2-station" data-location="인천공항2터미널" type="button" style="--x:9.85%;--y:72.58%">인천공항2터미널</button>
         <button class="station station-select above" data-location="인천공항1터미널" type="button" style="--x:13.55%;--y:64.37%">인천공항1터미널</button>
         <button class="station station-select below" data-location="공항화물청사" type="button" style="--x:18.89%;--y:67.81%">공항화물청사</button>
         <button class="station station-select above" data-location="운서" type="button" style="--x:27.58%;--y:48.74%">운서</button>
@@ -142,6 +142,6 @@
     <div class="page-dots" aria-label="대시보드 화면 전환"><button class="active" type="button" aria-label="첫 번째 대시보드"></button><button type="button" aria-label="두 번째 대시보드" onclick="parent.postMessage({source:'tnms-planner',type:'dashboard-slide',index:1},location.origin)"></button></div>
   </main>
 </div>
-<script src="app.js?v=20260903.4"></script>
+<script src="app.js?v=20260917.1"></script>
 </body>
 </html>

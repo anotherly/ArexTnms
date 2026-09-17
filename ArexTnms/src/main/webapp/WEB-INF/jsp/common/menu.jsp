@@ -36,14 +36,15 @@ Map<String, MenuAuthVO> menuPermissions = (Map<String, MenuAuthVO>) session.getA
 Set<String> facilityKeys = new HashSet<String>(Arrays.asList("systems", "equipment", "switch", "cctv", "scada"));
 Set<String> faultKeys = new HashSet<String>(Arrays.asList("faults", "faultHistory", "exceptions", "faultTypes"));
 Set<String> performanceKeys = new HashSet<String>(Arrays.asList("performance", "cycle", "threshold", "raw"));
-Set<String> operationKeys = new HashSet<String>(Arrays.asList("users", "auth", "applications", "logs"));
+Set<String> operationKeys = new HashSet<String>(Arrays.asList("users", "logs"));
+Set<String> settingKeys = new HashSet<String>(Arrays.asList("auth", "settings"));
 %>
 <aside class="sidebar">
   <div class="brand"><div class="logo">AREX</div><div class="brand-copy"><b>AREX TNMS</b></div></div>
   <nav class="nav" aria-label="주 메뉴">
     <a class="<%=itemClass(menuPermissions, menuPageKey, "dashboard", "nav-root-item")%>"
        href="<%=request.getContextPath()%>/main/dashboard.do" data-key="dashboard">
-      <i class="dot"><svg viewBox="0 0 24 24"><%=icon("dashboard")%></svg></i><span>통합 대시보드</span>
+      <i class="dot"><svg viewBox="0 0 24 24"><%=icon("dashboard")%></svg></i><span>대시보드</span>
     </a>
 
     <section class="nav-section <%=facilityKeys.contains(menuPageKey) ? "open" : ""%>">
@@ -87,16 +88,17 @@ Set<String> operationKeys = new HashSet<String>(Arrays.asList("users", "auth", "
     <section class="nav-section <%=operationKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=operationKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("users")%></svg></i><span>운영관리</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "users", "nav-child")%>" href="<%=request.getContextPath()%>/user/list.do?screen=users" data-key="users"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("users")%></svg></i><span>사용자 계정 설정</span></a>
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "auth", "nav-child")%>" href="<%=request.getContextPath()%>/auth/list.do?screen=auth" data-key="auth"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("auth")%></svg></i><span>권한 관리</span></a>
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "applications", "nav-child")%>" href="<%=request.getContextPath()%>/user/applications.do?screen=applications" data-key="applications"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("applications")%></svg></i><span>계정 신청 현황</span></a>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "users", "nav-child")%>" href="<%=request.getContextPath()%>/user/list.do?screen=users" data-key="users"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("users")%></svg></i><span>계정관리</span></a>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "logs", "nav-child")%>" href="<%=request.getContextPath()%>/audit/job-log.do?screen=logs" data-key="logs"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("logs")%></svg></i><span>작업로그 조회</span></a>
       </div>
     </section>
 
-    <section class="nav-section <%="settings".equals(menuPageKey) ? "open" : ""%>">
-      <button class="nav-parent" type="button" aria-expanded="<%="settings".equals(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>설정</span><b class="nav-chevron"></b></button>
-      <div class="nav-children"><a class="<%=itemClass(menuPermissions, menuPageKey, "settings", "nav-child")%>" href="<%=request.getContextPath()%>/setting/common-ui.do?screen=settings" data-key="settings"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>공통코드·UI 설정</span></a></div>
+    <section class="nav-section <%=settingKeys.contains(menuPageKey) ? "open" : ""%>">
+      <button class="nav-parent" type="button" aria-expanded="<%=settingKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>설정</span><b class="nav-chevron"></b></button>
+      <div class="nav-children">
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "auth", "nav-child")%>" href="<%=request.getContextPath()%>/auth/list.do?screen=auth" data-key="auth"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("auth")%></svg></i><span>권한관리</span></a>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "settings", "nav-child")%>" href="<%=request.getContextPath()%>/setting/common-ui.do?screen=settings" data-key="settings"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>공통코드·UI 설정</span></a>
+      </div>
     </section>
   </nav>
   <div class="side-footer"><button class="side-collapse" type="button">← 메뉴 접기</button></div>

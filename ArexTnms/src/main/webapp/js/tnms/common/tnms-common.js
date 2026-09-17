@@ -13,6 +13,7 @@
   };
 
   global.hasPermission = function (screen, property) {
+    if (screen === 'applications') screen = 'users';
     const permission = global.PERMISSIONS[screen];
     return !!permission && permission[property || 'listAuthrtYn'] === 'Y';
   };
@@ -37,7 +38,9 @@
     return body;
   };
 
-  global.renderPage = function (key, html) {
+  global.renderPage = function (key, html, actions) {
+    const actionArea = document.getElementById('pageActions');
+    if (actionArea) actionArea.innerHTML = actions || '';
     const body = document.getElementById('pageBody');
     if (!body) return;
     body.innerHTML = html || '';

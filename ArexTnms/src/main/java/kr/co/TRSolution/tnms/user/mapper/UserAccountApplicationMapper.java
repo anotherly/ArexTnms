@@ -13,6 +13,7 @@ public interface UserAccountApplicationMapper {
     UserAccountApplicationVO selectApplication(String aplyNo);
     UserAccountApplicationVO selectApplicationForUpdate(String aplyNo);
     int countActiveAuthrt(String authrtCd);
+    int updateRequestedAuthrt(UserAccountApplicationVO application);
     int approveApplication(UserAccountApplicationVO application);
     int rejectApplication(UserAccountApplicationVO application);
 }
