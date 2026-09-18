@@ -9,13 +9,14 @@ import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
 @Mapper("authMapper")
 public interface AuthMapper {
     List<AuthVO> selectAuthList();
-    AuthVO selectAuth(Long authrtSn);
+    AuthVO selectAuth(String authrtCd);
+    int countAuthCode(AuthVO authVO);
     int countAuthName(AuthVO authVO);
-    int countAuthUsers(Long authrtSn);
+    int countAuthUsers(String authrtCd);
     int insertAuth(AuthVO authVO);
     int updateAuth(AuthVO authVO);
-    int deleteAuthMenus(Long authrtSn);
-    int deleteAuth(Long authrtSn);
-    List<MenuAuthVO> selectMenuAuthList(Long authrtSn);
+    int deleteAuthMenus(String authrtCd);
+    int disableAuth(AuthVO authVO);
+    List<MenuAuthVO> selectMenuAuthList(String authrtCd);
     int insertMenuAuth(MenuAuthVO menuAuthVO);
 }

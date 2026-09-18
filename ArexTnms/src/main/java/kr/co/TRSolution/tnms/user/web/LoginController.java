@@ -1,5 +1,7 @@
 package kr.co.TRSolution.tnms.user.web;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -49,16 +51,16 @@ public class LoginController extends BaseController {
                 userService.recordLoginFailure(null, ip, request.getHeader("User-Agent"), "등록되지 않은 아이디");
                 return fail("아이디 또는 비밀번호가 올바르지 않습니다.");
             }
-            if (!"Y".equals(user.getUseYn()) || "삭제".equals(user.getUserSttsNm()) ||
-                    "중지".equals(user.getUserSttsNm())) {
+            if (!"Y".equals(user.getUseYn()) || "DELETED".equals(user.getUserSttsCd()) ||
+                    "SUSPENDED".equals(user.getUserSttsCd())) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "미사용 계정");
                 return fail("사용할 수 없는 계정입니다. 관리자에게 문의해 주세요.");
             }
-            if ("잠금".equals(user.getUserSttsNm())) {
+            if ("LOCKED".equals(user.getUserSttsCd())) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "잠금 계정");
                 return fail("로그인 실패 5회로 잠긴 계정입니다. 관리자에게 문의해 주세요.");
             }
-            if (user.getAuthrtSn() == null) {
+            if (user.getAuthrtCd() == null) {
                 userService.recordLoginFailure(user, ip, request.getHeader("User-Agent"), "권한 미지정");
                 return fail("권한이 지정되지 않은 계정입니다. 관리자에게 문의해 주세요.");
             }
@@ -67,22 +69,30 @@ public class LoginController extends BaseController {
                 return fail("아이디 또는 비밀번호가 올바르지 않습니다.");
             }
 
+            boolean passwordChangeRequired = isPasswordChangeRequired(user.getPswdExpryYmd());
             userService.recordLoginSuccess(user, ip, request.getHeader("User-Agent"));
             user.setUserEnpswd(null);
             HttpSession session = request.getSession(true);
             request.changeSessionId();
-            Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(user.getAuthrtSn());
+            Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(user.getAuthrtCd());
             session.setAttribute("loginUser", user);
             session.setAttribute("menuAuthMap", permissionMap);
             session.setAttribute("csrfToken", UUID.randomUUID().toString());
             SessionListener.register(user.getUserId(), session);
-            ModelAndView mav = success("로그인되었습니다.", null);
+            ModelAndView mav = success(passwordChangeRequired ? "비밀번호 변경주기가 경과했습니다. 관리자에게 비밀번호 변경을 요청해 주세요." : "로그인되었습니다.", null);
             mav.addObject("url", request.getContextPath() + "/main/dashboard.do");
+            mav.addObject("passwordChangeRequired", Boolean.valueOf(passwordChangeRequired));
             return mav;
         } catch (Exception e) {
             logger.error("로그인 처리 오류. userId=" + userId, e);
             return fail("로그인 처리 중 오류가 발생했습니다.");
         }
+    }
+
+    private boolean isPasswordChangeRequired(String expiryYmd) {
+        if (expiryYmd == null || expiryYmd.trim().length() == 0) return false;
+        try { return !LocalDate.parse(expiryYmd.substring(0, Math.min(10, expiryYmd.length()))).isAfter(LocalDate.now()); }
+        catch (DateTimeParseException e) { return false; }
     }
 
     @RequestMapping(value = "/login/logout.do")

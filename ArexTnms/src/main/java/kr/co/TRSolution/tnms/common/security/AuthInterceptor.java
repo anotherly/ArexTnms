@@ -36,14 +36,19 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
             }
         }
 
-        Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(loginUser.getAuthrtSn());
+        Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(loginUser.getAuthrtCd());
         session.setAttribute("menuAuthMap", permissionMap);
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
-        if ("/main/dashboard.do".equals(path)) {
-            String screen = request.getParameter("screen");
-            requirement = new Requirement(screen == null || screen.length() == 0 ? "dashboard" : screen, "LIST");
+        if ("/setting/common-ui/code.ajax".equals(path)) {
+            String requestedAction = request.getParameter("_authAction");
+            requirement = new Requirement("settings", "REG".equals(requestedAction) ? "REG" : "MDFCN");
+        }
+        if (requirement == null && path.startsWith("/facility/") && path.endsWith(".ajax")) {
+            String action = "/facility/save.ajax".equals(path) ? (request.getParameter("eqpmntSn") == null || request.getParameter("eqpmntSn").length() == 0 ? "REG" : "MDFCN")
+                    : "/facility/delete.ajax".equals(path) ? "DEL" : "/facility/detail.ajax".equals(path) ? "DTL" : "LIST";
+            requirement = new Requirement(facilityScreenKey(request.getParameter("linkSysCd")), action);
         }
         if (requirement == null) return true;
         MenuAuthVO permission = permissionMap.get(requirement.screenKey);
@@ -75,6 +80,34 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
     private static Map<String, Requirement> createRequirements() {
         Map<String, Requirement> map = new HashMap<String, Requirement>();
+        map.put("/facility/transmission.do", new Requirement("systems", "LIST"));
+        map.put("/facility/pids.do", new Requirement("equipment", "LIST"));
+        map.put("/facility/pbx.do", new Requirement("switch", "LIST"));
+        map.put("/facility/cctv.do", new Requirement("cctv", "LIST"));
+        map.put("/facility/scada.do", new Requirement("scada", "LIST"));
+        map.put("/performance/overview.do", new Requirement("performance", "LIST"));
+        map.put("/performance/cycle.do", new Requirement("cycle", "LIST"));
+        map.put("/performance/threshold.do", new Requirement("threshold", "LIST"));
+        map.put("/performance/raw.do", new Requirement("raw", "LIST"));
+        map.put("/fault/realtime.do", new Requirement("faults", "LIST"));
+        map.put("/fault/history.do", new Requirement("faultHistory", "LIST"));
+        map.put("/fault/exceptions.do", new Requirement("exceptions", "LIST"));
+        map.put("/fault/types.do", new Requirement("faultTypes", "LIST"));
+        map.put("/report/fault-performance.do", new Requirement("reports", "LIST"));
+        map.put("/report/fault-performance/data.ajax", new Requirement("reports", "LIST"));
+        map.put("/user/list.do", new Requirement("users", "LIST"));
+        map.put("/auth/list.do", new Requirement("auth", "LIST"));
+        map.put("/user/applications.do", new Requirement("users", "LIST"));
+        map.put("/user/applications/list.ajax", new Requirement("users", "LIST"));
+        map.put("/user/applications/detail.ajax", new Requirement("users", "DTL"));
+        map.put("/user/applications/approve.ajax", new Requirement("users", "MDFCN"));
+        map.put("/user/applications/reject.ajax", new Requirement("users", "MDFCN"));
+        map.put("/setting/common-ui.do", new Requirement("settings", "LIST"));
+        map.put("/setting/common-ui/data.ajax", new Requirement("settings", "LIST"));
+        map.put("/setting/common-ui/ui.ajax", new Requirement("settings", "MDFCN"));
+        map.put("/audit/job-log.do", new Requirement("logs", "LIST"));
+        map.put("/audit/job-log/list.ajax", new Requirement("logs", "LIST"));
+        map.put("/audit/job-log/detail.ajax", new Requirement("logs", "DTL"));
         map.put("/user/list.ajax", new Requirement("users", "LIST"));
         map.put("/user/detail.ajax", new Requirement("users", "DTL"));
         map.put("/user/idCheck.ajax", new Requirement("users", "REG"));
@@ -90,6 +123,14 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/auth/delete.ajax", new Requirement("auth", "DEL"));
         map.put("/auth/savePermissions.ajax", new Requirement("auth", "MDFCN"));
         return Collections.unmodifiableMap(map);
+    }
+
+    private static String facilityScreenKey(String linkSysCd) {
+        if ("EMS_PIDS".equals(linkSysCd)) return "equipment";
+        if ("PBX".equals(linkSysCd)) return "switch";
+        if ("VMS".equals(linkSysCd)) return "cctv";
+        if ("SCADA_SEC".equals(linkSysCd)) return "scada";
+        return "systems";
     }
 
     private static class Requirement {

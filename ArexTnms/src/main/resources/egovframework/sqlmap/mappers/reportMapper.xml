@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.report.mapper.ReportMapper">
+    <sql id="faultWhere">
+        WHERE D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDate}, ' 00:00:00')
+          AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          AND D.EXCP_APLY_YN = 'N'
+        <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD = #{linkSysCd}</if>
+    </sql>
+    <select id="selectFaultSummary" parameterType="reportVO" resultType="reportVO">
+        SELECT COUNT(*) AS TOTAL_NOCS,
+               SUM(CASE WHEN D.DSBLTY_GRD_CD = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               SUM(CASE WHEN D.DSBLTY_JGMT_CD = 'SERVICE' THEN 1 ELSE 0 END) AS SERVICE_NOCS,
+               SUM(CASE WHEN D.DSBLTY_END_DT IS NOT NULL OR D.PRCS_STTS_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETE_NOCS,
+               COALESCE(AVG(CASE WHEN D.DSBLTY_END_DT IS NOT NULL THEN TIMESTAMPDIFF(SECOND, D.DSBLTY_OCRN_DT, D.DSBLTY_END_DT) END), 0) AS AVG_RECOVERY_SEC,
+               CASE WHEN COUNT(*) = 0 THEN 0 ELSE ROUND(100 * SUM(CASE WHEN D.DSBLTY_END_DT IS NOT NULL OR D.PRCS_STTS_CD = 'COMPLETED' THEN 1 ELSE 0 END) / COUNT(*), 1) END AS COMPLETE_RATE
+          FROM dsblty_info D
+          LEFT JOIN eqpmnt_info E ON E.EQPMNT_SN = D.EQPMNT_SN
+        <include refid="faultWhere"/>
+    </select>
+    <select id="selectFaultSystemSummary" parameterType="reportVO" resultType="reportVO">
+        SELECT L.LINK_SYS_CD, L.LINK_SYS_NM, COUNT(D.DSBLTY_NO) AS TOTAL_NOCS,
+               SUM(CASE WHEN D.DSBLTY_GRD_CD = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               COALESCE(AVG(CASE WHEN D.DSBLTY_END_DT IS NOT NULL THEN TIMESTAMPDIFF(SECOND, D.DSBLTY_OCRN_DT, D.DSBLTY_END_DT) END), 0) AS AVG_RECOVERY_SEC,
+               CASE WHEN COUNT(D.DSBLTY_NO) = 0 THEN 0 ELSE ROUND(100 * SUM(CASE WHEN D.DSBLTY_END_DT IS NOT NULL OR D.PRCS_STTS_CD = 'COMPLETED' THEN 1 ELSE 0 END) / COUNT(D.DSBLTY_NO), 1) END AS COMPLETE_RATE
+          FROM link_sys_info L
+          LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = L.LINK_SYS_CD AND E.USE_YN = 'Y'
+          LEFT JOIN dsblty_info D ON D.EQPMNT_SN = E.EQPMNT_SN
+             AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDate}, ' 00:00:00')
+             AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+             AND D.EXCP_APLY_YN = 'N'
+         WHERE L.USE_YN = 'Y'
+        <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD = #{linkSysCd}</if>
+         GROUP BY L.LINK_SYS_CD, L.LINK_SYS_NM
+         ORDER BY FIELD(L.LINK_SYS_CD, 'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    </select>
+</mapper>

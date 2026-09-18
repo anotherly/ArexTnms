@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.user.mapper.UserAccountApplicationMapper">
+    <resultMap id="applicationMap" type="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        <id property="aplyNo" column="APLY_NO"/>
+        <result property="userId" column="USER_ID"/>
+        <result property="userNm" column="USER_NM"/>
+        <result property="userEnpswd" column="USER_ENPSWD"/>
+        <result property="userSeCd" column="USER_SE_CD"/>
+        <result property="ogdpBzentyNm" column="OGDP_BZENTY_NM"/>
+        <result property="deptNm" column="DEPT_NM"/>
+        <result property="mobileNo" column="MBL_TELNO"/>
+        <result property="telno" column="TELNO"/>
+        <result property="emlAddr" column="EML_ADDR"/>
+        <result property="dmndAuthrtCd" column="DMND_AUTHRT_CD"/>
+        <result property="dmndAuthrtNm" column="DMND_AUTHRT_NM"/>
+        <result property="aplyRsn" column="APLY_RSN"/>
+        <result property="aplyDt" column="APLY_DT"/>
+        <result property="aplySttsCd" column="APLY_STTS_CD"/>
+        <result property="aprvUserId" column="APRV_USER_ID"/>
+        <result property="aprvDt" column="APRV_DT"/>
+        <result property="rfslRsn" column="RFSL_RSN"/>
+    </resultMap>
+
+    <sql id="applicationSelect">
+        SELECT U.APLY_NO, U.USER_ID, U.USER_NM, U.USER_ENPSWD, U.USER_SE_CD,
+               U.OGDP_BZENTY_NM, U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR,
+               U.DMND_AUTHRT_CD, A.AUTHRT_NM AS DMND_AUTHRT_NM,
+               U.APLY_RSN, U.APLY_DT, U.APLY_STTS_CD, U.APRV_USER_ID, U.APRV_DT, U.RFSL_RSN
+          FROM user_acnt_aply_info U
+          LEFT JOIN authrt_info A ON A.AUTHRT_CD = U.DMND_AUTHRT_CD
+    </sql>
+
+    <select id="countUnavailableUserId" parameterType="string" resultType="int">
+        SELECT (SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter})
+             + (SELECT COUNT(*) FROM user_acnt_aply_info
+                 WHERE USER_ID = #{_parameter} AND APLY_STTS_CD IN ('WAITING', 'APPROVED'))
+    </select>
+
+    <insert id="insertAccountApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        INSERT INTO user_acnt_aply_info
+        (APLY_NO, USER_ID, USER_NM, USER_ENPSWD, USER_SE_CD, OGDP_BZENTY_NM, DEPT_NM,
+         MBL_TELNO, TELNO, EML_ADDR, DMND_AUTHRT_CD, APLY_RSN, APLY_DT, APLY_STTS_CD)
+        VALUES
+        (#{aplyNo}, #{userId}, #{userNm}, #{userEnpswd}, #{userSeCd}, #{ogdpBzentyNm}, #{deptNm},
+         #{mobileNo}, #{telno}, #{emlAddr}, #{dmndAuthrtCd}, #{aplyRsn}, NOW(), #{aplySttsCd})
+    </insert>
+
+    <select id="selectApplicationList" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
+         WHERE 1 = 1
+        <if test="aplySttsCd != null and aplySttsCd != ''">AND U.APLY_STTS_CD = #{aplySttsCd}</if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+           AND (U.USER_ID LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.USER_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.OGDP_BZENTY_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+             OR U.DEPT_NM LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+         ORDER BY U.APLY_DT DESC, U.APLY_NO DESC
+    </select>
+
+    <select id="selectApplication" parameterType="string" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
+         WHERE U.APLY_NO = #{_parameter}
+    </select>
+
+    <select id="selectApplicationForUpdate" parameterType="string" resultMap="applicationMap">
+        <include refid="applicationSelect"/>
+         WHERE U.APLY_NO = #{_parameter}
+         FOR UPDATE
+    </select>
+
+    <select id="countActiveAuthrt" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM authrt_info WHERE AUTHRT_CD = #{_parameter} AND USE_YN = 'Y'
+    </select>
+
+    <update id="updateRequestedAuthrt" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        UPDATE user_acnt_aply_info
+           SET DMND_AUTHRT_CD = #{dmndAuthrtCd}
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
+    </update>
+
+    <update id="approveApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        UPDATE user_acnt_aply_info
+           SET APLY_STTS_CD = 'APPROVED', APRV_USER_ID = #{aprvUserId}, APRV_DT = NOW(), RFSL_RSN = NULL
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
+    </update>
+
+    <update id="rejectApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
+        UPDATE user_acnt_aply_info
+           SET APLY_STTS_CD = 'REJECTED', RFSL_RSN = #{rfslRsn}
+         WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
+    </update>
+</mapper>

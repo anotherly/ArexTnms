@@ -1,5 +1,7 @@
 package kr.co.TRSolution.tnms.audit.service.impl;
 
+import java.util.List;
+
 import javax.annotation.Resource;
 
 import org.slf4j.Logger;
@@ -23,7 +25,6 @@ public class AuditServiceImpl implements AuditService {
                        String target, String message, String result) {
         AuditVO audit = new AuditVO();
         if (user != null) {
-            audit.setUserSn(user.getUserSn());
             audit.setUserId(user.getUserId());
         }
         audit.setUserIpAddr(ip);
@@ -37,5 +38,17 @@ public class AuditServiceImpl implements AuditService {
         } catch (RuntimeException e) {
             logger.warn("작업로그 저장 실패", e);
         }
+    }
+
+    @Override
+    public List<AuditVO> selectJobLogList(AuditVO searchVO) {
+        return auditMapper.selectJobLogList(searchVO == null ? new AuditVO() : searchVO);
+    }
+
+    @Override
+    public AuditVO selectJobLog(Long jobLogSn) {
+        AuditVO log = auditMapper.selectJobLog(jobLogSn);
+        if (log == null) throw new IllegalArgumentException("작업로그를 찾을 수 없습니다.");
+        return log;
     }
 }
