@@ -41,7 +41,7 @@
   }
   function uiRows(){
     const rows=(data.uiSettings||[]).filter(x=>!x.uiStngCd.startsWith('PUSH_')&&x.uiStngCd!=='STATION_STATUS_PRIORITY').sort((a,b)=>settingOrder.indexOf(a.uiStngCd)-settingOrder.indexOf(b.uiStngCd));
-    return rows.map(x=>`<div class="label">${escapeHtml(x.uiStngNm)}</div><div class="field">${settingControl(x)}<small class="form-help">${escapeHtml(x.uiStngExpln||'')}</small></div>`).join('');
+    return rows.map(x=>`<div class="label">${escapeHtml(x.uiStngNm)}</div><div class="field">${settingControl(x)}</div>`).join('');
   }
   function pushSettings(){
     return (data.uiSettings||[]).filter(x=>x.uiStngCd.startsWith('PUSH_')).map(x=>`<label class="push-toggle"><input type="checkbox" class="ui-setting-value" data-code="${escapeHtml(x.uiStngCd)}" value="Y" ${x.uiStngVl==='Y'?'checked':''}><span>${escapeHtml(x.uiStngNm)}</span></label>`).join('');

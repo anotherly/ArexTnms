@@ -20,5 +20,5 @@ boolean facilityStylePage = "systems".equals(facilityStylePageKey) || "equipment
         || "scada".equals(facilityStylePageKey) || "switch".equals(facilityStylePageKey) || "cctv".equals(facilityStylePageKey);
 if (facilityStylePage) {
 %>
-<link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/facility-screen.css?v=20260917.1" />
+<link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/facility-screen.css?v=20260918.2" />
 <% } %>

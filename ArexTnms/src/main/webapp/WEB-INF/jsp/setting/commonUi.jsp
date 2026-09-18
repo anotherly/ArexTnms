@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "이벤트 등급 색상, 역사 대표�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/setting/common-ui.js?v=20260918.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/setting/common-ui.js?v=20260918.2"></script>
 </body>
 </html>

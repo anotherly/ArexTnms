@@ -1,4 +1,4 @@
-const DASHBOARD_ASSET_VERSION = '20260918.2';
+const DASHBOARD_ASSET_VERSION = '20260918.4';
 let DASHBOARD_DATA = null;
 let DASHBOARD_REFRESH_TIMER = null;
 let DASHBOARD_MODE = localStorage.getItem('tnmsDashboardMode') === 'expanded' ? 'expanded' : 'basic';
@@ -37,7 +37,7 @@ function setDashboardMode(mode) {
 }
 function setDashboardSlide(index) {
   const frame = document.getElementById('plannerDashboardFrame');
-  if (frame) frame.src = dashboardAsset(index === 0 ? '/css/tnms/planner-dashboard-map/index.html' : '/css/tnms/planner-dashboard-system/index.html');
+  if (frame) frame.src = dashboardAsset(index === 0 ? '/css/tnms/planner-dashboard-map/index.html?v=20260918.4' : '/css/tnms/planner-dashboard-system/index.html?v=20260918.4');
 }
 window.addEventListener('message', function (event) {
   if (event.origin !== location.origin || !event.data || event.data.source !== 'tnms-planner') return;
@@ -68,7 +68,7 @@ function startDashboardRefresh() {
 window.addEventListener('beforeunload', function(){ if (DASHBOARD_REFRESH_TIMER) clearInterval(DASHBOARD_REFRESH_TIMER); });
 window.TNMS_PAGE_INIT = async function () {
   const html = '<div class="dashboard-embed-shell"><iframe id="plannerDashboardFrame" class="planner-dashboard-frame" '
-    + 'src="' + dashboardAsset('/css/tnms/planner-dashboard-map/index.html') + '" title="TNMS 통합 대시보드"></iframe></div>';
+    + 'src="' + dashboardAsset('/css/tnms/planner-dashboard-map/index.html?v=20260918.4') + '" title="TNMS 통합 대시보드"></iframe></div>';
   renderPage('dashboard', html);
   updateModeButtons();
   const frame = document.getElementById('plannerDashboardFrame');
