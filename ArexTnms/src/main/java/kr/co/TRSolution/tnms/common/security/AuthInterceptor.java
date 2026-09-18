@@ -41,6 +41,10 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
+        if ("/setting/common-ui/code.ajax".equals(path)) {
+            String requestedAction = request.getParameter("_authAction");
+            requirement = new Requirement("settings", "REG".equals(requestedAction) ? "REG" : "MDFCN");
+        }
         if (requirement == null && path.startsWith("/facility/") && path.endsWith(".ajax")) {
             String action = "/facility/save.ajax".equals(path) ? (request.getParameter("eqpmntSn") == null || request.getParameter("eqpmntSn").length() == 0 ? "REG" : "MDFCN")
                     : "/facility/delete.ajax".equals(path) ? "DEL" : "/facility/detail.ajax".equals(path) ? "DTL" : "LIST";
@@ -76,9 +80,6 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
     private static Map<String, Requirement> createRequirements() {
         Map<String, Requirement> map = new HashMap<String, Requirement>();
-        map.put("/main/dashboard.do", new Requirement("dashboard", "LIST"));
-        map.put("/main/dashboard-data.ajax", new Requirement("dashboard", "LIST"));
-        map.put("/main/dashboard-station.ajax", new Requirement("dashboard", "DTL"));
         map.put("/facility/transmission.do", new Requirement("systems", "LIST"));
         map.put("/facility/pids.do", new Requirement("equipment", "LIST"));
         map.put("/facility/pbx.do", new Requirement("switch", "LIST"));
@@ -104,7 +105,6 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/setting/common-ui.do", new Requirement("settings", "LIST"));
         map.put("/setting/common-ui/data.ajax", new Requirement("settings", "LIST"));
         map.put("/setting/common-ui/ui.ajax", new Requirement("settings", "MDFCN"));
-        map.put("/setting/common-ui/code.ajax", new Requirement("settings", "MDFCN"));
         map.put("/audit/job-log.do", new Requirement("logs", "LIST"));
         map.put("/audit/job-log/list.ajax", new Requirement("logs", "LIST"));
         map.put("/audit/job-log/detail.ajax", new Requirement("logs", "DTL"));

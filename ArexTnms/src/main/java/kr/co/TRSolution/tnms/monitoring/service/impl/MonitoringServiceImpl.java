@@ -33,6 +33,7 @@ public class MonitoringServiceImpl implements MonitoringService {
         EquipmentVO all = new EquipmentVO();
         List<String> priority = loadStatusPriority();
         List<EquipmentVO> systems = monitoringMapper.selectSystemSummary();
+        applyEquipmentPriority(systems, priority);
         List<StationStatusVO> stations = monitoringMapper.selectStationSummary(all);
         applyStationPriority(stations, priority);
         result.put("systems", systems);
@@ -74,7 +75,9 @@ public class MonitoringServiceImpl implements MonitoringService {
     @Override
     public List<EquipmentVO> selectStationSystemSummary(String stnCd) {
         if (stnCd == null || stnCd.trim().length() == 0) throw new IllegalArgumentException("역사코드가 필요합니다.");
-        return monitoringMapper.selectStationSystemSummary(stnCd);
+        List<EquipmentVO> systems = monitoringMapper.selectStationSystemSummary(stnCd);
+        applyEquipmentPriority(systems, loadStatusPriority());
+        return systems;
     }
 
     @Override
@@ -177,6 +180,15 @@ public class MonitoringServiceImpl implements MonitoringService {
             if (DEFAULT_STATUS_PRIORITY.contains(code) && unique.add(code)) result.add(code);
         }
         return result.size() == DEFAULT_STATUS_PRIORITY.size() ? result : DEFAULT_STATUS_PRIORITY;
+    }
+
+
+    private void applyEquipmentPriority(List<EquipmentVO> systems, List<String> priority) {
+        if (systems == null) return;
+        for (EquipmentVO system : systems) {
+            system.setSttsCd(resolveStatus(system.getTotalNocs(), system.getNormalNocs(), system.getCautionNocs(),
+                    system.getCriticalNocs(), system.getOfflineNocs(), system.getUnknownNocs(), priority));
+        }
     }
 
     private void applyStationPriority(List<StationStatusVO> stations, List<String> priority) {

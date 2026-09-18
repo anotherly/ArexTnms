@@ -4,6 +4,7 @@
   global.CONTEXT_PATH = config.contextPath || '';
   global.CSRF_TOKEN = '';
   global.PERMISSIONS = {};
+  global.RUNTIME_SETTINGS = {};
   global.CURRENT_USER = {userNm: '사용자'};
 
   global.escapeHtml = function (value) {
@@ -13,10 +14,26 @@
   };
 
   global.hasPermission = function (screen, property) {
+    if (screen === 'dashboard') return true;
     if (screen === 'applications') screen = 'users';
     const permission = global.PERMISSIONS[screen];
     return !!permission && permission[property || 'listAuthrtYn'] === 'Y';
   };
+
+  global.getUiSetting = function (code, fallback) {
+    const value = global.RUNTIME_SETTINGS ? global.RUNTIME_SETTINGS[code] : null;
+    return value == null || value === '' ? fallback : value;
+  };
+
+  global.getUiSettingInt = function (code, fallback, min, max) {
+    const value = parseInt(global.getUiSetting(code, fallback), 10);
+    let result = Number.isFinite(value) ? value : fallback;
+    if (typeof min === 'number') result = Math.max(min, result);
+    if (typeof max === 'number') result = Math.min(max, result);
+    return result;
+  };
+
+  global.getListPageSize = function () { return global.getUiSettingInt('LIST_ROW_CNT', 20, 1, 500); };
 
   global.permissionButton = function (screen, property, label, classes, handler) {
     return global.hasPermission(screen, property)
@@ -70,6 +87,7 @@
     const data = await global.api('/auth/myPermissions.ajax');
     global.CURRENT_USER = data.user || global.CURRENT_USER;
     global.PERMISSIONS = data.permissions || {};
+    global.RUNTIME_SETTINGS = data.uiSettings || {};
     global.CSRF_TOKEN = data.csrfToken || '';
     const userName = document.getElementById('headerUserName');
     if (userName) userName.textContent = global.CURRENT_USER.userNm || global.CURRENT_USER.userId || '사용자';

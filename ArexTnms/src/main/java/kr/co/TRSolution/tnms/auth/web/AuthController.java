@@ -22,6 +22,7 @@ import kr.co.TRSolution.tnms.auth.vo.AuthVO;
 import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
 import kr.co.TRSolution.tnms.common.BaseController;
 import kr.co.TRSolution.tnms.common.util.ClientIpUtil;
+import kr.co.TRSolution.tnms.setting.service.SettingService;
 import kr.co.TRSolution.tnms.user.vo.UserVO;
 
 @Controller
@@ -29,6 +30,7 @@ public class AuthController extends BaseController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     @Resource(name = "authService") private AuthService authService;
     @Resource(name = "auditService") private AuditService auditService;
+    @Resource(name = "settingService") private SettingService settingService;
 
     @RequestMapping(value = "/auth/list.do", method = RequestMethod.GET)
     public String authPage() { return "auth/list"; }
@@ -99,6 +101,7 @@ public class AuthController extends BaseController {
             Map<String, Object> result = new HashMap<String, Object>();
             result.put("user", user);
             result.put("permissions", permissions);
+            result.put("uiSettings", settingService.selectRuntimeSettings());
             result.put("csrfToken", request.getSession().getAttribute("csrfToken"));
             return success(result);
         } catch (Exception e) {

@@ -24,7 +24,7 @@ request.setAttribute("pageDescription", "계정 신청부터 승인·계정 관�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/user/applications.js?v=20260917.2"></script>
-<script src="<%=request.getContextPath()%>/js/tnms/pages/user/users.js?v=20260917.2"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/user/applications.js?v=20260918.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/user/users.js?v=20260918.1"></script>
 </body>
 </html>

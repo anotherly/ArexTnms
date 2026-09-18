@@ -88,16 +88,8 @@
         CASE
           WHEN E.EQPMNT_SN IS NULL THEN 'NO_DATA'
           WHEN C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL THEN 'UNKNOWN'
-          WHEN E.EQPMNT_MNG_NO LIKE 'UIUX-SAMPLE-%' THEN
-               CASE
-                 WHEN C.CNTN_YN = 'N' THEN 'UNKNOWN'
-                 WHEN C.STTS_CD = 'OFFLINE' THEN 'UNKNOWN'
-                 WHEN C.STTS_CD = 'WARNING' THEN 'CAUTION'
-                 ELSE COALESCE(C.STTS_CD, 'UNKNOWN')
-               END
-          WHEN C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(
-               (SELECT CAST(U.UI_STNG_VL AS UNSIGNED) FROM ui_stng_info U
-                 WHERE U.UI_STNG_CD = 'DASHBOARD_OFFLINE_MIN' AND U.USE_YN = 'Y'), 5) MINUTE) THEN 'UNKNOWN'
+          WHEN C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(CAST((SELECT U.UI_STNG_VL FROM ui_stng_info U
+                 WHERE U.UI_STNG_CD = 'DASHBOARD_OFFLINE_MIN' AND U.USE_YN = 'Y') AS UNSIGNED), 5) MINUTE) THEN 'UNKNOWN'
           WHEN C.STTS_CD = 'OFFLINE' THEN 'UNKNOWN'
           WHEN C.STTS_CD = 'WARNING' THEN 'CAUTION'
           ELSE COALESCE(C.STTS_CD, 'UNKNOWN')
@@ -206,7 +198,6 @@
             OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
         </if>
          ORDER BY COALESCE(S.STN_SEQ, 999), E.EQPMNT_MNG_NO
-         LIMIT 200
     </select>
 
     <select id="selectEquipmentSummary" parameterType="equipmentVO" resultMap="equipmentMap">

@@ -6,6 +6,7 @@
 <%@ page import="kr.co.TRSolution.tnms.auth.vo.MenuAuthVO" %>
 <%!
 private boolean canList(Map<String, MenuAuthVO> permissions, String key) {
+    if ("dashboard".equals(key)) return true;
     if (permissions == null) return true;
     MenuAuthVO permission = permissions.get(key);
     return permission != null && "Y".equals(permission.getListAuthrtYn());

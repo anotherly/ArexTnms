@@ -1,5 +1,6 @@
-const DASHBOARD_ASSET_VERSION = '20260917.1';
+const DASHBOARD_ASSET_VERSION = '20260918.2';
 let DASHBOARD_DATA = null;
+let DASHBOARD_REFRESH_TIMER = null;
 let DASHBOARD_MODE = localStorage.getItem('tnmsDashboardMode') === 'expanded' ? 'expanded' : 'basic';
 
 function dashboardAsset(path) { return CONTEXT_PATH + path + '?v=' + DASHBOARD_ASSET_VERSION; }
@@ -49,12 +50,22 @@ window.addEventListener('message', function (event) {
     }).catch(function(error){showToast(error.message,true)});
   }
   if (event.data.type === 'system-stations' && event.data.linkSysCd) {
-    api('/facility/data.ajax?linkSysCd='+encodeURIComponent(event.data.linkSysCd)).then(function(data){
+    api('/main/dashboard-system-stations.ajax?linkSysCd='+encodeURIComponent(event.data.linkSysCd)).then(function(data){
       const frame=document.getElementById('plannerDashboardFrame');
-      if(frame&&frame.contentWindow)frame.contentWindow.postMessage({source:'tnms-shell',type:'system-stations',linkSysCd:event.data.linkSysCd,data:data.stations||[]},location.origin);
+      if(frame&&frame.contentWindow)frame.contentWindow.postMessage({source:'tnms-shell',type:'system-stations',linkSysCd:event.data.linkSysCd,data:data||[]},location.origin);
     }).catch(function(error){showToast(error.message,true)});
   }
 });
+async function refreshDashboardData(showError) {
+  try { DASHBOARD_DATA = await api('/main/dashboard-data.ajax'); sendDashboardState(document.getElementById('plannerDashboardFrame')); }
+  catch (error) { if (showError) showToast(error.message, true); }
+}
+function startDashboardRefresh() {
+  if (DASHBOARD_REFRESH_TIMER) clearInterval(DASHBOARD_REFRESH_TIMER);
+  const seconds = getUiSettingInt('DASHBOARD_REFRESH_SEC', 10, 5, 3600);
+  DASHBOARD_REFRESH_TIMER = setInterval(function(){ refreshDashboardData(false); }, seconds * 1000);
+}
+window.addEventListener('beforeunload', function(){ if (DASHBOARD_REFRESH_TIMER) clearInterval(DASHBOARD_REFRESH_TIMER); });
 window.TNMS_PAGE_INIT = async function () {
   const html = '<div class="dashboard-embed-shell"><iframe id="plannerDashboardFrame" class="planner-dashboard-frame" '
     + 'src="' + dashboardAsset('/css/tnms/planner-dashboard-map/index.html') + '" title="TNMS 통합 대시보드"></iframe></div>';
@@ -62,6 +73,6 @@ window.TNMS_PAGE_INIT = async function () {
   updateModeButtons();
   const frame = document.getElementById('plannerDashboardFrame');
   if (frame) frame.addEventListener('load', function () { prepareDashboardFrame(frame); });
-  try { DASHBOARD_DATA = await api('/main/dashboard-data.ajax'); sendDashboardState(frame); }
-  catch (error) { showToast(error.message, true); }
+  await refreshDashboardData(true);
+  startDashboardRefresh();
 };

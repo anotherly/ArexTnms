@@ -11,6 +11,6 @@ window.TNMS_CONFIG = {
 };
 </script>
 <script src="<%=request.getContextPath()%>/js/tnms/common/page-urls.js?v=20260904.1"></script>
-<script src="<%=request.getContextPath()%>/js/tnms/common/tnms-common.js?v=20260916.2"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/common/tnms-common.js?v=20260918.1"></script>
 
 <script src="<%=request.getContextPath()%>/js/tnms/common/notification.js?v=20260917.1"></script>

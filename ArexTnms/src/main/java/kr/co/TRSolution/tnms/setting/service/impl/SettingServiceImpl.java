@@ -38,6 +38,24 @@ public class SettingServiceImpl implements SettingService {
     }
 
     @Override
+    public Map<String, String> selectRuntimeSettings() {
+        Map<String, String> result = new HashMap<String, String>();
+        for (UiSettingVO item : settingMapper.selectUiSettingList()) {
+            if (item != null && !blank(item.getUiStngCd())) result.put(item.getUiStngCd(), item.getUiStngVl());
+        }
+        return result;
+    }
+
+    @Override
+    public int getUiSettingInt(String code, int fallback) {
+        if (blank(code)) return fallback;
+        UiSettingVO item = settingMapper.selectUiSetting(code);
+        if (item == null || blank(item.getUiStngVl())) return fallback;
+        try { return Integer.parseInt(item.getUiStngVl().trim()); }
+        catch (NumberFormatException e) { return fallback; }
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveUiSettings(List<UiSettingVO> list, String actorId) {
         if (list == null || list.isEmpty()) throw new IllegalArgumentException("저장할 UI 설정이 없습니다.");
@@ -47,8 +65,10 @@ public class SettingServiceImpl implements SettingService {
                 vo.setUiStngVl(normalizeStationStatusPriority(vo.getUiStngVl()));
                 validateStationStatusPriority(vo.getUiStngVl());
             }
+            validateRuntimeSetting(vo);
             vo.setMdfrId(actorId);
             if (settingMapper.updateUiSetting(vo) != 1) throw new IllegalArgumentException("존재하지 않는 UI 설정입니다: " + vo.getUiStngCd());
+            if ("PSWD_CHG_NOTICE_DAY".equals(vo.getUiStngCd())) settingMapper.updatePasswordExpiryBySetting();
         }
     }
 
@@ -65,6 +85,17 @@ public class SettingServiceImpl implements SettingService {
             vo.setMdfrId(actorId);
             settingMapper.updateCommonCode(vo);
         }
+    }
+
+
+    private void validateRuntimeSetting(UiSettingVO vo) {
+        String code = vo.getUiStngCd();
+        if (!("LIST_ROW_CNT".equals(code) || "PSWD_CHG_NOTICE_DAY".equals(code) ||
+              "DASHBOARD_REFRESH_SEC".equals(code) || "DASHBOARD_OFFLINE_MIN".equals(code))) return;
+        int value;
+        try { value = Integer.parseInt(vo.getUiStngVl().trim()); }
+        catch (NumberFormatException e) { throw new IllegalArgumentException(vo.getUiStngNm() + " 값은 숫자여야 합니다."); }
+        if (value <= 0) throw new IllegalArgumentException(vo.getUiStngNm() + " 값은 0보다 커야 합니다.");
     }
 
     private boolean blank(String v) { return v == null || v.trim().length() == 0; }

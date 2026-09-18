@@ -72,6 +72,7 @@
           FROM menu_info M
           LEFT JOIN authrt_menu_rel R ON R.MENU_SN = M.MENU_SN AND R.AUTHRT_CD = #{_parameter}
          WHERE M.MENU_USE_YN = 'Y'
+           AND SUBSTRING_INDEX(M.MENU_URL_ADDR, 'screen=', -1) &lt;&gt; 'dashboard'
            AND EXISTS (SELECT 1 FROM authrt_info A WHERE A.AUTHRT_CD = #{_parameter} AND A.USE_YN = 'Y')
          ORDER BY M.MENU_SEQ, M.MENU_SN
     </select>

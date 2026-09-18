@@ -34,6 +34,15 @@ public class MonitoringController extends BaseController {
         catch (Exception e) { return fail(message(e)); }
     }
 
+    @RequestMapping(value = "/main/dashboard-system-stations.ajax", method = RequestMethod.GET)
+    public ModelAndView dashboardSystemStations(@RequestParam("linkSysCd") String linkSysCd) {
+        try {
+            EquipmentVO searchVO = new EquipmentVO();
+            searchVO.setLinkSysCd(linkSysCd);
+            return success(monitoringService.selectStationSummary(searchVO));
+        } catch (Exception e) { return fail(message(e)); }
+    }
+
     @RequestMapping(value = "/facility/data.ajax", method = RequestMethod.GET)
     public ModelAndView facility(@ModelAttribute EquipmentVO searchVO) {
         try { return success(monitoringService.selectFacility(searchVO)); }

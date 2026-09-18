@@ -11,6 +11,7 @@ public interface SettingMapper {
     List<UiSettingVO> selectUiSettingList();
     UiSettingVO selectUiSetting(String uiStngCd);
     int updateUiSetting(UiSettingVO vo);
+    int updatePasswordExpiryBySetting();
     List<CommonCodeVO> selectCodeGroupList();
     List<CommonCodeVO> selectCommonCodeList(String groupId);
     int countCommonCode(CommonCodeVO vo);

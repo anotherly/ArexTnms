@@ -24,6 +24,6 @@ request.setAttribute("pageDescription", "사용자의 로그인 및 웹 화면 �
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/audit/job-log.js?v=20260917.2"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/audit/job-log.js?v=20260918.1"></script>
 </body>
 </html>

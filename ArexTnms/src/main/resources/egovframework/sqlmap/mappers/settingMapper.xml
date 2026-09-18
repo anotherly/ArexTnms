@@ -14,6 +14,15 @@
         UPDATE ui_stng_info SET UI_STNG_VL = #{uiStngVl}, MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE UI_STNG_CD = #{uiStngCd} AND USE_YN = 'Y'
     </update>
+    <update id="updatePasswordExpiryBySetting">
+        UPDATE user_info
+           SET PSWD_EXPRY_YMD = DATE(TIMESTAMPADD(
+               MONTH,
+               CAST((SELECT UI_STNG_VL FROM ui_stng_info
+                      WHERE UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND USE_YN = 'Y') AS UNSIGNED),
+               COALESCE(PSWD_CHG_DT, REG_DT)))
+         WHERE USE_YN != 'N'
+    </update>
     <select id="selectCodeGroupList" resultType="commonCodeVO">
         SELECT G.COM_CD_GROUP_ID, G.COM_CD_GROUP_NM, G.COM_CD_GROUP_EXPLN, G.USE_YN,
                COUNT(C.COM_CD) AS CODE_NOCS

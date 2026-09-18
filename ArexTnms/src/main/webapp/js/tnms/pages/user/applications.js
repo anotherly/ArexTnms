@@ -1,12 +1,15 @@
 const APPLICATION_STATUS_LABELS={WAITING:'승인대기',APPROVED:'승인완료',REJECTED:'반려'};
 const APPLICATION_USER_TYPE_LABELS={INTERNAL:'내부',EXTERNAL:'외부'};
 window.APPLICATION_AUTH_LIST=window.APPLICATION_AUTH_LIST||[];
+let APPLICATION_DATA=[];
+let APPLICATION_PAGE=1;
+let APPLICATION_PAGE_SIZE=20;
 
 function applicationsScreen(){
   return `<section class="planner-card account-section application-section">
     <div class="planner-card-head"><div><h3>계정 신청 목록</h3><p>신규 계정 신청을 확인하고 권한을 지정하여 승인 또는 반려합니다.</p></div><small id="applicationCount">조회 중</small></div>
     <div class="planner-filter-row account-filter"><select id="applicationStatusFilter" class="input"><option value="">전체 상태</option><option value="WAITING" selected>승인 대기</option><option value="APPROVED">승인 완료</option><option value="REJECTED">반려</option></select><input id="applicationKeyword" class="input wide" placeholder="사용자명 / 아이디 / 소속"><button class="btn primary" type="button" onclick="loadApplications()">검색</button></div>
-    <div class="table-scroll"><table class="planner-table account-table"><thead><tr><th>No.</th><th>상태</th><th>사용자 아이디</th><th>사용자명</th><th>소속</th><th>부서</th><th>전화번호</th><th>이메일</th><th>신청일자</th><th>권한</th><th>처리</th></tr></thead><tbody id="applicationRows"><tr><td colspan="11" class="empty-row">조회 중입니다.</td></tr></tbody></table></div>
+    <div class="table-scroll"><table class="planner-table account-table"><thead><tr><th>No.</th><th>상태</th><th>사용자 아이디</th><th>사용자명</th><th>소속</th><th>부서</th><th>전화번호</th><th>이메일</th><th>신청일자</th><th>권한</th><th>처리</th></tr></thead><tbody id="applicationRows"><tr><td colspan="11" class="empty-row">조회 중입니다.</td></tr></tbody></table></div><div id="applicationPager" class="planner-pager account-pager"></div>
   </section>`;
 }
 function applicationAffiliation(a){
@@ -33,17 +36,15 @@ function applicationProcessButtons(a){
   }
   return hasPermission('applications','dtlAuthrtYn')?`<button class="btn sm" type="button" onclick='openApplicationDetail(${no})'>상세</button>`:'-';
 }
+function renderApplicationPager(){
+  const pager=document.getElementById('applicationPager');if(!pager)return;const pages=Math.max(1,Math.ceil(APPLICATION_DATA.length/APPLICATION_PAGE_SIZE));APPLICATION_PAGE=Math.min(APPLICATION_PAGE,pages);if(pages<=1){pager.innerHTML='';return;}let html=`<button ${APPLICATION_PAGE===1?'disabled':''} onclick="changeApplicationPage(${APPLICATION_PAGE-1})">‹</button>`;const start=Math.max(1,APPLICATION_PAGE-2),end=Math.min(pages,start+4);for(let i=start;i<=end;i++)html+=`<button class="${i===APPLICATION_PAGE?'on':''}" onclick="changeApplicationPage(${i})">${i}</button>`;html+=`<button ${APPLICATION_PAGE===pages?'disabled':''} onclick="changeApplicationPage(${APPLICATION_PAGE+1})">›</button>`;pager.innerHTML=html;
+}
+function renderApplications(){
+  const rows=document.getElementById('applicationRows');if(!rows)return;const start=(APPLICATION_PAGE-1)*APPLICATION_PAGE_SIZE,list=APPLICATION_DATA.slice(start,start+APPLICATION_PAGE_SIZE);rows.innerHTML=list.length?list.map((a,index)=>`<tr><td>${start+index+1}</td><td>${applicationStatusChip(a.aplySttsCd)}</td><td><button class="table-link" onclick='openApplicationDetail(${applicationActionNo(a.aplyNo)})'>${escapeHtml(a.userId)}</button></td><td>${escapeHtml(a.userNm)}</td><td>${escapeHtml(applicationAffiliation(a))}</td><td>${escapeHtml(a.deptNm||'-')}</td><td>${escapeHtml(a.mobileNo||a.telno||'-')}</td><td>${escapeHtml(a.emlAddr||'-')}</td><td>${formatDate(a.aplyDt)}</td><td>${applicationAuthSelect(a)}</td><td>${applicationProcessButtons(a)}</td></tr>`).join(''):'<tr><td class="empty-row" colspan="11">조회 결과가 없습니다.</td></tr>';renderApplicationPager();
+}
+window.changeApplicationPage=function(page){APPLICATION_PAGE=Math.max(1,page);renderApplications();};
 async function loadApplications(){
-  try{
-    const params=new URLSearchParams(),status=document.getElementById('applicationStatusFilter'),keyword=document.getElementById('applicationKeyword');
-    if(status&&status.value)params.set('aplySttsCd',status.value);
-    if(keyword&&keyword.value.trim())params.set('searchKeyword',keyword.value.trim());
-    const list=await api('/user/applications/list.ajax?'+params.toString());
-    const count=document.getElementById('applicationCount'),rows=document.getElementById('applicationRows');
-    if(count)count.textContent=`총 ${list.length}건`;
-    if(!rows)return;
-    rows.innerHTML=list.length?list.map((a,index)=>`<tr><td>${index+1}</td><td>${applicationStatusChip(a.aplySttsCd)}</td><td><button class="table-link" onclick='openApplicationDetail(${applicationActionNo(a.aplyNo)})'>${escapeHtml(a.userId)}</button></td><td>${escapeHtml(a.userNm)}</td><td>${escapeHtml(applicationAffiliation(a))}</td><td>${escapeHtml(a.deptNm||'-')}</td><td>${escapeHtml(a.mobileNo||a.telno||'-')}</td><td>${escapeHtml(a.emlAddr||'-')}</td><td>${formatDate(a.aplyDt)}</td><td>${applicationAuthSelect(a)}</td><td>${applicationProcessButtons(a)}</td></tr>`).join(''):'<tr><td class="empty-row" colspan="11">조회 결과가 없습니다.</td></tr>';
-  }catch(error){const rows=document.getElementById('applicationRows');if(rows)rows.innerHTML='<tr><td class="empty-row" colspan="11">계정 신청 목록을 불러오지 못했습니다.</td></tr>';showToast(error.message,true);}
+  try{const params=new URLSearchParams(),status=document.getElementById('applicationStatusFilter'),keyword=document.getElementById('applicationKeyword');if(status&&status.value)params.set('aplySttsCd',status.value);if(keyword&&keyword.value.trim())params.set('searchKeyword',keyword.value.trim());APPLICATION_DATA=await api('/user/applications/list.ajax?'+params.toString())||[];APPLICATION_PAGE=1;APPLICATION_PAGE_SIZE=getListPageSize();const count=document.getElementById('applicationCount');if(count)count.textContent=`총 ${APPLICATION_DATA.length}건`;renderApplications();}catch(error){const rows=document.getElementById('applicationRows');if(rows)rows.innerHTML='<tr><td class="empty-row" colspan="11">계정 신청 목록을 불러오지 못했습니다.</td></tr>';showToast(error.message,true);}
 }
 async function openApplicationDetail(aplyNo){
   try{

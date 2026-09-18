@@ -115,6 +115,7 @@
         });
         const result = await response.json();
         if (!result.success) throw new Error(result.message || '아이디와 비밀번호를 확인해 주세요');
+        if (result.passwordChangeRequired) alert(result.message || '비밀번호 변경주기가 경과했습니다.');
         location.replace(result.url);
       } catch (error) {
         errorMessage.textContent = error.message || '아이디와 비밀번호를 확인해 주세요';

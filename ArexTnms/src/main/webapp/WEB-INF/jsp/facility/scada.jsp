@@ -20,6 +20,6 @@ request.setAttribute("pageDescription", "");
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/facility/facility.js?v=20260917.5"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/facility/facility.js?v=20260918.1"></script>
 </body>
 </html>

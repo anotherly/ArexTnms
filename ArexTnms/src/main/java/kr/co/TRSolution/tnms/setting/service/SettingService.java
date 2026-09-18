@@ -8,6 +8,8 @@ import kr.co.TRSolution.tnms.setting.vo.UiSettingVO;
 
 public interface SettingService {
     Map<String, Object> selectSettings(String groupId);
+    Map<String, String> selectRuntimeSettings();
+    int getUiSettingInt(String code, int fallback);
     void saveUiSettings(List<UiSettingVO> list, String actorId);
     void saveCommonCode(CommonCodeVO vo, String actorId);
 }

@@ -10,7 +10,7 @@
     cctv:      {linkSysCd:'VMS',      name:'영상감시설비(CCTV)',   shortName:'CCTV',   eqpmntSeCd:'CCTV'}
   };
   const config = CONFIGS[PAGE_KEY] || CONFIGS.systems;
-  const PAGE_SIZE = 10;
+  let PAGE_SIZE = 20;
   let currentStation = '';
   let currentData = {stations:[], equipments:[], summary:{}, statusCodes:[], lseCandidates:[], equipmentLinks:[], scadaEvents:[]};
   let currentPage = 1;
@@ -460,5 +460,5 @@
     }catch(e){global.showToast(e.message,true);}
   };
 
-  global.TNMS_PAGE_INIT=async function(){await global.loadFacility();};
+  global.TNMS_PAGE_INIT=async function(){PAGE_SIZE=global.getListPageSize?global.getListPageSize():20;await global.loadFacility();};
 })(window);

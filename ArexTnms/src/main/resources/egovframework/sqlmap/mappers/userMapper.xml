@@ -24,7 +24,8 @@
 
     <sql id="userJoin">
         SELECT U.USER_ID, U.USER_NM, U.USER_ENPSWD, U.USER_SE_CD, U.OGDP_BZENTY_NM,
-               U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR, U.USER_STTS_CD, U.PSWD_EXPRY_YMD,
+               U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR, U.USER_STTS_CD,
+               DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), COALESCE(U.PSWD_CHG_DT, U.REG_DT))) AS PSWD_EXPRY_YMD,
                U.LAST_LGN_DT, U.LGN_FAIL_NOCS, U.USE_YN, U.REG_DT, U.MDFCN_DT,
                U.AUTHRT_CD, A.AUTHRT_NM
           FROM user_info U
@@ -65,10 +66,12 @@
     <insert id="insertUser" parameterType="userVO">
         INSERT INTO user_info
         (USER_ID, USER_NM, USER_ENPSWD, AUTHRT_CD, USER_SE_CD, OGDP_BZENTY_NM, DEPT_NM,
-         MBL_TELNO, TELNO, EML_ADDR, USER_STTS_CD, PSWD_EXPRY_YMD, LGN_FAIL_NOCS, USE_YN, RGTR_ID)
+         MBL_TELNO, TELNO, EML_ADDR, USER_STTS_CD, PSWD_EXPRY_YMD, PSWD_CHG_DT, LGN_FAIL_NOCS, USE_YN, RGTR_ID)
         VALUES
         (#{userId}, #{userNm}, #{userEnpswd}, #{authrtCd}, #{userSeCd}, #{ogdpBzentyNm}, #{deptNm},
-         #{mobileNo}, #{telno}, #{emlAddr}, #{userSttsCd}, DATE_ADD(CURDATE(), INTERVAL 90 DAY), 0, #{useYn}, #{rgtrId})
+         #{mobileNo}, #{telno}, #{emlAddr}, #{userSttsCd},
+         DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
+         NOW(), 0, #{useYn}, #{rgtrId})
     </insert>
 
     <update id="updateUser" parameterType="userVO">
@@ -82,7 +85,9 @@
 
     <update id="updatePassword" parameterType="userVO">
         UPDATE user_info
-           SET USER_ENPSWD = #{userEnpswd}, PSWD_EXPRY_YMD = DATE_ADD(CURDATE(), INTERVAL 90 DAY),
+           SET USER_ENPSWD = #{userEnpswd},
+               PSWD_EXPRY_YMD = DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
+               PSWD_CHG_DT = NOW(),
                MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE USER_ID = #{userId} AND USE_YN != 'N'
     </update>

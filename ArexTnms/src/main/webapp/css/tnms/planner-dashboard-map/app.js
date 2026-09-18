@@ -196,6 +196,13 @@ function applyStatusClass(control, statusCode, fixedMnls){
   const code = normalizeStatusCode(statusCode);
   control.classList.add(code === 'CRITICAL' ? 'db-critical' : code === 'CAUTION' ? 'db-warning' : code === 'UNKNOWN' || code === 'NO_DATA' ? 'db-unknown' : 'db-normal');
 }
+function applyRouteStatus(name, statusCode){
+  const code = normalizeStatusCode(statusCode);
+  routeNodes.filter(node => node.dataset.node === name).forEach(function(node){
+    node.classList.remove('db-normal','db-warning','db-critical','db-offline','db-unknown');
+    node.classList.add(code === 'CRITICAL' ? 'db-critical' : code === 'CAUTION' ? 'db-warning' : code === 'UNKNOWN' || code === 'NO_DATA' ? 'db-unknown' : 'db-normal');
+  });
+}
 const dashboardPalette={
   NORMAL:{label:'정상',color:'#10A05D'},CAUTION:{label:'주의',color:'#FF9418'},
   CRITICAL:{label:'장애',color:'#FF2B22'},UNKNOWN:{label:'통신단절',color:'#718096'}
@@ -256,6 +263,7 @@ function applyDashboardData(data) {
       const fixedMnls = item.mnlsStnYn === 'Y' && control.classList.contains('watch-chip');
       applyStatusClass(control, item.sttsCd, fixedMnls);
     });
+    if (item.mnlsStnYn !== 'Y') applyRouteStatus(item.stnNm, item.sttsCd);
   });
 }
 function applyStationDetail(items) {

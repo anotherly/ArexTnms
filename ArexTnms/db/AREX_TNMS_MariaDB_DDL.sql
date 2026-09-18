@@ -1030,6 +1030,7 @@ CREATE TABLE IF NOT EXISTS `user_info` (
   `EML_ADDR` varchar(320) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '이메일주소',
   `USER_STTS_CD` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NORMAL' COMMENT '사용자상태코드',
   `PSWD_EXPRY_YMD` date DEFAULT NULL COMMENT '비밀번호만료일자',
+  `PSWD_CHG_DT` datetime DEFAULT NULL COMMENT '비밀번호최종변경일시',
   `LAST_LGN_DT` datetime DEFAULT NULL COMMENT '최종로그인일시',
   `LGN_FAIL_NOCS` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '로그인실패건수',
   `USE_YN` char(1) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Y' COMMENT '사용여부',

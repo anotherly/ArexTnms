@@ -1,5 +1,6 @@
 package kr.co.TRSolution.tnms.auth.service.impl;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,10 +79,14 @@ public class AuthServiceImpl implements AuthService {
     public void saveMenuPermissions(String authrtCd, List<MenuAuthVO> permissions) {
         String code = normalizeCode(authrtCd);
         if (authMapper.selectAuth(code) == null) throw new IllegalArgumentException("권한 정보가 없습니다.");
+        Map<Long, String> screenByMenuSn = new HashMap<Long, String>();
+        for (MenuAuthVO menu : authMapper.selectMenuAuthList(code)) screenByMenuSn.put(menu.getMenuSn(), menu.getScreenKey());
         authMapper.deleteAuthMenus(code);
         if (permissions == null) return;
         for (MenuAuthVO permission : permissions) {
+            if (permission.getMenuSn() == null || !screenByMenuSn.containsKey(permission.getMenuSn())) continue;
             permission.setAuthrtCd(code);
+            permission.setScreenKey(screenByMenuSn.get(permission.getMenuSn()));
             normalizePermission(permission, SYSTEM_ADMIN_AUTHRT_CD.equals(code));
             authMapper.insertMenuAuth(permission);
         }
@@ -119,21 +124,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void normalizePermission(MenuAuthVO item, boolean systemAdmin) {
-        if (systemAdmin) {
-            item.setListAuthrtYn("Y"); item.setDtlAuthrtYn("Y"); item.setRegAuthrtYn("Y");
-            item.setMdfcnAuthrtYn("Y"); item.setDelAuthrtYn("Y"); item.setCtrlAuthrtYn("Y");
-            return;
-        }
-        item.setListAuthrtYn(yn(item.getListAuthrtYn()));
-        item.setDtlAuthrtYn(yn(item.getDtlAuthrtYn()));
-        item.setRegAuthrtYn(yn(item.getRegAuthrtYn()));
-        item.setMdfcnAuthrtYn(yn(item.getMdfcnAuthrtYn()));
-        item.setDelAuthrtYn(yn(item.getDelAuthrtYn()));
-        item.setCtrlAuthrtYn(yn(item.getCtrlAuthrtYn()));
+        String screen = item.getScreenKey();
+        item.setListAuthrtYn(systemAdmin || "Y".equals(item.getListAuthrtYn()) ? "Y" : "N");
+        item.setDtlAuthrtYn(supports(screen, "DTL") && (systemAdmin || "Y".equals(item.getDtlAuthrtYn())) ? "Y" : "N");
+        item.setRegAuthrtYn(supports(screen, "REG") && (systemAdmin || "Y".equals(item.getRegAuthrtYn())) ? "Y" : "N");
+        item.setMdfcnAuthrtYn(supports(screen, "MDFCN") && (systemAdmin || "Y".equals(item.getMdfcnAuthrtYn())) ? "Y" : "N");
+        item.setDelAuthrtYn(supports(screen, "DEL") && (systemAdmin || "Y".equals(item.getDelAuthrtYn())) ? "Y" : "N");
+        item.setCtrlAuthrtYn("N");
         if ("Y".equals(item.getMdfcnAuthrtYn()) || "Y".equals(item.getDelAuthrtYn())) item.setDtlAuthrtYn("Y");
         if ("Y".equals(item.getDtlAuthrtYn()) || "Y".equals(item.getRegAuthrtYn()) ||
-            "Y".equals(item.getMdfcnAuthrtYn()) || "Y".equals(item.getDelAuthrtYn()) ||
-            "Y".equals(item.getCtrlAuthrtYn())) item.setListAuthrtYn("Y");
+            "Y".equals(item.getMdfcnAuthrtYn()) || "Y".equals(item.getDelAuthrtYn())) item.setListAuthrtYn("Y");
+    }
+
+    private boolean supports(String screen, String action) {
+        if (screen == null) return "LIST".equals(action);
+        if ("systems".equals(screen) || "equipment".equals(screen) || "scada".equals(screen) ||
+            "switch".equals(screen) || "cctv".equals(screen) || "users".equals(screen) || "auth".equals(screen)) return true;
+        if ("settings".equals(screen)) return "LIST".equals(action) || "REG".equals(action) || "MDFCN".equals(action);
+        if ("logs".equals(screen)) return "LIST".equals(action) || "DTL".equals(action);
+        return "LIST".equals(action);
     }
 
     private String yn(String value) { return "Y".equals(value) ? "Y" : "N"; }
