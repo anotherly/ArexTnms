@@ -136,3 +136,40 @@
 @media(max-width:1550px){.facility-selected-title strong{font-size:15px}.pids-zone-card h4{font-size:13px}.planner-station{font-size:9px}.planner-station span{font-size:9px}.facility-table{min-width:1200px}}
 @media(max-width:1260px){.pids-overview-grid,.scada-overview-grid,.pbx-overview-grid,.cctv-overview-grid{grid-template-columns:1fr}.facility-list-toolbar{align-items:flex-start;flex-direction:column}.list-filter-inline{width:100%;margin-left:0;justify-content:flex-end}.pids-zone-pair{grid-template-columns:1fr}.pids-zone-pair:before,.pids-zone-pair:after{display:none}.status-tile-row,.cctv-floor-grid,.cctv-subarea-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.facility-selected-summary{align-items:flex-start!important;flex-direction:column;justify-content:center!important;padding:10px 14px!important}.facility-selected-title{flex-wrap:wrap}.list-filter-inline{flex-wrap:wrap;justify-content:flex-start}.planner-form-grid,.equipment-detail-grid{grid-template-columns:1fr}.detail-pair:nth-child(odd){border-right:0}.planner-form-field.span-2{grid-column:auto}.subscriber-wide-grid,.status-tile-row,.cctv-floor-grid,.cctv-subarea-grid{grid-template-columns:1fr}}
+
+/* 2026-09-18 프로젝트 가독성 보정
+   회색 안내/설명(.form-help, .card-note, .planner-form-notice 등)은 기존 크기 유지.
+   실제 값/라벨/조작 요소는 최소 10px로 통일. */
+.tx-topology-device small,
+.tx-topology-device em,
+.pids-server small,
+.pids-zone-wrap span,
+.inline-performance span,
+.subscriber-tiles small,
+.cctv-area-grid span,
+.cctv-area-grid small,
+.health-tiles span,
+.dep-chip,
+.realtime-alarm-card>button b,
+.facility-subtabs button,
+.list-filter-inline .input,
+.planner-table th,
+.planner-table td,
+.planner-status,
+.facility-table .equipment-name button,
+.facility-table .equipment-name small,
+.facility-table .btn.sm,
+.detail-pair span,
+.detail-pair b,
+.equipment-memo-block>label,
+.equipment-memo-block>div,
+.planner-form-field>label,
+.planner-form-field .form-control,
+.status-tile span,
+.ems-strip,
+.perf-box-grid span,
+.cctv-floor-card span,
+.subarea-card span,
+.subarea-card em,
+.cctv-health-card .health-list span,
+.cctv-health-card .health-list em{font-size:10px!important;}

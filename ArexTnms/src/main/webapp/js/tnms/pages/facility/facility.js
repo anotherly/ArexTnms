@@ -12,12 +12,11 @@
   const config = CONFIGS[PAGE_KEY] || CONFIGS.systems;
   let PAGE_SIZE = 20;
   let currentStation = '';
-  let currentData = {stations:[], equipments:[], summary:{}, statusCodes:[], lseCandidates:[], equipmentLinks:[], scadaEvents:[]};
+  let currentData = {stations:[], equipments:[], summary:{}, statusCodes:[], lseCandidates:[], equipmentLinks:[], scadaEvents:[], equipmentClassifications:[]};
   let currentPage = 1;
   let pidsArea = PAGE_KEY === 'equipment' ? 'PLATFORM' : 'ALL';
   let facilityStatus = '';
   let facilityKeyword = '';
-  let autoStationApplied = false;
 
   function n(value) { return Number(value || 0); }
   function safe(value, fallback) { return global.escapeHtml(value == null || value === '' ? (fallback == null ? '-' : fallback) : value); }
@@ -192,6 +191,8 @@
   }
   
   function pidsAreaOf(e) {
+    const type=String((e&&e.eqpmntSeCd)||'').toUpperCase();
+    if(type==='HSE' || type==='LSE') return 'CONTROL';
     const text = String((e.instlPlcNm || '') + ' ' + (e.eqpmntNm || '')).toLowerCase();
     if (text.indexOf('승강장') >= 0 || text.indexOf('platform') >= 0) return 'PLATFORM';
     if (text.indexOf('대합실') >= 0 || text.indexOf('lobby') >= 0) return 'LOBBY';
@@ -200,6 +201,8 @@
   function pidsOverview() {
     const list=currentData.equipments||[];
     const hse=list.filter(x=>String(x.eqpmntSeCd||'').toUpperCase()==='HSE'||/HSE/i.test((x.eqpmntNm||'')+' '+(x.eqpmntClsfNm||'')));
+    const hseMain=hse.find(x=>/MAIN/i.test((x.eqpmntNm||'')+' '+(x.emsId||'')+' '+(x.eqpmntMdlNm||''))) || hse[0] || null;
+    const hseSub=hse.find(x=>/SUB/i.test((x.eqpmntNm||'')+' '+(x.emsId||'')+' '+(x.eqpmntMdlNm||''))) || hse.find(x=>x!==hseMain) || null;
     const lse=list.filter(x=>String(x.eqpmntSeCd||'').toUpperCase()==='LSE'||/LSE/i.test((x.eqpmntNm||'')+' '+(x.eqpmntClsfNm||'')));
     const platform=list.filter(x=>pidsAreaOf(x)==='PLATFORM');
     const lobby=list.filter(x=>pidsAreaOf(x)==='LOBBY');
@@ -212,7 +215,7 @@
     return `<div class="pids-overview-grid">
       <section class="planner-card pids-architecture-card"><div class="planner-card-head"><h3>행선안내설비 구성도</h3></div>
         <div class="facility-topology facility-topology-pids js-topology" data-topology="pids"><svg class="facility-connector-layer" aria-hidden="true"></svg>
-          <div class="pids-hse-row"><div class="pids-hse-node js-pids-hse"><span class="tx-rack-icon"></span><b>HSE Main</b><em>${hse[0]?'연결':'대기'}</em></div><div class="pids-hse-node js-pids-hse ${hse[1]?'':'waiting'}"><span class="tx-rack-icon"></span><b>HSE Sub</b><em>${hse[1]?'연결':'대기'}</em></div></div>
+          <div class="pids-hse-row"><div class="pids-hse-node js-pids-hse"><span class="tx-rack-icon"></span><b>HSE Main</b><em>${hseMain?'연결':'대기'}</em></div><div class="pids-hse-node js-pids-hse ${hseSub?'':'waiting'}"><span class="tx-rack-icon"></span><b>HSE Sub</b><em>${hseSub?'연결':'대기'}</em></div></div>
           <div class="pids-lse-node js-pids-lse ${lseItem?statusType(lseItem.sttsCd):'off'}"><span class="tx-rack-icon"></span><b>LSE</b><strong>${safe(lseItem?lseItem.eqpmntNm:(stationName()+' 행선안내설비'))}</strong><em>${safe(lseItem?codeLabel(lseItem.sttsCd):'대기')}</em></div>
           <div class="pids-zone-row">${zone('승강장 표시장치',platform,'platform')}${zone('대합실 표시장치',lobby,'lobby')}</div>
         </div>
@@ -281,7 +284,7 @@
       return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td title="${safe(place)}">${safe(place)}</td><td class="equipment-name"><button type="button" onclick="openEquipmentDetail(${e.eqpmntSn})">${safe(e.eqpmntNm)}</button><small>${safe(e.eqpmntMngNo)}</small></td><td>${safe(e.eqpmntClsfNm||e.eqpmntSeCd)}</td><td>${safe(e.eqpmntIpAddr)}</td><td>${e.cpuUsgrt==null?'-':safe(Number(e.cpuUsgrt).toFixed(1))}</td><td>${e.mmryUsgrt==null?'-':safe(Number(e.mmryUsgrt).toFixed(1))+'%'}</td><td>${safe((e.ifUseNocs||0)+' / '+(e.ifTotalNocs||0))}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td title="${safe(e.eqpmntExpln||'-','')}">${safe(e.eqpmntExpln||'-')}</td><td>${commonManage}</td></tr>`;
     }
     if (PAGE_KEY==='equipment') {
-      return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td>${safe(pidsAreaOf(e)==='PLATFORM'?'승강장':pidsAreaOf(e)==='LOBBY'?'대합실':'기타')}</td><td class="equipment-name"><button type="button" onclick="openEquipmentDetail(${e.eqpmntSn})">${safe(e.eqpmntNm)}</button></td><td>${safe(e.eqpmntClsfNm||e.eqpmntSeCd)}</td><td>${safe(e.eqpmntIpAddr)}</td><td>${safe(compactDate(e.lastRspnsDt||e.clctDt))}</td><td title="${safe(e.lseEqpmntNms||'CCTV / 시계 / 화재 / 열차진입','')}">${safe(e.lseEqpmntNms||'CCTV / 시계 / 화재 / 열차진입')}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td>${normalizeStatusCode(e.sttsCd)==='NORMAL'?'정상':'확인중'}</td><td>${commonManage}</td></tr>`;
+      return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td>${safe(pidsAreaOf(e)==='PLATFORM'?'승강장':pidsAreaOf(e)==='LOBBY'?'대합실':pidsAreaOf(e)==='CONTROL'?String(e.eqpmntSeCd||'HSE/LSE'):'기타')}</td><td class="equipment-name"><button type="button" onclick="openEquipmentDetail(${e.eqpmntSn})">${safe(e.eqpmntNm)}</button></td><td>${safe(e.eqpmntClsfNm||e.eqpmntSeCd)}</td><td>${safe(e.eqpmntIpAddr)}</td><td>${safe(compactDate(e.lastRspnsDt||e.clctDt))}</td><td title="${safe(e.lseEqpmntNms||'CCTV / 시계 / 화재 / 열차진입','')}">${safe(e.lseEqpmntNms||'CCTV / 시계 / 화재 / 열차진입')}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td>${normalizeStatusCode(e.sttsCd)==='NORMAL'?'정상':'확인중'}</td><td>${commonManage}</td></tr>`;
     }
     if (PAGE_KEY==='scada') {
       return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td>${safe(e.instlPlcNm||'DB확인')}</td><td>${safe(e.eqpmntMngNo||e.eqpmntSn)}</td><td>${safe(e.eqpmntNm)}</td><td>${safe(e.eqpmntClsfNm||e.eqpmntSeCd)}</td><td>${safe(e.eqpmntIpAddr)}</td><td>${safe(e.cmpntNm||'COMM')}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td>${e.cpuUsgrt==null?'-':safe(Number(e.cpuUsgrt).toFixed(1))}</td><td>${e.mmryUsgrt==null?'-':safe(Number(e.mmryUsgrt).toFixed(1))}</td><td>${safe(compactDate(e.lastRspnsDt||e.clctDt))}</td><td>${commonManage}</td></tr>`;
@@ -303,7 +306,7 @@
   }
   function equipmentTable() {
     const list=filteredEquipment(), start=(currentPage-1)*PAGE_SIZE, rows=list.slice(start,start+PAGE_SIZE);
-    const pidsTabs=PAGE_KEY==='equipment'?`<div class="facility-subtabs"><button class="${pidsArea==='PLATFORM'?'active':''}" onclick="setPidsArea('PLATFORM')">승강장 표시장치</button><button class="${pidsArea==='LOBBY'?'active':''}" onclick="setPidsArea('LOBBY')">대합실 표시장치</button></div>`:'<div></div>';
+    const pidsTabs=PAGE_KEY==='equipment'?`<div class="facility-subtabs"><button class="${pidsArea==='PLATFORM'?'active':''}" onclick="setPidsArea('PLATFORM')">승강장 표시장치</button><button class="${pidsArea==='LOBBY'?'active':''}" onclick="setPidsArea('LOBBY')">대합실 표시장치</button><button class="${pidsArea==='CONTROL'?'active':''}" onclick="setPidsArea('CONTROL')">HSE / LSE</button></div>`:'<div></div>';
     const addBtn=global.hasPermission(PAGE_KEY,'regAuthrtYn')?'<button class="btn primary" type="button" onclick="openEquipmentModal()">+ 추가</button>':'';
     const delBtn=global.hasPermission(PAGE_KEY,'delAuthrtYn')?'<button class="btn danger-outline" type="button" onclick="deleteSelectedEquipment()">삭제</button>':'';
     const typeFilter = (PAGE_KEY==='scada'||PAGE_KEY==='switch'||PAGE_KEY==='cctv') ? '<select class="input compact"><option value="">장비별 전체</option></select>' : '';
@@ -374,11 +377,6 @@
       if(facilityKeyword)params.set('searchKeyword',facilityKeyword);
       currentData=await global.api('/facility/data.ajax?'+params.toString());
       currentData.stations=currentData.stations||[];currentData.equipments=currentData.equipments||[];currentData.summary=currentData.summary||{};currentData.statusCodes=currentData.statusCodes||[];currentData.lseCandidates=currentData.lseCandidates||[];currentData.equipmentLinks=currentData.equipmentLinks||[];currentData.scadaEvents=currentData.scadaEvents||[];
-      if(!autoStationApplied && !currentStation){
-        autoStationApplied=true;
-        const abnormal=currentData.stations.find(function(s){return s.mnlsStnYn!=='Y' && normalizeStatusCode(s.sttsCd)==='CRITICAL';}) || currentData.stations.find(function(s){return s.mnlsStnYn!=='Y' && normalizeStatusCode(s.sttsCd)==='CAUTION';});
-        if(abnormal){ currentStation=abnormal.stnCd; currentPage=1; return global.loadFacility(); }
-      }
       render();
       const next=document.getElementById('facilityKeyword'); if(next)next.value=facilityKeyword;
     }catch(e){global.showToast(e.message,true);}
@@ -425,7 +423,19 @@
         const typeOptions=`<option value="PIDS" ${String(e.eqpmntSeCd||'PIDS').toUpperCase()==='PIDS'?'selected':''}>표시장치(PIDS)</option><option value="LSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='LSE'?'selected':''}>LSE</option><option value="HSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='HSE'?'selected':''}>HSE</option>`;
         fields.push(formField('장비구분',selectControl('eqpmntSeCd',typeOptions,'required'),true));
       }else{
-        fields.push(formField('장비구분',inputControl('eqpmntClsfCd',e.eqpmntClsfCd,'장비구분 코드를 입력해 주세요','maxlength="50"'),false));
+        const clsfList=currentData.equipmentClassifications||[];
+        if(clsfList.length){
+          const clsfOptions='<option value="">장비분류 선택</option>'+clsfList.map(function(x){
+            const cd=x.eqpmntClsfCd||x.EQPMNT_CLSF_CD||'';
+            const nm=x.eqpmntClsfNm||x.EQPMNT_CLSF_NM||cd;
+            const eq=x.eqpmNm||x.EQPM_NM||'';
+            return `<option value="${safe(cd,'')}" ${String(cd)===String(e.eqpmntClsfCd||'')?'selected':''}>${safe(eq?eq+' · '+nm:nm)}</option>`;
+          }).join('');
+          fields.push(formField('장비분류',selectControl('eqpmntClsfCd',clsfOptions),false));
+        }else{
+          fields.push(`<input type="hidden" name="eqpmntClsfCd" value="">`);
+          fields.push(formField('장비구분',`<div class="form-control form-readonly">${safe(config.name)}</div>`,false));
+        }
       }
       fields.push(formField('설치장소',inputControl('instlPlcNm',e.instlPlcNm,'설치장소를 입력해 주세요','maxlength="300"'),false));
       fields.push(formField('IP',inputControl('eqpmntIpAddr',e.eqpmntIpAddr,'예) 10.1.21.45','maxlength="15"'),false,'span-2'));
@@ -434,7 +444,7 @@
       fields.push(formField('MAC 주소',inputControl('macAddr',e.macAddr,'MAC 주소','maxlength="17"'),false,'span-2'));
       if(PAGE_KEY==='equipment'){
         const lseOptions=(currentData.lseCandidates||[]).filter(x=>String(x.eqpmntSn)!==String(e.eqpmntSn||'')).map(x=>`<option value="${safe(x.eqpmntSn)}" ${selectedLse.has(String(x.eqpmntSn))?'selected':''}>${safe(x.stnNm)} · ${safe(x.eqpmntNm)}</option>`).join('');
-        fields.push(formField('연결 LSE',`<select class="form-control multi-select" name="lseEqpmntSns" multiple size="4">${lseOptions}</select><small class="form-help">Ctrl/Shift로 복수 선택할 수 있습니다.</small>`,false,'span-2'));
+        fields.push(formField('연결 LSE',`<select class="form-control multi-select" name="lseEqpmntSns" multiple size="4">${lseOptions}</select><small class="form-help">표시장치(PIDS) 또는 HSE에서 연결할 LSE를 복수 선택할 수 있습니다. LSE 장비 자체는 선택하지 않아도 됩니다.</small>`,false,'span-2'));
       }
       fields.push(formField('관리 메모',`<textarea class="form-control planner-memo" name="eqpmntExpln" maxlength="4000" rows="4" placeholder="관리자가 참고할 메모를 입력해 주세요. (선택사항)">${safe(e.eqpmntExpln||'','')}</textarea>`,false,'span-2'));
       global.showModal(`<div class="modal-head planner-modal-head"><div><h2>${safe(config.name)} 장비 ${edit?'수정':'등록'}</h2><p>관리 대상 장비의 기본정보를 ${edit?'수정':'등록'}합니다.</p></div><button class="modal-close" onclick="closeModal()">×</button></div><form id="equipmentForm"><input type="hidden" name="eqpmntSn" value="${safe(e.eqpmntSn||'','')}"><input type="hidden" name="linkSysCd" value="${safe(config.linkSysCd)}">${pidsHidden}<input type="hidden" name="useYn" value="Y"><div class="form-section-title"><b>기본정보</b><span><em>*</em> 필수 입력</span></div><div class="planner-form-grid">${fields.join('')}</div><div class="planner-form-notice">장애·성능 수집 항목은 연동정보 확인 후 자동으로 표출됩니다.</div><div class="modal-actions planner-modal-actions"><button type="button" class="btn" onclick="closeModal()">취소</button><button type="submit" class="btn primary">${edit?'수정':'저장'}</button></div></form>`);

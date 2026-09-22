@@ -90,3 +90,11 @@ button{font:inherit;color:inherit}
   .dashboard{height:auto;min-height:100%;grid-template-rows:auto auto auto 18px}.kpi-grid{grid-template-columns:repeat(5,minmax(130px,1fr));overflow-x:auto}.kpi-card{height:78px}
   .main-card{grid-template-columns:1fr}.station-detail{min-height:500px}.analytics-grid{grid-template-columns:1fr}.analytics-card{min-height:115px}.fault-card{grid-template-columns:120px 90px 1fr 1.2fr}
 }
+
+/* 2026-09-18 가독성: 데이터/상태 텍스트 최소 10px */
+.days,
+.heat-scale,
+.donut strong,
+.fault-legend,
+.cause-list p,
+.repeat-card p{font-size:10px!important;}

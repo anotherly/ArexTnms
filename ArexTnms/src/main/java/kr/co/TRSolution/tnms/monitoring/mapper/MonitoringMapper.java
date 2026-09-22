@@ -1,6 +1,7 @@
 package kr.co.TRSolution.tnms.monitoring.mapper;
 
 import java.util.List;
+import java.util.Map;
 
 import egovframework.rte.psl.dataaccess.mapper.Mapper;
 import kr.co.TRSolution.tnms.monitoring.vo.EquipmentLinkVO;
@@ -19,6 +20,9 @@ public interface MonitoringMapper {
     List<EquipmentVO> selectPidsLseCandidates(EquipmentVO searchVO);
     List<EquipmentLinkVO> selectEquipmentLinks(EquipmentVO searchVO);
     List<ScadaEventVO> selectRecentScadaEvents(EquipmentVO searchVO);
+    List<Map<String, Object>> selectEquipmentClassifications(String linkSysCd);
+    int countEquipmentMngNo(EquipmentVO equipmentVO);
+    int countEquipmentClassification(EquipmentVO equipmentVO);
     int insertEquipment(EquipmentVO equipmentVO);
     int updateEquipment(EquipmentVO equipmentVO);
     int disableEquipment(EquipmentVO equipmentVO);

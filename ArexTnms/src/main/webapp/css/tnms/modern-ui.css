@@ -204,3 +204,58 @@ tbody tr:hover{background:#f7faff}
 .settings-layout .form-grid .field .form-help{margin-top:6px;line-height:1.35;}
 .permission-table .perm-na{text-align:center;color:#a7b2bf;background:#fafbfd;font-weight:700;}
 .account-pager{margin:12px 0 2px}.account-pager:empty{display:none}
+
+/* 2026-09-18 공통 가독성 보정: 설명문을 제외한 주요 데이터/상태 영역 최소 10px */
+.rank-row,
+.system-summary-row small,
+.fault-mini-item p,
+.dash-system-card small,
+.mini-donut:after,
+.cause-ranks,
+.facility-content-head small,
+.notification-category-tabs em,
+.notification-kind,
+.notification-meta{font-size:10px!important;}
+
+/* 등록/수정/상세 모달의 실제 입력/라벨/버튼은 최소 10px */
+.modal-panel label,
+.modal-panel input,
+.modal-panel select,
+.modal-panel textarea,
+.modal-panel button,
+.modal-panel td,
+.modal-panel th{
+  font-size:10px;
+}
+
+
+/* 2026-09-18 header action icons: clean SVG line icons */
+.topbar .header-action-icon{
+  width:34px;
+  height:34px;
+  padding:0;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  display:grid;
+  place-items:center;
+  color:#fff;
+  cursor:pointer;
+  text-decoration:none;
+  transition:background-color .16s ease, opacity .16s ease;
+  filter:none!important;
+}
+.topbar .header-action-icon:hover{background:rgba(255,255,255,.12);}
+.topbar .header-action-icon:focus-visible{outline:2px solid rgba(255,255,255,.78);outline-offset:2px;}
+.topbar .header-action-icon svg{
+  width:21px;
+  height:21px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.topbar .fullscreen-icon:before,.topbar .logout:before{content:none!important;display:none!important;}
+.topbar .fullscreen-icon,.topbar .logout{border:0!important;background-color:transparent;color:#fff!important;font-size:0;}
+.topbar .fullscreen-icon:hover,.topbar .logout:hover{background:rgba(255,255,255,.12)!important;color:#fff!important;}

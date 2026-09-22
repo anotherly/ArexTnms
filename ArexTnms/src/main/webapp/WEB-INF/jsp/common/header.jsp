@@ -30,7 +30,17 @@ String headerUserName = headerLoginUser == null ? "사용자"
     <div class="user"><b id="headerUserName"><%=HtmlUtils.htmlEscape(headerUserName)%></b></div>
     <span class="header-divider"></span>
     <span class="header-clock" id="headerClock"></span>
-    <button class="fullscreen-icon" type="button" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면"></button>
-    <a class="logout" href="<%=request.getContextPath()%>/login/logout.do" title="로그아웃">로그아웃</a>
+    <button class="header-action-icon fullscreen-icon" type="button" onclick="toggleFullscreen()" title="전체화면" aria-label="전체화면">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path>
+      </svg>
+    </button>
+    <a class="header-action-icon logout" href="<%=request.getContextPath()%>/login/logout.do" title="로그아웃" aria-label="로그아웃">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"></path>
+        <path d="M14 8l4 4-4 4"></path>
+        <path d="M18 12H8"></path>
+      </svg>
+    </a>
   </div>
 </header>

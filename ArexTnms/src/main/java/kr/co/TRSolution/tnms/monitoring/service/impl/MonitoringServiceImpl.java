@@ -53,6 +53,7 @@ public class MonitoringServiceImpl implements MonitoringService {
         result.put("equipments", equipments);
         result.put("summary", monitoringMapper.selectEquipmentSummary(searchVO));
         result.put("statusCodes", settingMapper.selectCommonCodeList("SYS_STTS"));
+        result.put("equipmentClassifications", monitoringMapper.selectEquipmentClassifications(searchVO.getLinkSysCd()));
         if ("EMS_PIDS".equals(searchVO.getLinkSysCd())) {
             result.put("lseCandidates", monitoringMapper.selectPidsLseCandidates(searchVO));
         }
@@ -125,6 +126,12 @@ public class MonitoringServiceImpl implements MonitoringService {
         if (blank(vo.getEqpmntMngNo())) throw new IllegalArgumentException("장비관리번호를 입력해 주세요.");
         if (blank(vo.getEqpmntNm())) throw new IllegalArgumentException("장비명을 입력해 주세요.");
         if (blank(vo.getEqpmntSeCd())) throw new IllegalArgumentException("장비구분코드를 입력해 주세요.");
+        if (monitoringMapper.countEquipmentMngNo(vo) > 0) {
+            throw new IllegalArgumentException("이미 사용 중인 장비관리번호입니다. 다른 번호를 입력해 주세요.");
+        }
+        if (!blank(vo.getEqpmntClsfCd()) && monitoringMapper.countEquipmentClassification(vo) == 0) {
+            throw new IllegalArgumentException("선택한 장비분류가 현재 설비 시스템에 존재하지 않습니다. 장비분류를 다시 선택해 주세요.");
+        }
         if (vo.getUseYn() == null) vo.setUseYn("Y");
     }
 
@@ -146,6 +153,7 @@ public class MonitoringServiceImpl implements MonitoringService {
 
     private void savePidsLseRelations(EquipmentVO vo) {
         monitoringMapper.deletePidsLseRelations(vo.getEqpmntSn());
+        if ("LSE".equalsIgnoreCase(vo.getEqpmntSeCd())) return;
         Long[] lseSns = vo.getLseEqpmntSns();
         if (lseSns == null || lseSns.length == 0) return;
         Set<Long> unique = new HashSet<Long>();

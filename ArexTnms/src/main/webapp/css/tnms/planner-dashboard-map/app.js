@@ -1,4 +1,5 @@
 const mapWrap = document.getElementById('routeMap');
+const mapScene = document.getElementById('mapScene');
 const panel = document.getElementById('detailPanel');
 const closeButton = document.getElementById('closePanel');
 const detailTitle = document.getElementById('detailTitle');
@@ -21,8 +22,15 @@ function titleFor(name) {
   return name.endsWith('역') ? name : `${name}역`;
 }
 
+function normalizeStationName(value) {
+  return String(value || '').trim().replace(/역$/, '');
+}
+function findDashboardStation(name) {
+  const target = normalizeStationName(name);
+  return (window.TNMS_DASHBOARD_DATA && window.TNMS_DASHBOARD_DATA.stations || []).find(item => normalizeStationName(item.stnNm) === target) || null;
+}
 function summaryFor(name) {
-  const station = (window.TNMS_DASHBOARD_DATA && window.TNMS_DASHBOARD_DATA.stations || []).find(item => item.stnNm === name);
+  const station = findDashboardStation(name);
   if (!station) return '전체 시스템 상태를 조회 중입니다.';
   return `등록장비 ${station.totalNocs || 0} · ${dashboardPalette.NORMAL.label} ${station.normalNocs || 0} · ${dashboardPalette.CAUTION.label} ${station.cautionNocs || 0} · ${dashboardPalette.CRITICAL.label} ${station.criticalNocs || 0} · ${dashboardPalette.UNKNOWN.label} ${station.unknownNocs || 0}`;
 }
@@ -73,22 +81,22 @@ function openLocation(name, control) {
   selectedLocation = name;
   selectedControl = control || null;
   clearSelectionVisuals();
-  panel.classList.remove('open');
-  updateAria(false);
   setPanelContent(name);
-  const station = (window.TNMS_DASHBOARD_DATA && window.TNMS_DASHBOARD_DATA.stations || []).find(item => item.stnNm === name);
-  if (station && window.parent !== window) window.parent.postMessage({source:'tnms-planner',type:'station-detail',stnCd:station.stnCd}, location.origin);
-
-  // 재클릭 시에도 CSS animation을 처음부터 재생한다.
-  void mapWrap.offsetWidth;
 
   if (watchPoints.has(name)) pulseWatchPoint(name);
   else pulseStation(name);
 
-  openTimer = window.setTimeout(() => {
-    panel.classList.add('open');
-    updateAria(true);
-  }, 135);
+  // 상세 패널은 클릭 즉시 grid의 우측 열로 열고, 지도 높이는 유지한 채 가로 영역만 재배치한다.
+  // 노선 SVG 자체는 별도 좌표계를 유지해 역명/역 간격 가독성이 무너지지 않는다.
+  panel.classList.add('open');
+  mapWrap.classList.add('panel-open');
+  updateAria(true);
+  updateMapSceneShift(true);
+
+  const station = findDashboardStation(name);
+  if (station && window.parent !== window) {
+    window.parent.postMessage({source:'tnms-planner',type:'station-detail',stnCd:station.stnCd}, location.origin);
+  }
 
   pulseTimer = window.setTimeout(() => {
     nodeHotspots.forEach(btn => btn.classList.remove('is-pulsing'));
@@ -100,6 +108,8 @@ function closePanel({ returnFocus = false } = {}) {
   clearTimeout(openTimer);
   clearTimeout(pulseTimer);
   panel.classList.remove('open');
+  mapWrap.classList.remove('panel-open');
+  updateMapSceneShift(false);
   clearSelectionVisuals();
   updateAria(false);
 
@@ -108,6 +118,12 @@ function closePanel({ returnFocus = false } = {}) {
 
 stationButtons.forEach(button => {
   button.addEventListener('click', () => openLocation(button.dataset.location, button));
+  button.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openLocation(button.dataset.location, button);
+    }
+  });
 });
 nodeHotspots.forEach(button => {
   button.addEventListener('click', () => openLocation(button.dataset.location, button));
@@ -126,48 +142,13 @@ document.addEventListener('keydown', event => {
 
 updateAria(false);
 
-/* V4: 지도 크기에 맞춰 우측 상세 패널 전체를 동일 비율로 축소한다.
-   내부 텍스트/행 높이를 따로 줄이지 않기 때문에 원본 비율이 유지되고,
-   map-wrap의 overflow:hidden에도 패널 하단이 잘리지 않는다. */
-const watchStripForScale = document.querySelector('.watch-strip');
-
-function fitDetailPanelToMap() {
-  if (!mapWrap || !panel) return;
-
-  // transform 적용 전 레이아웃 기준 크기
-  const mapWidth = mapWrap.clientWidth;
-  const mapHeight = mapWrap.clientHeight;
-  const panelHeight = panel.offsetHeight;
-  const watchHeight = watchStripForScale ? watchStripForScale.offsetHeight : 0;
-
-  if (!mapWidth || !mapHeight || !panelHeight) return;
-
-  // 원본 지도 1606px 기준 가로 스케일 + 하단 감시지점 영역을 제외한 세로 스케일 중 작은 값 사용
-  const widthScale = mapWidth / 1606;
-  const topGap = mapWidth <= 560 ? 6 : mapWidth <= 900 ? 8 : 10;
-  const bottomReserve = Math.max(10, watchHeight + 12);
-  const usableHeight = Math.max(1, mapHeight - topGap - bottomReserve);
-  const heightScale = usableHeight / panelHeight;
-
-  const scale = Math.max(0.28, Math.min(1, widthScale, heightScale));
-  mapWrap.style.setProperty('--detail-scale', scale.toFixed(4));
+/* 지도 상세 패널은 grid의 두 번째 열로 열고 닫는다.
+   노선 자체를 scale/translate하지 않아 역사 간격과 라벨 가독성을 유지한다. */
+function updateMapSceneShift(open) {
+  if (!mapWrap) return;
+  mapWrap.classList.toggle('panel-open', !!open);
 }
 
-fitDetailPanelToMap();
-window.addEventListener('resize', fitDetailPanelToMap, { passive: true });
-if ('ResizeObserver' in window) {
-  const detailResizeObserver = new ResizeObserver(fitDetailPanelToMap);
-  detailResizeObserver.observe(mapWrap);
-  detailResizeObserver.observe(panel);
-}
-
-// 패널이 열리기 직전에도 최신 지도 크기로 다시 계산
-const originalOpenLocationV4 = openLocation;
-openLocation = function(name, control) {
-  fitDetailPanelToMap();
-  originalOpenLocationV4(name, control);
-  requestAnimationFrame(fitDetailPanelToMap);
-};
 document.querySelectorAll('.nav-item').forEach(function(item){
   item.addEventListener('click',function(){
     const keyMap={'대시보드':'dashboard','설비관리':'systems','장애관리':'faults','성능관리':'performance','연동관리':'cycle','보고서':'reports','운영관리':'users','설정':'settings'};

@@ -308,6 +308,31 @@
          LIMIT 8
     </select>
 
+
+    <select id="selectEquipmentClassifications" parameterType="string" resultType="map">
+        SELECT EQPMNT_CLSF_CD AS eqpmntClsfCd,
+               EQPMNT_CLSF_NM AS eqpmntClsfNm,
+               EQPM_NM AS eqpmNm
+          FROM eqpmnt_clsf_info
+         WHERE LINK_SYS_CD = #{_parameter}
+           AND USE_YN = 'Y'
+         ORDER BY COALESCE(EQPM_NM, ''), EQPMNT_CLSF_NM, EQPMNT_CLSF_CD
+    </select>
+
+    <select id="countEquipmentMngNo" parameterType="equipmentVO" resultType="int">
+        SELECT COUNT(*)
+          FROM eqpmnt_info
+         WHERE EQPMNT_MNG_NO = #{eqpmntMngNo}
+        <if test="eqpmntSn != null">AND EQPMNT_SN != #{eqpmntSn}</if>
+    </select>
+
+    <select id="countEquipmentClassification" parameterType="equipmentVO" resultType="int">
+        SELECT COUNT(*)
+          FROM eqpmnt_clsf_info
+         WHERE EQPMNT_CLSF_CD = #{eqpmntClsfCd}
+           AND LINK_SYS_CD = #{linkSysCd}
+           AND USE_YN = 'Y'
+    </select>
     <insert id="insertEquipment" parameterType="equipmentVO" useGeneratedKeys="true" keyProperty="eqpmntSn" keyColumn="EQPMNT_SN">
         INSERT INTO eqpmnt_info
         (EQPMNT_MNG_NO, EQPMNT_NM, EQPMNT_SE_CD, EQPMNT_CLSF_CD, LINK_SYS_CD,
