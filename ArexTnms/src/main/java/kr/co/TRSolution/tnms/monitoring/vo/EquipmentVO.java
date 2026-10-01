@@ -27,6 +27,18 @@ public class EquipmentVO extends MonitoringBaseVO {
     private Integer unknownNocs;
     private String flrNm;
     private Integer cmraQty;
+
+    // CCTV(VMS) 상세정보 - cctv_info (업체 엑셀 기준)
+    private String vmsNm;
+    private String strgMthNm;
+    private String cctvNm;
+    private String cnsmrNm;
+    private String cctvMdlNm;
+    private String frmwrVerNo;
+    private String cctvIpAddr;
+    private String cctvMacAddr;
+    private String acntNm;
+    private String vmsSrvrIpAddr;
     private String pbxEqpmNm;
     private String cmpntNm;
     private Long mtbfHr;
@@ -93,6 +105,26 @@ public class EquipmentVO extends MonitoringBaseVO {
     public void setFlrNm(String flrNm) { this.flrNm = flrNm; }
     public Integer getCmraQty() { return cmraQty; }
     public void setCmraQty(Integer cmraQty) { this.cmraQty = cmraQty; }
+    public String getVmsNm() { return vmsNm; }
+    public void setVmsNm(String vmsNm) { this.vmsNm = vmsNm; }
+    public String getStrgMthNm() { return strgMthNm; }
+    public void setStrgMthNm(String strgMthNm) { this.strgMthNm = strgMthNm; }
+    public String getCctvNm() { return cctvNm; }
+    public void setCctvNm(String cctvNm) { this.cctvNm = cctvNm; }
+    public String getCnsmrNm() { return cnsmrNm; }
+    public void setCnsmrNm(String cnsmrNm) { this.cnsmrNm = cnsmrNm; }
+    public String getCctvMdlNm() { return cctvMdlNm; }
+    public void setCctvMdlNm(String cctvMdlNm) { this.cctvMdlNm = cctvMdlNm; }
+    public String getFrmwrVerNo() { return frmwrVerNo; }
+    public void setFrmwrVerNo(String frmwrVerNo) { this.frmwrVerNo = frmwrVerNo; }
+    public String getCctvIpAddr() { return cctvIpAddr; }
+    public void setCctvIpAddr(String cctvIpAddr) { this.cctvIpAddr = cctvIpAddr; }
+    public String getCctvMacAddr() { return cctvMacAddr; }
+    public void setCctvMacAddr(String cctvMacAddr) { this.cctvMacAddr = cctvMacAddr; }
+    public String getAcntNm() { return acntNm; }
+    public void setAcntNm(String acntNm) { this.acntNm = acntNm; }
+    public String getVmsSrvrIpAddr() { return vmsSrvrIpAddr; }
+    public void setVmsSrvrIpAddr(String vmsSrvrIpAddr) { this.vmsSrvrIpAddr = vmsSrvrIpAddr; }
     public String getPbxEqpmNm() { return pbxEqpmNm; }
     public void setPbxEqpmNm(String pbxEqpmNm) { this.pbxEqpmNm = pbxEqpmNm; }
     public String getCmpntNm() { return cmpntNm; }

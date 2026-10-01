@@ -272,6 +272,7 @@
     if (PAGE_KEY==='equipment') return ['선택','NO.','상태','위치구분','장비명','장비구분','IP/연동주소','발생시간','연동정보','현재 알림','처리상태','관리'];
     if (PAGE_KEY==='scada') return ['선택','NO.','상태','위치구분','장비ID','장비명','장비종류','IP','발생위치','현재 장애','CPU','Memory','발생시간','관리'];
     if (PAGE_KEY==='switch') return ['선택','NO.','상태','역사','장비 ID','장비명','장비종류','IP','감시방식','발생위치','현재 장애','CPU','Memory','관리'];
+    if (PAGE_KEY==='cctv') return ['선택','NO.','상태','역사/VMS 명','저장방식','이름','모델','CCTV IP','CCTV MAC','층명','수량','관리'];
     return ['선택','NO.','상태','역사/위치','장비종류','장비ID','장비명','IP','현재 장애','CPU','Memory','마지막 확인','메모','관리'];
   }
   
@@ -291,6 +292,10 @@
     }
     if (PAGE_KEY==='switch') {
       return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td>${safe(e.stnNm)}</td><td>${safe(e.eqpmntMngNo||e.eqpmntSn)}</td><td>${safe(e.eqpmntNm)}</td><td>${safe(e.pbxEqpmNm||e.cmpntNm||e.eqpmntClsfNm)}</td><td>${safe(e.eqpmntIpAddr)}</td><td>${safe(e.pingRspnsMs!=null?'PING':'COMM')}</td><td>${safe(e.instlPlcNm||'DB 확인')}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td>${e.cpuUsgrt==null?'-':safe(Number(e.cpuUsgrt).toFixed(1))}</td><td>${e.mmryUsgrt==null?'-':safe(Number(e.mmryUsgrt).toFixed(1))}</td><td>${commonManage}</td></tr>`;
+    }
+    if (PAGE_KEY==='cctv') {
+      const vmsPlace=[e.stnNm,e.vmsNm].filter(Boolean).join(' / ');
+      return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td title="${safe(vmsPlace,'')}">${safe(vmsPlace||'-')}</td><td>${safe(e.strgMthNm||'-')}</td><td class="equipment-name cctv-name-cell" title="${safe(e.cctvNm||e.eqpmntNm,'')}"><button type="button" onclick="openEquipmentDetail(${e.eqpmntSn})">${safe(e.cctvNm||e.eqpmntNm)}</button><small>${safe(e.eqpmntMngNo)}</small></td><td title="${safe(e.cctvMdlNm||e.eqpmntMdlNm||'-','')}">${safe(e.cctvMdlNm||e.eqpmntMdlNm||'-')}</td><td>${safe(e.cctvIpAddr||e.eqpmntIpAddr||'-')}</td><td>${safe(e.cctvMacAddr||e.macAddr||'-')}</td><td>${safe(e.flrNm||'-')}</td><td>${safe(e.cmraQty||1)}</td><td class="cctv-manage-cell">${commonManage}</td></tr>`;
     }
     return `<tr><td class="center"><input type="checkbox" class="facility-row-check" value="${e.eqpmntSn}"></td><td>${idx}</td><td>${status}</td><td title="${safe(place)}">${safe(place)}</td><td>${safe(e.eqpmntClsfNm||e.eqpmntSeCd)}</td><td>${safe(e.eqpmntMngNo)}</td><td class="equipment-name"><button type="button" onclick="openEquipmentDetail(${e.eqpmntSn})">${safe(e.eqpmntNm)}</button></td><td>${safe(e.eqpmntIpAddr)}</td><td class="alarm-text ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</td><td>${e.cpuUsgrt==null?'-':safe(Number(e.cpuUsgrt).toFixed(1))}</td><td>${e.mmryUsgrt==null?'-':safe(Number(e.mmryUsgrt).toFixed(1))}</td><td>${safe(compactDate(e.lastRspnsDt||e.clctDt))}</td><td title="${safe(e.eqpmntExpln||'등록 메모 확인 영역','')}">${safe(e.eqpmntExpln||'등록 메모 확인 영역')}</td><td>${commonManage}</td></tr>`;
   }
@@ -314,7 +319,7 @@
       <div class="planner-card-head list-title-row"><div><h3>상세목록</h3></div></div>
       <div class="facility-list-toolbar">${pidsTabs}<div class="list-filter-inline">${typeFilter}<select id="facilityStatusFilter" class="input compact" onchange="applyFacilityFilters()"><option value="">상태 전체</option><option value="NORMAL" ${facilityStatus==='NORMAL'?'selected':''}>정상</option><option value="CAUTION" ${facilityStatus==='CAUTION'?'selected':''}>주의</option><option value="CRITICAL" ${facilityStatus==='CRITICAL'?'selected':''}>장애</option><option value="UNKNOWN" ${facilityStatus==='UNKNOWN'?'selected':''}>통신단절</option></select><input id="facilityKeyword" class="input search-input" placeholder="검색어를 입력해 주세요" value="${safe(facilityKeyword,'')}"><button class="btn primary search-btn" onclick="loadFacility()">검색</button></div></div>
       <div class="planner-table-meta"><span>총 <b>${list.length}</b>건</span><span class="table-sort-hint">최신순⌄</span></div>
-      <div class="table-scroll"><table class="planner-table facility-table"><thead><tr>${tableColumns().map((c,i)=>`<th class="${i===0?'center':''}">${i===0?'<input type="checkbox" id="facilityCheckAll" onchange="toggleFacilityChecks(this.checked)">':safe(c)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((item,idx)=>equipmentRow(item,start+idx+1)).join(''):`<tr><td colspan="${tableColumns().length}" class="empty-row">조회된 장비가 없습니다.</td></tr>`}</tbody></table></div>
+      <div class="table-scroll"><table class="planner-table facility-table ${PAGE_KEY==='cctv'?'cctv-data-table':''}"><thead><tr>${tableColumns().map((c,i)=>`<th class="${i===0?'center':''}">${i===0?'<input type="checkbox" id="facilityCheckAll" onchange="toggleFacilityChecks(this.checked)">':safe(c)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((item,idx)=>equipmentRow(item,start+idx+1)).join(''):`<tr><td colspan="${tableColumns().length}" class="empty-row">조회된 장비가 없습니다.</td></tr>`}</tbody></table></div>
       <div class="facility-bottom-bar"><div class="facility-list-actions">${addBtn}${delBtn}</div>${pagination(list.length)}</div>
     </section>`;
   }
@@ -390,8 +395,27 @@
   global.openEquipmentDetail=async function(eqpmntSn){
     try{
       const e=await global.api('/facility/detail.ajax?eqpmntSn='+encodeURIComponent(eqpmntSn));
-      const perfText=(e.cpuUsgrt==null?'-':Number(e.cpuUsgrt).toFixed(1)+'%')+' / '+(e.mmryUsgrt==null?'-':Number(e.mmryUsgrt).toFixed(1)+'%');
       const items=[];
+      if(PAGE_KEY==='cctv'){
+        items.push(detailPair('설비', safe(config.name)));
+        items.push(detailPair('역사', safe(e.stnNm||'-')));
+        items.push(detailPair('역사_VMS 명', safe(e.vmsNm||'-')));
+        items.push(detailPair('저장방식', safe(e.strgMthNm||'-')));
+        items.push(detailPair('이름', safe(e.cctvNm||e.eqpmntNm||'-'),'span-2'));
+        items.push(detailPair('수요자', safe(e.cnsmrNm||'-')));
+        items.push(detailPair('모델', safe(e.cctvMdlNm||e.eqpmntMdlNm||'-')));
+        items.push(detailPair('펌웨어', safe(e.frmwrVerNo||'-')));
+        items.push(detailPair('CCTV IP', safe(e.cctvIpAddr||e.eqpmntIpAddr||'-')));
+        items.push(detailPair('CCTV MAC 주소', safe(e.cctvMacAddr||e.macAddr||'-')));
+        items.push(detailPair('계정', safe(e.acntNm||'-')));
+        items.push(detailPair('VMS 서버 IP', safe(e.vmsSrvrIpAddr||'-')));
+        items.push(detailPair('층명', safe(e.flrNm||'-')));
+        items.push(detailPair('카메라 수량', safe(e.cmraQty||1)));
+        items.push(detailPair('현재 장애', `<span class="detail-alarm ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</span>`,'span-2'));
+        global.showModal(`<div class="modal-head planner-modal-head"><div><h2>${safe(config.name)} 장비 상세</h2></div><button class="modal-close" onclick="closeModal()">×</button></div><div class="equipment-detail-hero"><div><strong>${safe(e.cctvNm||e.eqpmntNm)}</strong><span>${safe([e.stnNm,e.vmsNm].filter(Boolean).join(' / '))}</span></div><span class="planner-status ${statusType(e.sttsCd)}"><i></i>${safe(statusLabel(e))}</span></div><div class="equipment-detail-grid">${items.join('')}</div><div class="equipment-memo-block"><label>관리 메모</label><div>${safe(e.eqpmntExpln||'등록된 관리 메모가 없습니다.')}</div></div><div class="modal-actions planner-modal-actions">${global.hasPermission(PAGE_KEY,'mdfcnAuthrtYn')?`<button class="btn primary" onclick="closeModal();openEquipmentModal(${e.eqpmntSn})">수정</button>`:''}<button class="btn" onclick="closeModal()">닫기</button></div>`);
+        return;
+      }
+      const perfText=(e.cpuUsgrt==null?'-':Number(e.cpuUsgrt).toFixed(1)+'%')+' / '+(e.mmryUsgrt==null?'-':Number(e.mmryUsgrt).toFixed(1)+'%');
       items.push(detailPair('설비', safe(config.name)));
       items.push(detailPair('역사 / 위치', safe([e.stnNm,e.instlPlcNm].filter(Boolean).join(' / '))));
       items.push(detailPair('장비명', safe(e.eqpmntNm)));
@@ -400,7 +424,6 @@
       items.push(detailPair('CPU / Memory', safe(perfText)));
       if(PAGE_KEY==='systems') items.push(detailPair('Interface', safe((e.ifUseNocs||0)+' / '+(e.ifTotalNocs||0))));
       if(PAGE_KEY==='equipment') items.push(detailPair('연결 LSE', safe(e.lseEqpmntNms)));
-      if(PAGE_KEY==='cctv') items.push(detailPair('층 / 카메라 수', safe((e.flrNm||'-')+' / '+(e.cmraQty||'-'))));
       if(PAGE_KEY==='switch') items.push(detailPair('설비 / 구성품', safe((e.pbxEqpmNm||'-')+' / '+(e.cmpntNm||'-'))));
       items.push(detailPair('현재 장애', `<span class="detail-alarm ${normalizeStatusCode(e.sttsCd)!=='NORMAL'?'active':''}">${safe(e.sttsExpln||'-')}</span>`));
       global.showModal(`<div class="modal-head planner-modal-head"><div><h2>${safe(config.name)} 장비 상세</h2></div><button class="modal-close" onclick="closeModal()">×</button></div><div class="equipment-detail-hero"><div><strong>${safe(e.eqpmntNm)}</strong><span>${safe([e.stnNm,e.eqpmntClsfNm||e.eqpmntSeCd].filter(Boolean).join(' / '))}</span></div><span class="planner-status ${statusType(e.sttsCd)}"><i></i>${safe(statusLabel(e))}</span></div><div class="equipment-detail-grid">${items.join('')}</div><div class="equipment-memo-block"><label>관리 메모</label><div>${safe(e.eqpmntExpln||'등록된 관리 메모가 없습니다.')}</div></div><div class="modal-actions planner-modal-actions">${global.hasPermission(PAGE_KEY,'mdfcnAuthrtYn')?`<button class="btn primary" onclick="closeModal();openEquipmentModal(${e.eqpmntSn})">수정</button>`:''}<button class="btn" onclick="closeModal()">닫기</button></div>`);
@@ -410,41 +433,61 @@
   global.openEquipmentModal=async function(eqpmntSn){
     try{
       const edit=!!eqpmntSn;
-      const e=edit?await global.api('/facility/detail.ajax?eqpmntSn='+encodeURIComponent(eqpmntSn)):{linkSysCd:config.linkSysCd,eqpmntSeCd:config.eqpmntSeCd,useYn:'Y'};
+      const e=edit?await global.api('/facility/detail.ajax?eqpmntSn='+encodeURIComponent(eqpmntSn)):{linkSysCd:config.linkSysCd,eqpmntSeCd:config.eqpmntSeCd,useYn:'Y',cmraQty:1};
       const stations=(currentData.stations||[]).filter(x=>x.mnlsStnYn!=='Y').concat((currentData.stations||[]).filter(x=>x.mnlsStnYn==='Y'));
       const selectedLse=new Set(String(e.lseEqpmntSnsCsv||'').split(',').filter(Boolean));
-      const pidsHidden=PAGE_KEY==='equipment'?`<input type="hidden" name="eqpmntClsfCd" value="${safe(e.eqpmntClsfCd||'','')}">`:`<input type="hidden" name="eqpmntSeCd" value="${safe(e.eqpmntSeCd||config.eqpmntSeCd)}">`;
+      const pidsHidden=PAGE_KEY==='equipment'
+        ? `<input type="hidden" name="eqpmntClsfCd" value="${safe(e.eqpmntClsfCd||'','')}">`
+        : PAGE_KEY==='cctv'
+          ? `<input type="hidden" name="eqpmntSeCd" value="CCTV"><input type="hidden" name="eqpmntClsfCd" value="">`
+          : `<input type="hidden" name="eqpmntSeCd" value="${safe(e.eqpmntSeCd||config.eqpmntSeCd)}">`;
       const stationOptions='<option value="">역사 또는 위치 선택</option>'+stations.map(s=>`<option value="${safe(s.stnCd)}" ${s.stnCd===e.stnCd?'selected':''}>${safe(s.stnNm)}${s.mnlsStnYn==='Y'?' (무인국사)':''}</option>`).join('');
       const fields=[];
       fields.push(formField('장비관리번호',inputControl('eqpmntMngNo',e.eqpmntMngNo,'장비관리번호를 입력해 주세요','required maxlength="50"'),true));
-      fields.push(formField('장비명',inputControl('eqpmntNm',e.eqpmntNm,'장비명을 입력해 주세요','required maxlength="100"'),true));
       fields.push(formField('역사 / 위치',selectControl('stnCd',stationOptions),false));
-      if(PAGE_KEY==='equipment'){
-        const typeOptions=`<option value="PIDS" ${String(e.eqpmntSeCd||'PIDS').toUpperCase()==='PIDS'?'selected':''}>표시장치(PIDS)</option><option value="LSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='LSE'?'selected':''}>LSE</option><option value="HSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='HSE'?'selected':''}>HSE</option>`;
-        fields.push(formField('장비구분',selectControl('eqpmntSeCd',typeOptions,'required'),true));
+
+      if(PAGE_KEY==='cctv'){
+        fields.push(formField('역사_VMS 명',inputControl('vmsNm',e.vmsNm,'예) 서울역#1','required maxlength="100"'),true));
+        fields.push(formField('저장방식',inputControl('strgMthNm',e.strgMthNm,'예) 움직임 + 저해상도','required maxlength="50"'),true));
+        fields.push(formField('이름',inputControl('cctvNm',e.cctvNm||e.eqpmntNm,'CCTV 이름','required maxlength="200"'),true,'span-2'));
+        fields.push(formField('수요자',inputControl('cnsmrNm',e.cnsmrNm,'예) TTA_NORMAL','required maxlength="100"'),true));
+        fields.push(formField('모델',inputControl('cctvMdlNm',e.cctvMdlNm||e.eqpmntMdlNm,'CCTV 모델','required maxlength="100"'),true));
+        fields.push(formField('펌웨어',inputControl('frmwrVerNo',e.frmwrVerNo,'펌웨어 버전','maxlength="100"'),false));
+        fields.push(formField('CCTV IP',inputControl('cctvIpAddr',e.cctvIpAddr||e.eqpmntIpAddr,'예) 172.22.30.34','required maxlength="45"'),true));
+        fields.push(formField('CCTV MAC 주소',inputControl('cctvMacAddr',e.cctvMacAddr||e.macAddr,'예) 00-07-D8-1D-E1-66','required maxlength="17"'),true));
+        fields.push(formField('계정',inputControl('acntNm',e.acntNm,'계정 (선택)','maxlength="100"'),false));
+        fields.push(formField('VMS 서버 IP',inputControl('vmsSrvrIpAddr',e.vmsSrvrIpAddr,'예) 172.22.21.201','required maxlength="45"'),true));
+        fields.push(formField('층명',inputControl('flrNm',e.flrNm,'예) B3, 1F (선택)','maxlength="50"'),false));
+        fields.push(formField('카메라 수량',inputControl('cmraQty',e.cmraQty||1,'1','type="number" min="1" step="1"'),false));
       }else{
-        const clsfList=currentData.equipmentClassifications||[];
-        if(clsfList.length){
-          const clsfOptions='<option value="">장비분류 선택</option>'+clsfList.map(function(x){
-            const cd=x.eqpmntClsfCd||x.EQPMNT_CLSF_CD||'';
-            const nm=x.eqpmntClsfNm||x.EQPMNT_CLSF_NM||cd;
-            const eq=x.eqpmNm||x.EQPM_NM||'';
-            return `<option value="${safe(cd,'')}" ${String(cd)===String(e.eqpmntClsfCd||'')?'selected':''}>${safe(eq?eq+' · '+nm:nm)}</option>`;
-          }).join('');
-          fields.push(formField('장비분류',selectControl('eqpmntClsfCd',clsfOptions),false));
+        fields.push(formField('장비명',inputControl('eqpmntNm',e.eqpmntNm,'장비명을 입력해 주세요','required maxlength="100"'),true));
+        if(PAGE_KEY==='equipment'){
+          const typeOptions=`<option value="PIDS" ${String(e.eqpmntSeCd||'PIDS').toUpperCase()==='PIDS'?'selected':''}>표시장치(PIDS)</option><option value="LSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='LSE'?'selected':''}>LSE</option><option value="HSE" ${String(e.eqpmntSeCd||'').toUpperCase()==='HSE'?'selected':''}>HSE</option>`;
+          fields.push(formField('장비구분',selectControl('eqpmntSeCd',typeOptions,'required'),true));
         }else{
-          fields.push(`<input type="hidden" name="eqpmntClsfCd" value="">`);
-          fields.push(formField('장비구분',`<div class="form-control form-readonly">${safe(config.name)}</div>`,false));
+          const clsfList=currentData.equipmentClassifications||[];
+          if(clsfList.length){
+            const clsfOptions='<option value="">장비분류 선택</option>'+clsfList.map(function(x){
+              const cd=x.eqpmntClsfCd||x.EQPMNT_CLSF_CD||'';
+              const nm=x.eqpmntClsfNm||x.EQPMNT_CLSF_NM||cd;
+              const eq=x.eqpmNm||x.EQPM_NM||'';
+              return `<option value="${safe(cd,'')}" ${String(cd)===String(e.eqpmntClsfCd||'')?'selected':''}>${safe(eq?eq+' · '+nm:nm)}</option>`;
+            }).join('');
+            fields.push(formField('장비분류',selectControl('eqpmntClsfCd',clsfOptions),false));
+          }else{
+            fields.push(`<input type="hidden" name="eqpmntClsfCd" value="">`);
+            fields.push(formField('장비구분',`<div class="form-control form-readonly">${safe(config.name)}</div>`,false));
+          }
         }
-      }
-      fields.push(formField('설치장소',inputControl('instlPlcNm',e.instlPlcNm,'설치장소를 입력해 주세요','maxlength="300"'),false));
-      fields.push(formField('IP',inputControl('eqpmntIpAddr',e.eqpmntIpAddr,'예) 10.1.21.45','maxlength="15"'),false,'span-2'));
-      fields.push(formField('EMS ID',inputControl('emsId',e.emsId,'EMS ID','maxlength="20"'),false));
-      fields.push(formField('모델명',inputControl('eqpmntMdlNm',e.eqpmntMdlNm,'모델명','maxlength="100"'),false));
-      fields.push(formField('MAC 주소',inputControl('macAddr',e.macAddr,'MAC 주소','maxlength="17"'),false,'span-2'));
-      if(PAGE_KEY==='equipment'){
-        const lseOptions=(currentData.lseCandidates||[]).filter(x=>String(x.eqpmntSn)!==String(e.eqpmntSn||'')).map(x=>`<option value="${safe(x.eqpmntSn)}" ${selectedLse.has(String(x.eqpmntSn))?'selected':''}>${safe(x.stnNm)} · ${safe(x.eqpmntNm)}</option>`).join('');
-        fields.push(formField('연결 LSE',`<select class="form-control multi-select" name="lseEqpmntSns" multiple size="4">${lseOptions}</select><small class="form-help">표시장치(PIDS) 또는 HSE에서 연결할 LSE를 복수 선택할 수 있습니다. LSE 장비 자체는 선택하지 않아도 됩니다.</small>`,false,'span-2'));
+        fields.push(formField('설치장소',inputControl('instlPlcNm',e.instlPlcNm,'설치장소를 입력해 주세요','maxlength="300"'),false));
+        fields.push(formField('IP',inputControl('eqpmntIpAddr',e.eqpmntIpAddr,'예) 10.1.21.45','maxlength="45"'),false,'span-2'));
+        fields.push(formField('EMS ID',inputControl('emsId',e.emsId,'EMS ID','maxlength="20"'),false));
+        fields.push(formField('모델명',inputControl('eqpmntMdlNm',e.eqpmntMdlNm,'모델명','maxlength="100"'),false));
+        fields.push(formField('MAC 주소',inputControl('macAddr',e.macAddr,'MAC 주소','maxlength="17"'),false,'span-2'));
+        if(PAGE_KEY==='equipment'){
+          const lseOptions=(currentData.lseCandidates||[]).filter(x=>String(x.eqpmntSn)!==String(e.eqpmntSn||'')).map(x=>`<option value="${safe(x.eqpmntSn)}" ${selectedLse.has(String(x.eqpmntSn))?'selected':''}>${safe(x.stnNm)} · ${safe(x.eqpmntNm)}</option>`).join('');
+          fields.push(formField('연결 LSE',`<select class="form-control multi-select" name="lseEqpmntSns" multiple size="4">${lseOptions}</select><small class="form-help">표시장치(PIDS) 또는 HSE에서 연결할 LSE를 복수 선택할 수 있습니다. LSE 장비 자체는 선택하지 않아도 됩니다.</small>`,false,'span-2'));
+        }
       }
       fields.push(formField('관리 메모',`<textarea class="form-control planner-memo" name="eqpmntExpln" maxlength="4000" rows="4" placeholder="관리자가 참고할 메모를 입력해 주세요. (선택사항)">${safe(e.eqpmntExpln||'','')}</textarea>`,false,'span-2'));
       global.showModal(`<div class="modal-head planner-modal-head"><div><h2>${safe(config.name)} 장비 ${edit?'수정':'등록'}</h2><p>관리 대상 장비의 기본정보를 ${edit?'수정':'등록'}합니다.</p></div><button class="modal-close" onclick="closeModal()">×</button></div><form id="equipmentForm"><input type="hidden" name="eqpmntSn" value="${safe(e.eqpmntSn||'','')}"><input type="hidden" name="linkSysCd" value="${safe(config.linkSysCd)}">${pidsHidden}<input type="hidden" name="useYn" value="Y"><div class="form-section-title"><b>기본정보</b><span><em>*</em> 필수 입력</span></div><div class="planner-form-grid">${fields.join('')}</div><div class="planner-form-notice">장애·성능 수집 항목은 연동정보 확인 후 자동으로 표출됩니다.</div><div class="modal-actions planner-modal-actions"><button type="button" class="btn" onclick="closeModal()">취소</button><button type="submit" class="btn primary">${edit?'수정':'저장'}</button></div></form>`);

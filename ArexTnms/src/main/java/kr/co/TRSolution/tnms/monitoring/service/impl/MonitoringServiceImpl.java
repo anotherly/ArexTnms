@@ -92,6 +92,10 @@ public class MonitoringServiceImpl implements MonitoringService {
     @Transactional(rollbackFor = Exception.class)
     public Long saveEquipment(EquipmentVO equipmentVO, String actorId) {
         normalize(equipmentVO);
+        if ("VMS".equals(equipmentVO.getLinkSysCd())) {
+            normalizeCctv(equipmentVO);
+            syncCctvMasterFields(equipmentVO);
+        }
         validateEquipment(equipmentVO);
         if (equipmentVO.getEqpmntSn() == null) {
             equipmentVO.setRgtrId(actorId);
@@ -102,6 +106,11 @@ public class MonitoringServiceImpl implements MonitoringService {
         }
         if ("EMS_PIDS".equals(equipmentVO.getLinkSysCd())) {
             savePidsLseRelations(equipmentVO);
+        }
+        if ("VMS".equals(equipmentVO.getLinkSysCd())) {
+            equipmentVO.setMdfrId(actorId);
+            monitoringMapper.updateCctvEquipmentMirror(equipmentVO);
+            monitoringMapper.upsertCctvInfo(equipmentVO);
         }
         return equipmentVO.getEqpmntSn();
     }
@@ -126,6 +135,7 @@ public class MonitoringServiceImpl implements MonitoringService {
         if (blank(vo.getEqpmntMngNo())) throw new IllegalArgumentException("장비관리번호를 입력해 주세요.");
         if (blank(vo.getEqpmntNm())) throw new IllegalArgumentException("장비명을 입력해 주세요.");
         if (blank(vo.getEqpmntSeCd())) throw new IllegalArgumentException("장비구분코드를 입력해 주세요.");
+        if ("VMS".equals(vo.getLinkSysCd())) validateCctv(vo);
         if (monitoringMapper.countEquipmentMngNo(vo) > 0) {
             throw new IllegalArgumentException("이미 사용 중인 장비관리번호입니다. 다른 번호를 입력해 주세요.");
         }
@@ -149,6 +159,42 @@ public class MonitoringServiceImpl implements MonitoringService {
         vo.setMacAddr(trim(vo.getMacAddr()));
         vo.setEqpmntMdlNm(trim(vo.getEqpmntMdlNm()));
         vo.setEqpmntExpln(trim(vo.getEqpmntExpln()));
+    }
+
+    private void normalizeCctv(EquipmentVO vo) {
+        vo.setVmsNm(trim(vo.getVmsNm()));
+        vo.setStrgMthNm(trim(vo.getStrgMthNm()));
+        vo.setCctvNm(trim(vo.getCctvNm()));
+        vo.setCnsmrNm(trim(vo.getCnsmrNm()));
+        vo.setCctvMdlNm(trim(vo.getCctvMdlNm()));
+        vo.setFrmwrVerNo(trim(vo.getFrmwrVerNo()));
+        vo.setCctvIpAddr(trim(vo.getCctvIpAddr()));
+        vo.setCctvMacAddr(trim(vo.getCctvMacAddr()));
+        vo.setAcntNm(trim(vo.getAcntNm()));
+        vo.setVmsSrvrIpAddr(trim(vo.getVmsSrvrIpAddr()));
+        vo.setFlrNm(trim(vo.getFlrNm()));
+        if (vo.getCmraQty() == null || vo.getCmraQty().intValue() < 1) vo.setCmraQty(Integer.valueOf(1));
+    }
+
+    private void syncCctvMasterFields(EquipmentVO vo) {
+        vo.setEqpmntSeCd("CCTV");
+        vo.setEqpmntClsfCd(null);
+        vo.setEqpmntNm(vo.getCctvNm());
+        vo.setEqpmntIpAddr(vo.getCctvIpAddr());
+        vo.setMacAddr(vo.getCctvMacAddr());
+        vo.setEqpmntMdlNm(vo.getCctvMdlNm());
+        vo.setInstlPlcNm(!blank(vo.getFlrNm()) ? vo.getFlrNm() : vo.getVmsNm());
+    }
+
+    private void validateCctv(EquipmentVO vo) {
+        if (blank(vo.getVmsNm())) throw new IllegalArgumentException("역사_VMS 명을 입력해 주세요.");
+        if (blank(vo.getStrgMthNm())) throw new IllegalArgumentException("저장방식을 입력해 주세요.");
+        if (blank(vo.getCctvNm())) throw new IllegalArgumentException("CCTV 이름을 입력해 주세요.");
+        if (blank(vo.getCnsmrNm())) throw new IllegalArgumentException("수요자를 입력해 주세요.");
+        if (blank(vo.getCctvMdlNm())) throw new IllegalArgumentException("CCTV 모델을 입력해 주세요.");
+        if (blank(vo.getCctvIpAddr())) throw new IllegalArgumentException("CCTV IP를 입력해 주세요.");
+        if (blank(vo.getCctvMacAddr())) throw new IllegalArgumentException("CCTV MAC 주소를 입력해 주세요.");
+        if (blank(vo.getVmsSrvrIpAddr())) throw new IllegalArgumentException("VMS 서버 IP를 입력해 주세요.");
     }
 
     private void savePidsLseRelations(EquipmentVO vo) {

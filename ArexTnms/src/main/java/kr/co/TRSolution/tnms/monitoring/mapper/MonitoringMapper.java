@@ -25,6 +25,8 @@ public interface MonitoringMapper {
     int countEquipmentClassification(EquipmentVO equipmentVO);
     int insertEquipment(EquipmentVO equipmentVO);
     int updateEquipment(EquipmentVO equipmentVO);
+    int upsertCctvInfo(EquipmentVO equipmentVO);
+    int updateCctvEquipmentMirror(EquipmentVO equipmentVO);
     int disableEquipment(EquipmentVO equipmentVO);
     int deletePidsLseRelations(Long eqpmntSn);
     int insertPidsLseRelation(EquipmentVO relationVO);

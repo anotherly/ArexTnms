@@ -32,3 +32,60 @@
 #pageBody .facility-planner-page select,
 #pageBody .facility-planner-page input,
 #pageBody .facility-planner-page button { font-size:10px; }
+
+/* 2026-09-23 CCTV 상세목록: 한 화면 표출용 압축 레이아웃
+   화면 제외: 수요자 / 펌웨어 / 계정 / VMS 서버 IP
+   이름·관리 열은 폭을 줄이고 나머지 필드에 필요한 폭을 배분 */
+.facility-table.cctv-data-table{
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+}
+.facility-table.cctv-data-table th,
+.facility-table.cctv-data-table td{
+  white-space:nowrap!important;
+  padding-left:5px!important;
+  padding-right:5px!important;
+}
+.facility-table.cctv-data-table th:nth-child(1),
+.facility-table.cctv-data-table td:nth-child(1){width:38px!important}
+.facility-table.cctv-data-table th:nth-child(2),
+.facility-table.cctv-data-table td:nth-child(2){width:42px!important}
+.facility-table.cctv-data-table th:nth-child(3),
+.facility-table.cctv-data-table td:nth-child(3){width:72px!important}
+.facility-table.cctv-data-table th:nth-child(4),
+.facility-table.cctv-data-table td:nth-child(4){width:115px!important}
+.facility-table.cctv-data-table th:nth-child(5),
+.facility-table.cctv-data-table td:nth-child(5){width:100px!important}
+.facility-table.cctv-data-table th:nth-child(6),
+.facility-table.cctv-data-table td:nth-child(6){width:175px!important}
+.facility-table.cctv-data-table th:nth-child(7),
+.facility-table.cctv-data-table td:nth-child(7){width:95px!important}
+.facility-table.cctv-data-table th:nth-child(8),
+.facility-table.cctv-data-table td:nth-child(8){width:110px!important}
+.facility-table.cctv-data-table th:nth-child(9),
+.facility-table.cctv-data-table td:nth-child(9){width:130px!important}
+.facility-table.cctv-data-table th:nth-child(10),
+.facility-table.cctv-data-table td:nth-child(10){width:58px!important}
+.facility-table.cctv-data-table th:nth-child(11),
+.facility-table.cctv-data-table td:nth-child(11){width:50px!important}
+.facility-table.cctv-data-table th:nth-child(12),
+.facility-table.cctv-data-table td:nth-child(12){width:78px!important}
+.facility-table.cctv-data-table .cctv-name-cell button{
+  max-width:160px!important;
+}
+.facility-table.cctv-data-table .cctv-name-cell small{
+  max-width:160px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facility-table.cctv-data-table .cctv-manage-cell{
+  padding-left:2px!important;
+  padding-right:2px!important;
+}
+.facility-table.cctv-data-table .cctv-manage-cell .btn.sm{
+  min-width:0!important;
+  padding:0 4px!important;
+  margin:0 1px!important;
+}

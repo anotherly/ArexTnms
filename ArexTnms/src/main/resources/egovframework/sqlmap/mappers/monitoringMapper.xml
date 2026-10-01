@@ -33,6 +33,16 @@
         <result property="unknownNocs" column="UNKNOWN_NOCS"/>
         <result property="flrNm" column="FLR_NM"/>
         <result property="cmraQty" column="CMRA_QTY"/>
+        <result property="vmsNm" column="VMS_NM"/>
+        <result property="strgMthNm" column="STRG_MTH_NM"/>
+        <result property="cctvNm" column="CCTV_NM"/>
+        <result property="cnsmrNm" column="CNSMR_NM"/>
+        <result property="cctvMdlNm" column="CCTV_MDL_NM"/>
+        <result property="frmwrVerNo" column="FRMWR_VER_NO"/>
+        <result property="cctvIpAddr" column="CCTV_IP_ADDR"/>
+        <result property="cctvMacAddr" column="CCTV_MAC_ADDR"/>
+        <result property="acntNm" column="ACNT_NM"/>
+        <result property="vmsSrvrIpAddr" column="VMS_SRVR_IP_ADDR"/>
         <result property="pbxEqpmNm" column="PBX_EQPM_NM"/>
         <result property="cmpntNm" column="CMPNT_NM"/>
         <result property="mtbfHr" column="MTBF_HR"/>
@@ -168,7 +178,9 @@
                E.EQPMNT_CLSF_CD, F.EQPMNT_CLSF_NM, E.LINK_SYS_CD, L.LINK_SYS_NM,
                E.EMS_ID, E.STN_CD, S.STN_NM, E.INSTL_PLC_NM, E.EQPMNT_IP_ADDR,
                E.MAC_ADDR, E.EQPMNT_MDL_NM, E.EQPMNT_EXPLN, C.CNTN_YN,
-               V.FLR_NM, V.CMRA_QTY, P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
+               V.FLR_NM, V.CMRA_QTY, V.VMS_NM, V.STRG_MTH_NM, V.CCTV_NM, V.CNSMR_NM,
+               V.CCTV_MDL_NM, V.FRMWR_VER_NO, V.CCTV_IP_ADDR, V.CCTV_MAC_ADDR, V.ACNT_NM, V.VMS_SRVR_IP_ADDR,
+               P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
                CPU.MSRMT_VL AS CPU_USGRT, MMRY.MSRMT_VL AS MMRY_USGRT,
                CAST(IFU.MSRMT_VL AS UNSIGNED) AS IF_USE_NOCS,
                CAST(IFT.MSRMT_VL AS UNSIGNED) AS IF_TOTAL_NOCS,
@@ -195,7 +207,15 @@
         <if test="searchKeyword != null and searchKeyword != ''">
           AND (E.EQPMNT_MNG_NO LIKE CONCAT('%', #{searchKeyword}, '%')
             OR E.EQPMNT_NM LIKE CONCAT('%', #{searchKeyword}, '%')
-            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
+            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.VMS_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.STRG_MTH_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CNSMR_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_MDL_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_MAC_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.VMS_SRVR_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
         </if>
          ORDER BY COALESCE(S.STN_SEQ, 999), E.EQPMNT_MNG_NO
     </select>
@@ -213,13 +233,22 @@
                CAST(COALESCE(SUM(IFT.MSRMT_VL), 0) AS UNSIGNED) AS IF_TOTAL_NOCS
           FROM eqpmnt_info E
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
          WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
         <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
         <if test="searchKeyword != null and searchKeyword != ''">
           AND (E.EQPMNT_MNG_NO LIKE CONCAT('%', #{searchKeyword}, '%')
             OR E.EQPMNT_NM LIKE CONCAT('%', #{searchKeyword}, '%')
-            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
+            OR E.EQPMNT_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.VMS_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.STRG_MTH_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CNSMR_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_MDL_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.CCTV_MAC_ADDR LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR V.VMS_SRVR_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%'))
         </if>
     </select>
 
@@ -248,7 +277,9 @@
 
     <select id="selectEquipment" parameterType="long" resultMap="equipmentMap">
         SELECT E.*, L.LINK_SYS_NM, S.STN_NM, F.EQPMNT_CLSF_NM,
-               V.FLR_NM, V.CMRA_QTY, P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
+               V.FLR_NM, V.CMRA_QTY, V.VMS_NM, V.STRG_MTH_NM, V.CCTV_NM, V.CNSMR_NM,
+               V.CCTV_MDL_NM, V.FRMWR_VER_NO, V.CCTV_IP_ADDR, V.CCTV_MAC_ADDR, V.ACNT_NM, V.VMS_SRVR_IP_ADDR,
+               P.EQPM_NM AS PBX_EQPM_NM, P.CMPNT_NM, P.MTBF_HR,
                CPU.MSRMT_VL AS CPU_USGRT, MMRY.MSRMT_VL AS MMRY_USGRT,
                CAST(IFU.MSRMT_VL AS UNSIGNED) AS IF_USE_NOCS,
                CAST(IFT.MSRMT_VL AS UNSIGNED) AS IF_TOTAL_NOCS,
@@ -354,6 +385,46 @@
                EQPMNT_EXPLN = #{eqpmntExpln},
                MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE EQPMNT_SN = #{eqpmntSn} AND USE_YN = 'Y'
+    </update>
+
+    <insert id="upsertCctvInfo" parameterType="equipmentVO">
+        INSERT INTO cctv_info
+        (EQPMNT_SN, VMS_NM, STRG_MTH_NM, CCTV_NM, CNSMR_NM, CCTV_MDL_NM,
+         FRMWR_VER_NO, CCTV_IP_ADDR, CCTV_MAC_ADDR, ACNT_NM, VMS_SRVR_IP_ADDR,
+         FLR_NM, CMRA_QTY, REG_DT, MDFCN_DT)
+        VALUES
+        (#{eqpmntSn}, #{vmsNm}, #{strgMthNm}, #{cctvNm}, #{cnsmrNm}, #{cctvMdlNm},
+         #{frmwrVerNo}, #{cctvIpAddr}, #{cctvMacAddr}, #{acntNm}, #{vmsSrvrIpAddr},
+         #{flrNm}, COALESCE(#{cmraQty}, 1), NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+          VMS_NM = VALUES(VMS_NM),
+          STRG_MTH_NM = VALUES(STRG_MTH_NM),
+          CCTV_NM = VALUES(CCTV_NM),
+          CNSMR_NM = VALUES(CNSMR_NM),
+          CCTV_MDL_NM = VALUES(CCTV_MDL_NM),
+          FRMWR_VER_NO = VALUES(FRMWR_VER_NO),
+          CCTV_IP_ADDR = VALUES(CCTV_IP_ADDR),
+          CCTV_MAC_ADDR = VALUES(CCTV_MAC_ADDR),
+          ACNT_NM = VALUES(ACNT_NM),
+          VMS_SRVR_IP_ADDR = VALUES(VMS_SRVR_IP_ADDR),
+          FLR_NM = VALUES(FLR_NM),
+          CMRA_QTY = VALUES(CMRA_QTY),
+          MDFCN_DT = NOW()
+    </insert>
+
+    <update id="updateCctvEquipmentMirror" parameterType="equipmentVO">
+        UPDATE eqpmnt_info
+           SET EQPMNT_NM = #{cctvNm},
+               EQPMNT_SE_CD = 'CCTV',
+               EQPMNT_CLSF_CD = NULL,
+               INSTL_PLC_NM = COALESCE(NULLIF(#{flrNm}, ''), #{vmsNm}),
+               EQPMNT_IP_ADDR = #{cctvIpAddr},
+               SOU_EQPMNT_IP_ADDR = #{vmsSrvrIpAddr},
+               MAC_ADDR = #{cctvMacAddr},
+               EQPMNT_MDL_NM = #{cctvMdlNm},
+               VER_NO = #{frmwrVerNo},
+               MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+         WHERE EQPMNT_SN = #{eqpmntSn}
     </update>
 
     <update id="disableEquipment" parameterType="equipmentVO">
