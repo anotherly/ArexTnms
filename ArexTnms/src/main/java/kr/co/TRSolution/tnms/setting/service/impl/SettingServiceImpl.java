@@ -20,7 +20,11 @@ import kr.co.TRSolution.tnms.setting.vo.UiSettingVO;
 @Service("settingService")
 public class SettingServiceImpl implements SettingService {
     private static final String STATION_STATUS_PRIORITY = "STATION_STATUS_PRIORITY";
-    private static final Set<String> STATION_STATUS_CODES = new HashSet<String>(Arrays.asList("CRITICAL", "CAUTION", "UNKNOWN", "NORMAL"));
+    private static final Set<String> STATION_STATUS_CODES = new HashSet<String>(Arrays.asList("CRITICAL", "CAUTION", "NORMAL"));
+    private static final String MAP_CRITICAL = "DASHBOARD_CRITICAL_GRADES";
+    private static final String MAP_CAUTION = "DASHBOARD_CAUTION_GRADES";
+    private static final String MAP_NORMAL = "DASHBOARD_NORMAL_GRADES";
+    private static final Set<String> SOURCE_GRADE_CODES = new HashSet<String>(Arrays.asList("EMERGENCY","HIGH","LOW","WARNING","INFO","CLEAR","UNKNOWN"));
     @Resource(name = "settingMapper") private SettingMapper settingMapper;
 
     @Override
@@ -34,6 +38,7 @@ public class SettingServiceImpl implements SettingService {
         result.put("selectedGroupId", selected);
         result.put("codes", selected == null ? java.util.Collections.emptyList() : settingMapper.selectCommonCodeList(selected));
         result.put("severityCodes", settingMapper.selectCommonCodeList("SYS_STTS"));
+        result.put("faultGradeCodes", settingMapper.selectCommonCodeList("DSBLTY_GRD"));
         return result;
     }
 
@@ -59,6 +64,7 @@ public class SettingServiceImpl implements SettingService {
     @Transactional(rollbackFor = Exception.class)
     public void saveUiSettings(List<UiSettingVO> list, String actorId) {
         if (list == null || list.isEmpty()) throw new IllegalArgumentException("저장할 UI 설정이 없습니다.");
+        validateGradeMappingIfIncluded(list);
         for (UiSettingVO vo : list) {
             if (blank(vo.getUiStngCd()) || blank(vo.getUiStngVl())) throw new IllegalArgumentException("UI 설정 코드와 값을 확인해 주세요.");
             if (STATION_STATUS_PRIORITY.equals(vo.getUiStngCd())) {
@@ -123,7 +129,34 @@ public class SettingServiceImpl implements SettingService {
         Set<String> unique = new HashSet<String>();
         for (String code : codes) unique.add(normalizeStatusCode(code));
         if (codes.length != STATION_STATUS_CODES.size() || !unique.equals(STATION_STATUS_CODES)) {
-            throw new IllegalArgumentException("역사 대표색 우선순위는 장애, 주의, 통신단절, 정상 항목을 중복 없이 모두 포함해야 합니다.");
+            throw new IllegalArgumentException("역사 대표색 우선순위는 심각, 주의, 정상 항목을 중복 없이 모두 포함해야 합니다.");
         }
     }
+    private void validateGradeMappingIfIncluded(List<UiSettingVO> list) {
+        boolean included = false;
+        Map<String, String> values = new HashMap<String, String>();
+        for (String code : Arrays.asList(MAP_CRITICAL, MAP_CAUTION, MAP_NORMAL)) {
+            UiSettingVO current = settingMapper.selectUiSetting(code);
+            values.put(code, current == null ? "" : current.getUiStngVl());
+        }
+        for (UiSettingVO vo : list) {
+            if (MAP_CRITICAL.equals(vo.getUiStngCd()) || MAP_CAUTION.equals(vo.getUiStngCd()) || MAP_NORMAL.equals(vo.getUiStngCd())) {
+                included = true;
+                values.put(vo.getUiStngCd(), vo.getUiStngVl());
+            }
+        }
+        if (!included) return;
+        Set<String> all = new HashSet<String>();
+        for (String code : Arrays.asList(MAP_CRITICAL, MAP_CAUTION, MAP_NORMAL)) {
+            String csv = values.get(code);
+            if (blank(csv)) throw new IllegalArgumentException("장애등급 그룹에는 최소 1개 이상의 항목이 필요합니다.");
+            for (String item : csv.split(",")) {
+                String grade = item.trim();
+                if (!SOURCE_GRADE_CODES.contains(grade)) throw new IllegalArgumentException("지원하지 않는 장애등급입니다: " + grade);
+                if (!all.add(grade)) throw new IllegalArgumentException("장애등급은 하나의 메인 상태에만 매핑할 수 있습니다: " + grade);
+            }
+        }
+        if (!all.equals(SOURCE_GRADE_CODES)) throw new IllegalArgumentException("긴급·높음·낮음·경고·정보·해제·통신단절을 모두 한 번씩 매핑해 주세요.");
+    }
+
 }

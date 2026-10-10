@@ -8,6 +8,7 @@ request.setAttribute("pageDescription", "설비 EMS에서 연동되는 장애유
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.2" />
 </head>
 <body>
 <div class="app">
@@ -24,6 +25,7 @@ request.setAttribute("pageDescription", "설비 EMS에서 연동되는 장애유
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/fault/types.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/fault/types.js?v=20261010.2"></script>
 </body>
 </html>

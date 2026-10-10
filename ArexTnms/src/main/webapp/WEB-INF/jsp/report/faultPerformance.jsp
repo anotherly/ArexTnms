@@ -8,6 +8,7 @@ request.setAttribute("pageDescription", "장애 조치 및 성능 통계를 기�
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261008.1" />
 </head>
 <body>
 <div class="app">
@@ -24,6 +25,6 @@ request.setAttribute("pageDescription", "장애 조치 및 성능 통계를 기�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/report/fault-performance.js?v=20260914.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/report/fault-performance.js?v=20261008.1"></script>
 </body>
 </html>

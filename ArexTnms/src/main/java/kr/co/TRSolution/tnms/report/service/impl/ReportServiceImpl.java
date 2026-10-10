@@ -16,6 +16,7 @@ import kr.co.TRSolution.tnms.report.vo.ReportVO;
 @Service("reportService")
 public class ReportServiceImpl implements ReportService {
     @Resource(name = "reportMapper") private ReportMapper reportMapper;
+
     @Override
     public Map<String, Object> selectFaultPerformance(ReportVO searchVO) {
         if (searchVO == null) searchVO = new ReportVO();
@@ -23,15 +24,19 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> result = new HashMap<String, Object>();
         result.put("condition", searchVO);
         result.put("summary", reportMapper.selectFaultSummary(searchVO));
+        result.put("daily", reportMapper.selectDailyFaultSummary(searchVO));
         result.put("systems", reportMapper.selectFaultSystemSummary(searchVO));
+        result.put("stations", reportMapper.selectFaultStationSummary(searchVO));
+        result.put("details", reportMapper.selectFaultDetailList(searchVO));
         return result;
     }
+
     private void defaultDates(ReportVO vo) {
         Calendar cal = Calendar.getInstance();
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd");
         if (vo.getEndDate() == null || vo.getEndDate().trim().length() == 0) vo.setEndDate(f.format(cal.getTime()));
         if (vo.getStartDate() == null || vo.getStartDate().trim().length() == 0) {
-            cal.set(Calendar.DAY_OF_MONTH, 1);
+            cal.add(Calendar.DAY_OF_MONTH, -6);
             vo.setStartDate(f.format(cal.getTime()));
         }
     }

@@ -95,15 +95,11 @@
     </resultMap>
 
     <sql id="effectiveStatus">
-        CASE
-          WHEN E.EQPMNT_SN IS NULL THEN 'NO_DATA'
-          WHEN C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL THEN 'UNKNOWN'
-          WHEN C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(CAST((SELECT U.UI_STNG_VL FROM ui_stng_info U
-                 WHERE U.UI_STNG_CD = 'DASHBOARD_OFFLINE_MIN' AND U.USE_YN = 'Y') AS UNSIGNED), 5) MINUTE) THEN 'UNKNOWN'
-          WHEN C.STTS_CD = 'OFFLINE' THEN 'UNKNOWN'
-          WHEN C.STTS_CD = 'WARNING' THEN 'CAUTION'
-          ELSE COALESCE(C.STTS_CD, 'UNKNOWN')
-        END
+        CASE WHEN E.EQPMNT_SN IS NULL THEN 'NO_DATA' ELSE COALESCE(ES.STTS_CD,'NORMAL') END
+    </sql>
+
+    <sql id="isDisconnected">
+        (C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL OR C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(CAST((SELECT U.UI_STNG_VL FROM ui_stng_info U WHERE U.UI_STNG_CD='DASHBOARD_OFFLINE_MIN' AND U.USE_YN='Y') AS UNSIGNED),5) MINUTE) OR C.STTS_CD='OFFLINE')
     </sql>
 
     <sql id="performanceJoins">
@@ -131,18 +127,19 @@
                SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
                SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
                0 AS OFFLINE_NOCS,
-               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="isDisconnected"/> THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
                MAX(C.CLCT_DT) AS LAST_CLCT_DT,
                CASE
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
-                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
           FROM link_sys_info S
           LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = S.LINK_SYS_CD AND E.USE_YN = 'Y'
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE S.USE_YN = 'Y'
          GROUP BY S.LINK_SYS_CD, S.LINK_SYS_NM
          ORDER BY FIELD(S.LINK_SYS_CD, 'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
@@ -155,12 +152,12 @@
                SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
                SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
                0 AS OFFLINE_NOCS,
-               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="isDisconnected"/> THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
                MAX(C.CLCT_DT) AS LAST_CLCT_DT,
                CASE
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
-                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
@@ -168,6 +165,7 @@
           LEFT JOIN eqpmnt_info E ON E.STN_CD = S.STN_CD AND E.USE_YN = 'Y'
           <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD = #{linkSysCd}</if>
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE S.USE_YN = 'Y'
          GROUP BY S.STN_CD, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN
          ORDER BY S.STN_SEQ
@@ -198,6 +196,7 @@
           LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
           LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
@@ -226,13 +225,14 @@
                SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
                SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
                0 AS OFFLINE_NOCS,
-               SUM(CASE WHEN <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="isDisconnected"/> THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
                ROUND(AVG(CPU.MSRMT_VL), 1) AS CPU_USGRT,
                ROUND(AVG(MMRY.MSRMT_VL), 1) AS MMRY_USGRT,
                CAST(COALESCE(SUM(IFU.MSRMT_VL), 0) AS UNSIGNED) AS IF_USE_NOCS,
                CAST(COALESCE(SUM(IFT.MSRMT_VL), 0) AS UNSIGNED) AS IF_TOTAL_NOCS
           FROM eqpmnt_info E
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
          WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
@@ -258,18 +258,19 @@
                SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) AS CAUTION_NOCS,
                SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
                0 AS OFFLINE_NOCS,
-               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
+               SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="isDisconnected"/> THEN 1 ELSE 0 END) AS UNKNOWN_NOCS,
                MAX(C.CLCT_DT) AS LAST_CLCT_DT,
                CASE
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'CRITICAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'CRITICAL'
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> IN ('CAUTION','WARNING') THEN 1 ELSE 0 END) &gt; 0 THEN 'CAUTION'
-                 WHEN SUM(CASE WHEN E.EQPMNT_SN IS NOT NULL AND <include refid="effectiveStatus"/> = 'UNKNOWN' THEN 1 ELSE 0 END) &gt; 0 THEN 'UNKNOWN'
+                 
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
           FROM link_sys_info L
           LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = L.LINK_SYS_CD AND E.STN_CD = #{_parameter} AND E.USE_YN = 'Y'
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE L.USE_YN = 'Y'
          GROUP BY L.LINK_SYS_CD, L.LINK_SYS_NM
          ORDER BY FIELD(L.LINK_SYS_CD, 'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
@@ -291,6 +292,7 @@
           LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
           LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
           LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>

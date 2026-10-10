@@ -8,6 +8,7 @@ request.setAttribute("pageDescription", "정기점검 등 계획된 시간에는
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.1" />
 </head>
 <body>
 <div class="app">
@@ -24,6 +25,7 @@ request.setAttribute("pageDescription", "정기점검 등 계획된 시간에는
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/fault/exceptions.js?v=20260904.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/fault/exceptions.js?v=20261010.2"></script>
 </body>
 </html>

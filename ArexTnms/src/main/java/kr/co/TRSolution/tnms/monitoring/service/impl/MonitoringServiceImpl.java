@@ -23,7 +23,7 @@ import kr.co.TRSolution.tnms.setting.vo.UiSettingVO;
 @Service("monitoringService")
 public class MonitoringServiceImpl implements MonitoringService {
     private static final String STATION_STATUS_PRIORITY = "STATION_STATUS_PRIORITY";
-    private static final List<String> DEFAULT_STATUS_PRIORITY = Arrays.asList("CRITICAL", "CAUTION", "UNKNOWN", "NORMAL");
+    private static final List<String> DEFAULT_STATUS_PRIORITY = Arrays.asList("CRITICAL", "CAUTION", "NORMAL");
     @Resource(name = "monitoringMapper") private MonitoringMapper monitoringMapper;
     @Resource(name = "settingMapper") private SettingMapper settingMapper;
 
@@ -259,7 +259,6 @@ public class MonitoringServiceImpl implements MonitoringService {
         for (String code : priority) {
             if ("CRITICAL".equals(code) && positive(critical)) return code;
             if ("CAUTION".equals(code) && positive(caution)) return code;
-            if ("UNKNOWN".equals(code) && (positive(unknown) || positive(offline))) return code;
             if ("NORMAL".equals(code) && positive(normal)) return code;
         }
         return "UNKNOWN";

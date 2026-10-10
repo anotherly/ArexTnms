@@ -95,6 +95,7 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/fault/types.do", new Requirement("faultTypes", "LIST"));
         map.put("/report/fault-performance.do", new Requirement("reports", "LIST"));
         map.put("/report/fault-performance/data.ajax", new Requirement("reports", "LIST"));
+        map.put("/report/fault-performance/excel.do", new Requirement("reports", "LIST"));
         map.put("/user/list.do", new Requirement("users", "LIST"));
         map.put("/auth/list.do", new Requirement("auth", "LIST"));
         map.put("/user/applications.do", new Requirement("users", "LIST"));

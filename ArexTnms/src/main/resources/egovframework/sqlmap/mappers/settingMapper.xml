@@ -41,7 +41,7 @@
                     COALESCE(NULLIF(FIND_IN_SET(COM_CD,
                         COALESCE((SELECT UI_STNG_VL FROM ui_stng_info
                                    WHERE UI_STNG_CD = 'STATION_STATUS_PRIORITY' AND USE_YN = 'Y'),
-                                 'CRITICAL,CAUTION,UNKNOWN,NORMAL')), 0), 999)
+                                 'CRITICAL,CAUTION,NORMAL')), 0), 999)
                     ELSE COM_CD_SEQ END,
                COM_CD
     </select>

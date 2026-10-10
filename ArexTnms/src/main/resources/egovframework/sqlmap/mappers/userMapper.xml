@@ -104,8 +104,8 @@
 
     <update id="increaseLoginFailure" parameterType="string">
         UPDATE user_info
-           SET LGN_FAIL_NOCS = LGN_FAIL_NOCS + 1,
-               USER_STTS_CD = CASE WHEN LGN_FAIL_NOCS + 1 &gt;= 5 THEN 'LOCKED' ELSE USER_STTS_CD END
+           SET USER_STTS_CD = CASE WHEN LGN_FAIL_NOCS + 1 &gt;= 5 THEN 'LOCKED' ELSE USER_STTS_CD END,
+               LGN_FAIL_NOCS = LGN_FAIL_NOCS + 1
          WHERE USER_ID = #{_parameter}
     </update>
 

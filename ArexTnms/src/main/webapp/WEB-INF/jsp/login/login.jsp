@@ -99,14 +99,30 @@
       location.href = contextPath + '/login/account-application.do';
     });
 
+    function showLoginError(message) {
+      errorMessage.textContent = message || '아이디와 비밀번호를 확인해 주세요';
+      errorMessage.classList.add('show');
+      loginForm.querySelectorAll('.input-box').forEach(function (box) {
+        box.classList.add('is-error');
+      });
+    }
+
+    function clearLoginError() {
+      errorMessage.textContent = '';
+      errorMessage.classList.remove('show');
+      loginForm.querySelectorAll('.input-box').forEach(function (box) {
+        box.classList.remove('is-error');
+      });
+    }
+
     loginForm.addEventListener('submit', async function (event) {
       event.preventDefault();
       if (!loginForm.userId.value.trim() || !loginForm.password.value) {
-        errorMessage.textContent = '아이디와 비밀번호를 입력해 주세요';
+        showLoginError('아이디와 비밀번호를 입력해 주세요');
         return;
       }
       loginButton.disabled = true;
-      errorMessage.textContent = '';
+      clearLoginError();
       try {
         const response = await fetch(contextPath + '/login/loginPost.do', {
           method: 'POST',
@@ -118,7 +134,7 @@
         if (result.passwordChangeRequired) alert(result.message || '비밀번호 변경주기가 경과했습니다.');
         location.replace(result.url);
       } catch (error) {
-        errorMessage.textContent = error.message || '아이디와 비밀번호를 확인해 주세요';
+        showLoginError(error.message || '아이디와 비밀번호를 확인해 주세요');
         loginButton.disabled = false;
       }
     });
