@@ -1,5 +1,7 @@
 let FAULT_DATA = {};
 let FAULT_EQUIPMENT_EDIT = null;
+let FAULT_PAGE = 1;
+const FAULT_PAGE_SIZE = 20;
 
 function faultGradeOptions(rows, selected) {
   return '<option value="">전체 등급</option>' + mgmtOptions(rows, 'code', 'name', selected);
@@ -53,10 +55,14 @@ function realtimeScreen() {
   const s = d.summary || {};
   const canModify = realtimeCanModify();
   const canControl = realtimeCanControl();
-  const faults = d.faults || [];
+  const allFaults = d.faults || [];
+  const pageCount = Math.max(1, Math.ceil(allFaults.length / FAULT_PAGE_SIZE));
+  if (FAULT_PAGE > pageCount) FAULT_PAGE = pageCount;
+  const pageStart = (FAULT_PAGE - 1) * FAULT_PAGE_SIZE;
+  const faults = allFaults.slice(pageStart, pageStart + FAULT_PAGE_SIZE);
 
   const rows = faults.length ? faults.map(function (r, idx) {
-    const no = faults.length - idx;
+    const no = allFaults.length - pageStart - idx;
     const equipmentType = r.eqpmntClsfNm || r.eqpmntSeCd || '-';
     const judgment = faultJudgmentName(r.dsbltyJgmtCd);
     const temp = r.tempActionYn === 'Y' ? '입력완료' : '미입력';
@@ -95,7 +101,7 @@ function realtimeScreen() {
       '<div class="mgmt-stat"><div class="label">정보 · 등급 5</div><strong>' + mgmtNum(s.infoCount) + '</strong><small>정보 이벤트</small></div>' +
     '</div>' +
     '<section class="mgmt-card">' +
-      '<div class="mgmt-card-head fault-list-head"><div><h3>실시간 장애 목록</h3><small>총 ' + faults.length.toLocaleString() + '건</small></div><div class="fault-list-actions"><button class="btn" onclick="downloadRealtimeExcel()">Excel</button></div></div>' +
+      '<div class="mgmt-card-head fault-list-head"><div><h3>실시간 장애 목록</h3><small>총 ' + allFaults.length.toLocaleString() + '건 · 최신순</small></div><div class="fault-list-actions"><button class="btn" onclick="downloadRealtimeExcel()">Excel</button></div></div>' +
       '<div class="mgmt-filter">' +
         '<select id="faultGrade" class="input">' + faultGradeOptions(d.gradeCodes) + '</select>' +
         '<select id="faultSystem" class="input"><option value="">전체 설비</option>' + mgmtOptions(d.systems, 'linkSysCd', 'linkSysNm') + '</select>' +
@@ -108,6 +114,7 @@ function realtimeScreen() {
         '<th><input id="faultCheckAll" class="mgmt-checkbox" type="checkbox" onchange="toggleAllFaults(this.checked)"></th>' +
         '<th>NO.</th><th>등급</th><th>설비</th><th>역사/시설</th><th>장비명</th><th>IP</th><th>장비종류</th><th>발생위치</th><th>장애유형</th><th>장애내용</th><th>발생시각</th><th>장애판단</th><th>임시조치</th><th>관리</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      realtimePager(allFaults.length) +
       '<div class="fault-bottom-toolbar">' +
         '<div class="mgmt-actions">' +
           (canControl ? '<button id="faultTransferBtn" class="btn" disabled onclick="openTransferModal()">선택 장애 이관</button>' : '') +
@@ -117,6 +124,21 @@ function realtimeScreen() {
       '</div>' +
     '</section>' +
   '</div>';
+}
+
+function realtimePager(total) {
+  const pages = Math.max(1, Math.ceil(total / FAULT_PAGE_SIZE));
+  if (pages <= 1) return '';
+  let h = '<div class="mgmt-pager">';
+  for (let p = Math.max(1, FAULT_PAGE - 2); p <= Math.min(pages, FAULT_PAGE + 2); p++) {
+    h += '<button class="btn sm ' + (p === FAULT_PAGE ? 'primary' : '') + '" onclick="moveRealtimePage(' + p + ')">' + p + '</button>';
+  }
+  return h + '</div>';
+}
+function moveRealtimePage(page) {
+  FAULT_PAGE = Math.max(1, page);
+  renderPage('faults', realtimeScreen(), '<button class="btn" onclick="loadRealtime()">새로고침</button>');
+  updateRealtimeSelectionState();
 }
 
 function checkedFaults() {
@@ -146,6 +168,7 @@ function updateRealtimeSelectionState() {
 
 async function loadRealtime() {
   try {
+    FAULT_PAGE = 1;
     const p = {
       grade: document.getElementById('faultGrade') ? document.getElementById('faultGrade').value : '',
       linkSysCd: document.getElementById('faultSystem') ? document.getElementById('faultSystem').value : '',
@@ -171,11 +194,18 @@ function currentRealtimeFilters() {
   };
 }
 
-function downloadRealtimeExcel() {
+async function downloadRealtimeExcel() {
   const q = new URLSearchParams();
   const filters = currentRealtimeFilters();
   Object.keys(filters).forEach(function (k) { if (filters[k]) q.append(k, filters[k]); });
-  location.href = CONTEXT_PATH + '/fault/realtime-excel.do' + (q.toString() ? '?' + q.toString() : '');
+  try {
+    const r = await fetch(CONTEXT_PATH + '/fault/realtime-excel.do' + (q.toString() ? '?' + q.toString() : ''), {credentials:'same-origin'});
+    if (!r.ok) throw new Error('Excel 다운로드에 실패했습니다.');
+    const b = await r.blob(), a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = 'TNMS_실시간장애.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    showToast('Excel 다운로드가 완료되었습니다.');
+  } catch(e) { showToast(e.message, true); }
 }
 
 async function openFaultDetail(no) {
@@ -337,7 +367,7 @@ function openTransferModal() {
     '<div class="mgmt-modal-title"><h2>선택 장애이관</h2></div>' +
     '<div class="fault-confirm-title"><span class="fault-warning-icon">!</span><div><b>선택한 장애 ' + rows.length + '건을 장애이력으로 이관하시겠습니까?</b><p>이관 후에는 실시간 장애목록에서 조회되지 않습니다.</p></div></div>' +
     '<div class="fault-modal-label">선택 장애</div>' + selectionRowsHtml(rows) +
-    '<ul class="fault-transfer-notes"><li>이관된 장애는 장애이력·조치 화면에서 계속 조회할 수 있습니다.</li><li>임시조치 내용과 장애판단 정보도 함께 이관됩니다.</li><li class="warn">이관 후 복구 수신 처리 기준은 개발확인필요.</li></ul>' +
+    '<ul class="fault-transfer-notes"><li>이관된 장애는 장애이력·조치 화면에서 계속 조회할 수 있습니다.</li><li>임시조치 내용과 장애판단 정보도 함께 이관됩니다.</li><li>이관 후 복구 수신 시 장애이력의 복구정보를 갱신합니다.</li></ul>' +
     '<div class="mgmt-modal-actions"><button class="btn" onclick="closeModal()">취소</button><button class="btn primary" onclick="applyTransferFromModal()">이관</button></div>' +
   '</div>');
 }

@@ -57,10 +57,27 @@ public class FaultServiceImpl implements FaultService {
         if (!blank(actionReason)) params.put("reason", actionReason);
         params.put("actorId", actorId);
         if (faultMapper.updateFault(params) != 1) throw new IllegalArgumentException("장애 정보를 찾을 수 없습니다.");
-        String action = value(params.get("actionCn"));
+
+        String tempAction = value(params.get("tempActionCn"));
+        if (blank(tempAction)) tempAction = value(params.get("actionCn"));
+        String completeAction = value(params.get("completeActionCn"));
         String symptom = value(params.get("symptom"));
-        if (!blank(action) || !blank(symptom) || !blank(actionReason)) {
-            insertAction(no, "TEMP", valueOr(action, "임시조치 정보 수정"), params, actorId, actorName);
+        String plan = value(params.get("plan"));
+        String result = value(params.get("result"));
+        if (!blank(tempAction) || !blank(symptom) || !blank(actionReason)) {
+            Map<String,Object> tempParams = new HashMap<String,Object>(params);
+            tempParams.put("actionCn", tempAction);
+            insertAction(no, "TEMP", valueOr(tempAction, "임시조치 정보 수정"), tempParams, actorId, actorName);
+        }
+        if (!blank(completeAction) || !blank(plan) || !blank(result)) {
+            Map<String,Object> completeParams = new HashMap<String,Object>(params);
+            completeParams.put("actionCn", completeAction);
+            insertAction(no, "COMPLETE", valueOr(completeAction, "완료조치 정보 수정"), completeParams, actorId, actorName);
+        }
+        if ("COMPLETED".equals(value(params.get("prcsSttsCd")))) {
+            Map<String,Object> st = new HashMap<String,Object>();
+            st.put("dsbltyNo", no); st.put("prcsSttsCd", "COMPLETED"); st.put("idntyUserId", actorId); st.put("completeYn", "Y");
+            faultMapper.updateFaultStatus(st);
         }
     }
 
@@ -139,6 +156,13 @@ public class FaultServiceImpl implements FaultService {
     }
 
     @Override
+    public Map<String, Object> searchExceptionEquipment(Map<String, Object> params) {
+        Map<String,Object> result = new HashMap<String,Object>();
+        result.put("rows", faultMapper.selectExceptionEquipmentCandidates(params == null ? new HashMap<String,Object>() : params));
+        return result;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveExceptionGroup(Map<String, Object> params, String actorId) {
         String name = value(params.get("groupNm"));
@@ -173,7 +197,9 @@ public class FaultServiceImpl implements FaultService {
         Map<String,Object> result = new HashMap<String,Object>();
         Map<String,Object> row = faultMapper.selectExceptionSchedule(scheduleSn);
         if (row == null) throw new IllegalArgumentException("예외일정을 찾을 수 없습니다.");
-        result.put("schedule", row); result.put("grades", faultMapper.selectExceptionScheduleGrades(scheduleSn));
+        result.put("schedule", row);
+        result.put("grades", faultMapper.selectExceptionScheduleGrades(scheduleSn));
+        result.put("members", faultMapper.selectExceptionGroupMembers(longValue(row.get("groupSn"))));
         return result;
     }
 
@@ -182,19 +208,59 @@ public class FaultServiceImpl implements FaultService {
     public Long saveExceptionSchedule(Map<String, Object> params, String actorId) {
         Long groupSn = longValue(params.get("groupSn"));
         if (groupSn == null) throw new IllegalArgumentException("예외그룹을 선택해 주세요.");
-        if (blank(params.get("scheduleNm")) || blank(params.get("beginDt")) || blank(params.get("endDt"))) throw new IllegalArgumentException("일정명과 시작/종료일시를 입력해 주세요.");
-        if (blank(params.get("reason"))) throw new IllegalArgumentException("예외 사유를 입력해 주세요.");
+        if (blank(params.get("beginDt"))) throw new IllegalArgumentException("시작일시를 입력해 주세요.");
+        if (blank(params.get("reason"))) throw new IllegalArgumentException("설명을 입력해 주세요.");
+
+        Map<String,Object> group = faultMapper.selectExceptionGroup(groupSn);
+        if (group == null) throw new IllegalArgumentException("선택한 예외그룹을 찾을 수 없습니다.");
+        String scheduleNm = value(params.get("scheduleNm"));
+        if (blank(scheduleNm)) {
+            Long existingSn = longValue(params.get("scheduleSn"));
+            if (existingSn != null) {
+                Map<String,Object> existing = faultMapper.selectExceptionSchedule(existingSn);
+                if (existing != null) scheduleNm = value(existing.get("scheduleNm"));
+            }
+        }
+        if (blank(scheduleNm)) {
+            String groupNm = valueOr(group.get("groupNm"), "장애 예외");
+            String start = value(params.get("beginDt")).replace('T', ' ');
+            String kind = "REPEAT".equalsIgnoreCase(value(params.get("runType"))) ? "반복" : "1회";
+            scheduleNm = groupNm + " " + kind + " " + start;
+        }
+        if (scheduleNm.length() > 100) scheduleNm = scheduleNm.substring(0, 100);
+        params.put("scheduleNm", scheduleNm);
+
+        String runType = valueOr(params.get("runType"), "ONCE").toUpperCase();
+        if (!("ONCE".equals(runType) || "REPEAT".equals(runType))) throw new IllegalArgumentException("실행구분을 확인해 주세요.");
+        String noEndYn = "Y".equalsIgnoreCase(value(params.get("noEndYn"))) ? "Y" : "N";
+        if ("ONCE".equals(runType)) noEndYn = "N";
+        if ("N".equals(noEndYn) && blank(params.get("endDt"))) throw new IllegalArgumentException("종료일시를 입력하거나 종료일 제외를 선택해 주세요.");
+
+        String repeatCycle = null;
+        String repeatDays = null;
+        if ("REPEAT".equals(runType)) {
+            repeatCycle = valueOr(params.get("repeatCycle"), "DAILY").toUpperCase();
+            if (!("DAILY".equals(repeatCycle) || "WEEKLY".equals(repeatCycle) || "MONTHLY".equals(repeatCycle)))
+                throw new IllegalArgumentException("반복주기를 확인해 주세요.");
+            repeatDays = value(params.get("repeatDays"));
+            if ("WEEKLY".equals(repeatCycle) && blank(repeatDays)) throw new IllegalArgumentException("반복 요일을 하나 이상 선택해 주세요.");
+            if (blank(params.get("startTime")) || blank(params.get("endTime"))) throw new IllegalArgumentException("반복 시작/종료 시간을 입력해 주세요.");
+        }
+
+        params.put("runType", runType);
+        params.put("noEndYn", noEndYn);
+        params.put("repeatCycle", repeatCycle);
+        params.put("repeatDays", repeatDays);
         params.put("bgngDt", dateTimeValue(params.get("beginDt")));
-        params.put("endDt", dateTimeValue(params.get("endDt")));
+        params.put("endDt", "Y".equals(noEndYn) ? null : dateTimeValue(params.get("endDt")));
+        params.put("startTime", timeValue(params.get("startTime"), params.get("beginDt")));
+        params.put("endTime", timeValue(params.get("endTime"), params.get("endDt")));
+        params.put("reptCycleCn", "REPEAT".equals(runType) ? "REPEAT|" + repeatCycle + "|" + valueOr(repeatDays, "") : "ONCE");
         params.put("excpRsn", value(params.get("reason")));
         Long sn = longValue(params.get("scheduleSn"));
-        params.put("rgtrId", actorId); params.put("mdfrId", actorId); params.put("useYn", "N".equals(value(params.get("useYn"))) ? "N" : "Y");
+        params.put("rgtrId", actorId); params.put("mdfrId", actorId); params.put("useYn", "Y");
         if (sn == null) { faultMapper.insertExceptionSchedule(params); sn = longValue(params.get("scheduleSn")); }
         else { params.put("scheduleSn", sn); faultMapper.updateExceptionSchedule(params); faultMapper.deleteExceptionScheduleGrades(sn); }
-        String grades = value(params.get("grades"));
-        if (!blank(grades)) for (String g : grades.split(",")) {
-            Map<String,Object> rel = new HashMap<String,Object>(); rel.put("scheduleSn", sn); rel.put("grade", g.trim()); faultMapper.insertExceptionScheduleGrade(rel);
-        }
         return sn;
     }
 
@@ -223,4 +289,10 @@ public class FaultServiceImpl implements FaultService {
     private String valueOr(Object v, String d) { String s=value(v); return blank(s)?d:s; }
     private Long longValue(Object v) { try { return blank(v) ? null : Long.valueOf(String.valueOf(v)); } catch(Exception e){ return null; } }
     private String dateTimeValue(Object v) { String s=value(v); if (s==null) return null; s=s.replace('T', ' '); return s.length()==16 ? s+":00" : s; }
+    private String timeValue(Object explicit, Object dateTime) {
+        String s=value(explicit); if (!blank(s)) return s.length()==5 ? s+":00" : s;
+        String dt=value(dateTime); if (blank(dt)) return null; dt=dt.replace('T',' ');
+        int idx=dt.indexOf(' '); if(idx>=0 && dt.length()>idx+5) return dt.substring(idx+1, Math.min(idx+9,dt.length()));
+        return null;
+    }
 }

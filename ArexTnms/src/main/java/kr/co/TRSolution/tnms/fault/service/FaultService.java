@@ -14,6 +14,7 @@ public interface FaultService {
     Map<String, Object> selectType(Long dsbltyTypeSn);
     Map<String, Object> selectExceptions(Map<String, Object> params);
     Map<String, Object> selectExceptionGroup(Long groupSn);
+    Map<String, Object> searchExceptionEquipment(Map<String, Object> params);
     Long saveExceptionGroup(Map<String, Object> params, String actorId);
     void deleteExceptionGroup(Long groupSn);
     Map<String, Object> selectExceptionSchedule(Long scheduleSn);

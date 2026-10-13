@@ -44,8 +44,6 @@
                (SELECT C.CLCT_CYCLE_SEC FROM clct_cycle_info C WHERE C.LINK_SYS_CD=E.LINK_SYS_CD AND C.DATA_SE_CD='P' AND C.USE_YN='Y' LIMIT 1) AS clctCycleSec,
                MAX(CASE WHEN P.PERF_IDCT_CD='CPU_USGRT' THEN P.MSRMT_VL END) AS cpuUsgrt,
                MAX(CASE WHEN P.PERF_IDCT_CD='MMRY_USGRT' THEN P.MSRMT_VL END) AS mmryUsgrt,
-               MAX(CASE WHEN P.PERF_IDCT_CD='TRFC_USGRT' THEN P.MSRMT_VL END) AS trfcUsgrt,
-               MAX(CASE WHEN P.PERF_IDCT_CD='ERR_PKT_RT' THEN P.MSRMT_VL END) AS errPktRt,
                MAX(CASE WHEN P.PERF_IDCT_CD='PING_RSPNS_MS' THEN P.MSRMT_VL END) AS pingRspnsMs,
                MAX(CASE WHEN P.PERF_IDCT_CD='IF_USE_NOCS' THEN P.MSRMT_VL END) AS ifUseNocs,
                MAX(CASE WHEN P.PERF_IDCT_CD='IF_TOTAL_NOCS' THEN P.MSRMT_VL END) AS ifTotalNocs,
@@ -95,7 +93,10 @@
                C.DATA_SE_CD AS dataSeCd,
                CASE C.DATA_SE_CD WHEN 'P' THEN '성능·상태' WHEN 'F' THEN '장애·상태' WHEN 'C' THEN '구성' WHEN 'S' THEN '보안' ELSE C.DATA_SE_CD END AS dataSeNm,
                L.PROTCL_CD AS performanceProtocol, 'ICMP' AS pingProtocol,
+               C.PERF_CLCT_USE_YN AS perfClctUseYn, C.PING_MNTR_USE_YN AS pingMntrUseYn,
                C.CLCT_CYCLE_SEC AS clctCycleSec, C.STTS_MNTR_CYCLE_SEC AS sttsMntrCycleSec, C.TIMEOUT_SEC AS timeoutSec, C.RTRY_NOCS AS rtryNocs,
+               C.TIMEOUT_POLL_SEC AS timeoutPollSec,
+               (C.STTS_MNTR_CYCLE_SEC + (C.TIMEOUT_SEC * C.RTRY_NOCS)) AS totalJgmtSec,
                C.LAST_EXCN_DT AS lastExcnDt, C.NEXT_EXCN_DT AS nextExcnDt, C.USE_YN AS useYn, C.CYCLE_CRTR_CN AS cycleCrtrCn,
                (SELECT COUNT(*) FROM eqpmnt_info E2 WHERE E2.LINK_SYS_CD=C.LINK_SYS_CD AND E2.USE_YN='Y') AS targetEqpmntCount
           FROM clct_cycle_info C JOIN link_sys_info L ON L.LINK_SYS_CD=C.LINK_SYS_CD
@@ -123,20 +124,23 @@
     </select>
     <select id="selectCollectionCycle" parameterType="long" resultType="map">
         SELECT C.CLCT_CYCLE_SN AS clctCycleSn, C.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
-               C.DATA_SE_CD AS dataSeCd, C.CLCT_CYCLE_SEC AS clctCycleSec, C.STTS_MNTR_CYCLE_SEC AS sttsMntrCycleSec,
-               C.TIMEOUT_SEC AS timeoutSec, C.RTRY_NOCS AS rtryNocs, C.USE_YN AS useYn, C.CYCLE_CRTR_CN AS cycleCrtrCn,
-               L.PROTCL_CD AS performanceProtocol,
+               C.DATA_SE_CD AS dataSeCd, C.PERF_CLCT_USE_YN AS perfClctUseYn, C.PING_MNTR_USE_YN AS pingMntrUseYn,
+               C.CLCT_CYCLE_SEC AS clctCycleSec, C.STTS_MNTR_CYCLE_SEC AS sttsMntrCycleSec,
+               C.TIMEOUT_SEC AS timeoutSec, C.RTRY_NOCS AS rtryNocs, C.TIMEOUT_POLL_SEC AS timeoutPollSec,
+               (C.STTS_MNTR_CYCLE_SEC + (C.TIMEOUT_SEC * C.RTRY_NOCS)) AS totalJgmtSec,
+               C.USE_YN AS useYn, C.CYCLE_CRTR_CN AS cycleCrtrCn, L.PROTCL_CD AS performanceProtocol,
                (SELECT COUNT(*) FROM eqpmnt_info E2 WHERE E2.LINK_SYS_CD=C.LINK_SYS_CD AND E2.USE_YN='Y') AS targetEqpmntCount
           FROM clct_cycle_info C JOIN link_sys_info L ON L.LINK_SYS_CD=C.LINK_SYS_CD WHERE C.CLCT_CYCLE_SN=#{_parameter}
     </select>
     <update id="updateCollectionCycle" parameterType="map">
-        UPDATE clct_cycle_info SET CLCT_CYCLE_SEC=#{clctCycleSec}, STTS_MNTR_CYCLE_SEC=#{sttsMntrCycleSec},
-               TIMEOUT_SEC=#{timeoutSec}, RTRY_NOCS=#{rtryNocs}, USE_YN=#{useYn}, MDFCN_DT=NOW(), MDFR_ID=#{mdfrId}
+        UPDATE clct_cycle_info SET PERF_CLCT_USE_YN=#{perfClctUseYn}, PING_MNTR_USE_YN=#{pingMntrUseYn},
+               CLCT_CYCLE_SEC=#{clctCycleSec}, STTS_MNTR_CYCLE_SEC=#{sttsMntrCycleSec},
+               TIMEOUT_SEC=#{timeoutSec}, RTRY_NOCS=#{rtryNocs}, TIMEOUT_POLL_SEC=#{timeoutPollSec}, USE_YN=#{useYn}, MDFCN_DT=NOW(), MDFR_ID=#{mdfrId}
          WHERE CLCT_CYCLE_SN=#{clctCycleSn}
     </update>
 
     <select id="selectThresholds" parameterType="map" resultType="map">
-        SELECT T.THRSHLD_SN AS thrshldSn, I.PERF_IDCT_CD AS perfIdctCd, I.PERF_IDCT_NM AS perfIdctNm, I.UNIT_NM AS unitNm,
+        SELECT T.THRSHLD_SN AS thrshldSn, T.THRSHLD_PROFILE_NM AS profileNm, I.PERF_IDCT_CD AS perfIdctCd, I.PERF_IDCT_NM AS perfIdctNm, I.UNIT_NM AS unitNm,
                T.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm, T.EQPMNT_SE_CD AS eqpmntSeCd,
                T.INFO_VL AS infoVl, T.WARNING_VL AS warningVl, T.LOW_VL AS lowVl, T.HIGH_VL AS highVl, T.EMERGENCY_VL AS emergencyVl,
                T.CMPR_OPRTR_CD AS cmprOprtrCd, COALESCE(T.CONTN_NOCS,3) AS contnNocs,
@@ -150,23 +154,23 @@
          ORDER BY FIELD(I.PERF_IDCT_CD,'CPU_USGRT','MMRY_USGRT'), T.THRSHLD_SN
     </select>
     <select id="selectThreshold" parameterType="long" resultType="map">
-        SELECT T.THRSHLD_SN AS thrshldSn,T.LINK_SYS_CD AS linkSysCd,T.EQPMNT_SE_CD AS eqpmntSeCd,T.PERF_IDCT_CD AS perfIdctCd,
+        SELECT T.THRSHLD_SN AS thrshldSn,T.THRSHLD_PROFILE_NM AS profileNm,T.LINK_SYS_CD AS linkSysCd,T.EQPMNT_SE_CD AS eqpmntSeCd,T.PERF_IDCT_CD AS perfIdctCd,
                I.PERF_IDCT_NM AS perfIdctNm,I.UNIT_NM AS unitNm,T.INFO_VL AS infoVl,T.WARNING_VL AS warningVl,T.LOW_VL AS lowVl,T.HIGH_VL AS highVl,T.EMERGENCY_VL AS emergencyVl,
                T.CMPR_OPRTR_CD AS cmprOprtrCd,COALESCE(T.CONTN_NOCS,3) AS contnNocs,T.ALRM_USE_YN AS alrmUseYn,T.USE_YN AS useYn
           FROM thrshld_info T JOIN perf_idct_info I ON I.PERF_IDCT_CD=T.PERF_IDCT_CD WHERE T.THRSHLD_SN=#{_parameter}
     </select>
     <select id="selectThresholdByIndicator" parameterType="string" resultType="map">
-        SELECT T.THRSHLD_SN AS thrshldSn,T.LINK_SYS_CD AS linkSysCd,T.EQPMNT_SE_CD AS eqpmntSeCd,T.PERF_IDCT_CD AS perfIdctCd,
+        SELECT T.THRSHLD_SN AS thrshldSn,T.THRSHLD_PROFILE_NM AS profileNm,T.LINK_SYS_CD AS linkSysCd,T.EQPMNT_SE_CD AS eqpmntSeCd,T.PERF_IDCT_CD AS perfIdctCd,
                I.PERF_IDCT_NM AS perfIdctNm,I.UNIT_NM AS unitNm,T.INFO_VL AS infoVl,T.WARNING_VL AS warningVl,T.LOW_VL AS lowVl,T.HIGH_VL AS highVl,T.EMERGENCY_VL AS emergencyVl,
                T.CMPR_OPRTR_CD AS cmprOprtrCd,COALESCE(T.CONTN_NOCS,3) AS contnNocs,T.ALRM_USE_YN AS alrmUseYn,T.USE_YN AS useYn
           FROM thrshld_info T JOIN perf_idct_info I ON I.PERF_IDCT_CD=T.PERF_IDCT_CD WHERE T.PERF_IDCT_CD=#{_parameter} ORDER BY T.THRSHLD_SN LIMIT 1
     </select>
     <insert id="insertThreshold" parameterType="map" useGeneratedKeys="true" keyProperty="thrshldSn" keyColumn="THRSHLD_SN">
-        INSERT INTO thrshld_info(LINK_SYS_CD,EQPMNT_SE_CD,PERF_IDCT_CD,INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CMPR_OPRTR_CD,CONTN_NOCS,ALRM_USE_YN,SMS_USE_YN,USE_YN,RGTR_ID)
-        VALUES(NULLIF(#{linkSysCd},''),NULLIF(#{eqpmntSeCd},''),#{perfIdctCd},NULLIF(#{infoVl},''),NULLIF(#{warningVl},''),NULLIF(#{lowVl},''),NULLIF(#{highVl},''),NULLIF(#{emergencyVl},''),'GE',#{contnNocs},'Y','N',#{useYn},#{rgtrId})
+        INSERT INTO thrshld_info(THRSHLD_PROFILE_NM,LINK_SYS_CD,EQPMNT_SE_CD,PERF_IDCT_CD,INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CMPR_OPRTR_CD,CONTN_NOCS,ALRM_USE_YN,SMS_USE_YN,USE_YN,RGTR_ID)
+        VALUES(#{profileNm},NULLIF(#{linkSysCd},''),NULLIF(#{eqpmntSeCd},''),#{perfIdctCd},NULLIF(#{infoVl},''),NULLIF(#{warningVl},''),NULLIF(#{lowVl},''),NULLIF(#{highVl},''),NULLIF(#{emergencyVl},''),'GE',#{contnNocs},'Y','N',#{useYn},#{rgtrId})
     </insert>
     <update id="updateThreshold" parameterType="map">
-        UPDATE thrshld_info SET LINK_SYS_CD=NULLIF(#{linkSysCd},''),EQPMNT_SE_CD=NULLIF(#{eqpmntSeCd},''),
+        UPDATE thrshld_info SET THRSHLD_PROFILE_NM=#{profileNm},LINK_SYS_CD=NULLIF(#{linkSysCd},''),EQPMNT_SE_CD=NULLIF(#{eqpmntSeCd},''),
                INFO_VL=NULLIF(#{infoVl},''),WARNING_VL=NULLIF(#{warningVl},''),LOW_VL=NULLIF(#{lowVl},''),HIGH_VL=NULLIF(#{highVl},''),EMERGENCY_VL=NULLIF(#{emergencyVl},''),
                CMPR_OPRTR_CD='GE',CONTN_NOCS=#{contnNocs},ALRM_USE_YN='Y',SMS_USE_YN='N',USE_YN=#{useYn},MDFCN_DT=NOW(),MDFR_ID=#{mdfrId}
          WHERE THRSHLD_SN=#{thrshldSn}
@@ -225,7 +229,9 @@
          ORDER BY R.CLCT_DT DESC LIMIT 500
     </select>
     <select id="selectRawRetentionSummary" resultType="map">
-        SELECT (SELECT COUNT(*) FROM perf_raw_data) AS rawCount,
+        SELECT 3 AS rawRetentionMonth, 1 AS hourRetentionYear, 3 AS dayRetentionYear,
+               COALESCE((SELECT MIN(CLCT_CYCLE_SEC) FROM clct_cycle_info WHERE DATA_SE_CD='P' AND USE_YN='Y'),300) AS defaultCycleSec,
+               (SELECT COUNT(*) FROM perf_raw_data) AS rawCount,
                (SELECT COUNT(*) FROM perf_hr_stats) AS hourCount,
                (SELECT COUNT(*) FROM perf_day_stats) AS dayCount,
                (SELECT COUNT(*) FROM link_raw_data) AS interfaceCount

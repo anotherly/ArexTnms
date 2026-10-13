@@ -11,8 +11,15 @@ const MENU_CAPABILITIES={
   auth:['listAuthrtYn','dtlAuthrtYn','regAuthrtYn','mdfcnAuthrtYn','delAuthrtYn'],
   settings:['listAuthrtYn','regAuthrtYn','mdfcnAuthrtYn'],
   logs:['listAuthrtYn','dtlAuthrtYn'],
-  performance:['listAuthrtYn'],cycle:['listAuthrtYn'],threshold:['listAuthrtYn'],raw:['listAuthrtYn'],
-  faults:['listAuthrtYn'],faultHistory:['listAuthrtYn'],exceptions:['listAuthrtYn'],faultTypes:['listAuthrtYn'],reports:['listAuthrtYn']
+  performance:['listAuthrtYn','dtlAuthrtYn'],
+  cycle:['listAuthrtYn','dtlAuthrtYn','mdfcnAuthrtYn'],
+  threshold:['listAuthrtYn','dtlAuthrtYn','mdfcnAuthrtYn'],
+  raw:['listAuthrtYn'],
+  faults:['listAuthrtYn','dtlAuthrtYn','mdfcnAuthrtYn'],
+  faultHistory:['listAuthrtYn','dtlAuthrtYn','mdfcnAuthrtYn'],
+  exceptions:['listAuthrtYn','dtlAuthrtYn','regAuthrtYn','mdfcnAuthrtYn','delAuthrtYn'],
+  faultTypes:['listAuthrtYn','dtlAuthrtYn'],
+  reports:['listAuthrtYn']
 };
 function menuCapabilities(menu){return MENU_CAPABILITIES[menu.screenKey]||['listAuthrtYn'];}
 function permissionCell(menu,key,protectedAuth){
@@ -47,7 +54,7 @@ async function loadAuthDetail(authrtCd,reloadList=true,skipConfirm=false){
     CURRENT_AUTH_CD=authrtCd;CURRENT_AUTH_DATA={authrtCd:a.authrtCd,authrtNm:a.authrtNm,authrtExpln:a.authrtExpln||''};setDirty(false);
     if(reloadList)document.querySelectorAll('#authRows .auth-list-row').forEach(x=>x.classList.toggle('selected',x.dataset.authrtCd===String(authrtCd)));
     const visible=(a.menuAuthList||[]).filter(m=>!REMOVED_MENU_NAMES.has(m.menuNm));const protectedAuth=a.authrtCd===SYSTEM_ADMIN_AUTHRT_CD;setSaveAction(protectedAuth);
-    document.getElementById('authDetail').innerHTML=`<div class="planner-card-head auth-detail-head"><div><h3>메뉴·기능 권한</h3><p><b>${escapeHtml(a.authrtNm)}</b> · ${escapeHtml(a.authrtCd)}</p></div><div class="row-actions">${hasPermission('auth','mdfcnAuthrtYn')?`<button class="btn" type="button" onclick="openAuthModal(CURRENT_AUTH_DATA)">권한명 수정</button>`:''}${hasPermission('auth','delAuthrtYn')&&!protectedAuth?`<button class="btn danger-outline" type="button" onclick='deleteAuth(${authActionCode(a.authrtCd)})'>권한 삭제</button>`:''}</div></div><div class="permission-note">각 화면에 실제 구현된 기능만 권한으로 표시합니다. 상세·등록·수정·삭제 권한을 선택하면 목록 권한이 자동 포함됩니다. 대시보드는 모든 로그인 사용자가 조회하므로 권한 대상에서 제외합니다.${protectedAuth?' 시스템 관리자 권한은 보호되어 직접 수정할 수 없습니다.':''}</div><div class="table-scroll"><table class="planner-table permission-table"><thead><tr><th>메뉴</th>${AUTH_COLUMNS.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${visible.map(m=>`<tr data-menu-sn="${m.menuSn}" data-screen-key="${escapeHtml(m.screenKey||'')}"><td><b>${escapeHtml(m.menuNm)}</b></td>${AUTH_COLUMNS.map(c=>permissionCell(m,c[0],protectedAuth)).join('')}</tr>`).join('')}</tbody></table></div>`;
+    document.getElementById('authDetail').innerHTML=`<div class="planner-card-head auth-detail-head"><div><h3>메뉴·기능 권한</h3><p><b>${escapeHtml(a.authrtNm)}</b> · ${escapeHtml(a.authrtCd)}</p></div><div class="row-actions">${hasPermission('auth','mdfcnAuthrtYn')&&!protectedAuth?`<button class="btn" type="button" onclick="openAuthModal(CURRENT_AUTH_DATA)">권한명 수정</button>`:''}${hasPermission('auth','delAuthrtYn')&&!protectedAuth?`<button class="btn danger-outline" type="button" onclick='deleteAuth(${authActionCode(a.authrtCd)})'>권한 삭제</button>`:''}</div></div><div class="permission-note">각 화면에 실제 구현된 기능만 권한으로 표시합니다. 상세·등록·수정·삭제 권한을 선택하면 목록 권한이 자동 포함됩니다. 대시보드는 모든 로그인 사용자가 조회하므로 권한 대상에서 제외합니다.${protectedAuth?' 시스템 관리자는 지원되는 모든 기능 권한이 자동 적용되며 직접 변경할 수 없습니다.':''}</div><div class="table-scroll"><table class="planner-table permission-table"><thead><tr><th>메뉴</th>${AUTH_COLUMNS.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${visible.map(m=>`<tr data-menu-sn="${m.menuSn}" data-screen-key="${escapeHtml(m.screenKey||'')}"><td><b>${escapeHtml(m.menuNm)}</b></td>${AUTH_COLUMNS.map(c=>permissionCell(m,c[0],protectedAuth)).join('')}</tr>`).join('')}</tbody></table></div>`;
     enhanceTables(document.getElementById('authDetail'));
     document.querySelectorAll('#authDetail .perm-check:not(:disabled)').forEach(input=>input.addEventListener('change',function(){const row=input.closest('tr');if(input.dataset.key!=='listAuthrtYn'&&input.checked){const list=row.querySelector('[data-key="listAuthrtYn"]');if(list)list.checked=true;}if(input.dataset.key==='listAuthrtYn'&&!input.checked){row.querySelectorAll('.perm-check').forEach(x=>x.checked=false);}setDirty(true);}));
   }catch(e){showToast(e.message,true);}

@@ -65,22 +65,24 @@ public class PerformanceServiceImpl implements PerformanceService {
     @Transactional(rollbackFor = Exception.class)
     public void saveCycle(Map<String, Object> params, String actorId) {
         Long sn = longValue(params.get("clctCycleSn"));
-        if (sn == null) throw new IllegalArgumentException("수정할 연동주기를 선택해 주세요.");
+        if (sn == null) throw new IllegalArgumentException("수정할 수집주기를 선택해 주세요.");
+        String perfUse = "N".equalsIgnoreCase(value(params.get("perfClctUseYn"))) ? "N" : "Y";
+        String pingUse = "N".equalsIgnoreCase(value(params.get("pingMntrUseYn"))) ? "N" : "Y";
         int cycle = intValue(params.get("clctCycleSec"), 300);
-        int ping = intValue(params.get("sttsMntrCycleSec"), 30);
-        int timeout = intValue(params.get("timeoutSec"), 10);
+        int ping = intValue(params.get("sttsMntrCycleSec"), 10);
+        int timeout = intValue(params.get("timeoutSec"), 1);
         int retry = intValue(params.get("rtryNocs"), 3);
-        if (cycle < 60) throw new IllegalArgumentException("수집주기는 1분 이상이어야 합니다.");
-        if (ping < 1 || ping > 30) throw new IllegalArgumentException("PING 상태감시 주기는 1~30초로 입력해 주세요.");
-        if (timeout < 1 || retry < 0) throw new IllegalArgumentException("타임아웃/재시도 값을 확인해 주세요.");
+        int timeoutPoll = intValue(params.get("timeoutPollSec"), 1);
+        if ("Y".equals(perfUse) && cycle < 60) throw new IllegalArgumentException("성능 수집주기는 1분 이상이어야 합니다.");
+        if ("Y".equals(pingUse) && (ping < 1 || ping > 30)) throw new IllegalArgumentException("PING 상태감시 폴링주기는 1~30초로 입력해 주세요.");
+        if (timeout < 1 || retry < 1 || timeoutPoll < 1) throw new IllegalArgumentException("타임아웃 시간·횟수·재확인 주기를 확인해 주세요.");
         params.put("clctCycleSn", sn);
-        params.put("clctCycleSec", cycle);
-        params.put("sttsMntrCycleSec", ping);
-        params.put("timeoutSec", timeout);
-        params.put("rtryNocs", retry);
-        params.put("useYn", "N".equals(value(params.get("useYn"))) ? "N" : "Y");
+        params.put("perfClctUseYn", perfUse); params.put("pingMntrUseYn", pingUse);
+        params.put("clctCycleSec", cycle); params.put("sttsMntrCycleSec", ping);
+        params.put("timeoutSec", timeout); params.put("rtryNocs", retry); params.put("timeoutPollSec", timeoutPoll);
+        params.put("useYn", ("N".equals(perfUse) && "N".equals(pingUse)) ? "N" : "Y");
         params.put("mdfrId", actorId);
-        if (performanceMapper.updateCollectionCycle(params) != 1) throw new IllegalArgumentException("연동주기 정보를 찾을 수 없습니다.");
+        if (performanceMapper.updateCollectionCycle(params) != 1) throw new IllegalArgumentException("수집주기 정보를 찾을 수 없습니다.");
     }
 
     @Override
@@ -110,6 +112,9 @@ public class PerformanceServiceImpl implements PerformanceService {
             throw new IllegalArgumentException("임계치는 정보 < 경고 < 낮음 < 높음 < 긴급 순으로 입력해 주세요.");
         int contnNocs = intValue(params.get("contnNocs"), 3);
         if (contnNocs < 1 || contnNocs > 100) throw new IllegalArgumentException("연속 발생 횟수는 1~100회로 입력해 주세요.");
+        String profileNm = value(params.get("profileNm"));
+        if (blank(profileNm)) profileNm = "CPU_USGRT".equals(value(params.get("perfIdctCd"))) ? "장비 CPU 임계치" : "장비 MEMORY 임계치";
+        params.put("profileNm", profileNm);
         params.put("useYn", "N".equals(value(params.get("useYn"))) ? "N" : "Y");
         params.put("alrmUseYn", "Y");
         params.put("smsUseYn", "N");

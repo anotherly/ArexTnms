@@ -258,36 +258,68 @@
   <delete id="deleteExceptionGroup" parameterType="long">DELETE FROM dsblty_excp_group_info WHERE EXCP_GROUP_SN=#{_parameter}</delete>
 
   <select id="selectExceptionSchedules" parameterType="map" resultType="map">
-    SELECT S.EXCP_SCHDL_SN AS scheduleSn,S.EXCP_GROUP_SN AS groupSn,G.EXCP_GROUP_NM AS groupNm,
-           S.EXCP_SCHDL_NM AS scheduleNm,S.BGNG_DT AS bgngDt,S.END_DT AS endDt,S.REPT_CYCLE_CN AS reptCycleCn,
-           S.EXCP_RSN AS excpRsn,S.USE_YN AS useYn,
+    SELECT S.EXCP_SCHDL_SN AS scheduleSn, S.EXCP_GROUP_SN AS groupSn, G.EXCP_GROUP_NM AS groupNm,
+           S.EXCP_SCHDL_NM AS scheduleNm, S.BGNG_DT AS bgngDt, S.END_DT AS endDt,
+           S.REPT_CYCLE_CN AS reptCycleCn, S.EXCP_RSN AS excpRsn, S.USE_YN AS useYn,
+           S.NO_END_YN AS noEndYn,
+           TIME_FORMAT(S.REPT_START_TM, '%H:%i') AS startTime,
+           TIME_FORMAT(S.REPT_END_TM, '%H:%i') AS endTime,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END AS runType,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',2),'|',-1) ELSE NULL END AS repeatCycle,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',-1) ELSE NULL END AS repeatDays,
+           S.REG_DT AS regDt, S.MDFCN_DT AS mdfcnDt,
            GROUP_CONCAT(R.DSBLTY_GRD_CD ORDER BY FIELD(R.DSBLTY_GRD_CD,'EMERGENCY','HIGH','LOW','WARNING','INFO') SEPARATOR ',') AS grades
-      FROM dsblty_excp_schdl_info S JOIN dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN
+      FROM dsblty_excp_schdl_info S
+      JOIN dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN
       LEFT JOIN dsblty_excp_schdl_grd_rel R ON R.EXCP_SCHDL_SN=S.EXCP_SCHDL_SN
      WHERE 1=1
        <if test="groupSn != null and groupSn != ''">AND S.EXCP_GROUP_SN=#{groupSn}</if>
+       <if test="runType != null and runType != ''">
+         AND (CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END)=#{runType}
+       </if>
        <if test="useYn != null and useYn != ''">AND S.USE_YN=#{useYn}</if>
        <if test="keyword != null and keyword != ''">AND (S.EXCP_SCHDL_NM LIKE CONCAT('%',#{keyword},'%') OR S.EXCP_RSN LIKE CONCAT('%',#{keyword},'%'))</if>
-     GROUP BY S.EXCP_SCHDL_SN,S.EXCP_GROUP_SN,G.EXCP_GROUP_NM,S.EXCP_SCHDL_NM,S.BGNG_DT,S.END_DT,S.REPT_CYCLE_CN,S.EXCP_RSN,S.USE_YN
-     ORDER BY S.BGNG_DT DESC,S.EXCP_SCHDL_SN DESC
+     GROUP BY S.EXCP_SCHDL_SN, S.EXCP_GROUP_SN, G.EXCP_GROUP_NM, S.EXCP_SCHDL_NM,
+              S.BGNG_DT, S.END_DT, S.REPT_CYCLE_CN, S.EXCP_RSN, S.USE_YN,
+              S.NO_END_YN, S.REPT_START_TM, S.REPT_END_TM, S.REG_DT, S.MDFCN_DT
+     ORDER BY S.BGNG_DT DESC, S.EXCP_SCHDL_SN DESC
   </select>
   <select id="selectExceptionSchedule" parameterType="long" resultType="map">
-    SELECT S.EXCP_SCHDL_SN AS scheduleSn,S.EXCP_GROUP_SN AS groupSn,G.EXCP_GROUP_NM AS groupNm,
-           S.EXCP_SCHDL_NM AS scheduleNm,S.BGNG_DT AS bgngDt,S.END_DT AS endDt,S.REPT_CYCLE_CN AS reptCycleCn,
-           S.EXCP_RSN AS excpRsn,S.USE_YN AS useYn,S.REG_DT AS regDt,S.MDFCN_DT AS mdfcnDt
-      FROM dsblty_excp_schdl_info S JOIN dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN WHERE S.EXCP_SCHDL_SN=#{_parameter}
+    SELECT S.EXCP_SCHDL_SN AS scheduleSn, S.EXCP_GROUP_SN AS groupSn, G.EXCP_GROUP_NM AS groupNm,
+           S.EXCP_SCHDL_NM AS scheduleNm, S.BGNG_DT AS bgngDt, S.END_DT AS endDt,
+           S.REPT_CYCLE_CN AS reptCycleCn, S.EXCP_RSN AS excpRsn, S.USE_YN AS useYn,
+           S.NO_END_YN AS noEndYn,
+           TIME_FORMAT(S.REPT_START_TM, '%H:%i') AS startTime,
+           TIME_FORMAT(S.REPT_END_TM, '%H:%i') AS endTime,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END AS runType,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',2),'|',-1) ELSE NULL END AS repeatCycle,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',-1) ELSE NULL END AS repeatDays,
+           S.REG_DT AS regDt, S.MDFCN_DT AS mdfcnDt
+      FROM dsblty_excp_schdl_info S
+      JOIN dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN
+     WHERE S.EXCP_SCHDL_SN=#{_parameter}
   </select>
   <select id="selectExceptionScheduleGrades" parameterType="long" resultType="string">
     SELECT DSBLTY_GRD_CD FROM dsblty_excp_schdl_grd_rel WHERE EXCP_SCHDL_SN=#{_parameter}
     ORDER BY FIELD(DSBLTY_GRD_CD,'EMERGENCY','HIGH','LOW','WARNING','INFO')
   </select>
   <insert id="insertExceptionSchedule" parameterType="map" useGeneratedKeys="true" keyProperty="scheduleSn">
-    INSERT INTO dsblty_excp_schdl_info(EXCP_GROUP_SN,EXCP_SCHDL_NM,BGNG_DT,END_DT,REPT_CYCLE_CN,EXCP_RSN,USE_YN,REG_DT,RGTR_ID)
-    VALUES(#{groupSn},#{scheduleNm},#{bgngDt},#{endDt},#{reptCycleCn},#{excpRsn},#{useYn},NOW(),#{rgtrId})
+    INSERT INTO dsblty_excp_schdl_info
+      (EXCP_GROUP_SN, EXCP_SCHDL_NM, BGNG_DT, END_DT,
+       NO_END_YN, REPT_START_TM, REPT_END_TM,
+       REPT_CYCLE_CN, EXCP_RSN, USE_YN, REG_DT, RGTR_ID)
+    VALUES
+      (#{groupSn}, #{scheduleNm}, #{bgngDt}, #{endDt},
+       #{noEndYn}, #{startTime}, #{endTime},
+       #{reptCycleCn}, #{excpRsn}, #{useYn}, NOW(), #{rgtrId})
   </insert>
   <update id="updateExceptionSchedule" parameterType="map">
-    UPDATE dsblty_excp_schdl_info SET EXCP_GROUP_SN=#{groupSn},EXCP_SCHDL_NM=#{scheduleNm},BGNG_DT=#{bgngDt},END_DT=#{endDt},
-      REPT_CYCLE_CN=#{reptCycleCn},EXCP_RSN=#{excpRsn},USE_YN=#{useYn},MDFCN_DT=NOW(),MDFR_ID=#{mdfrId}
+    UPDATE dsblty_excp_schdl_info
+       SET EXCP_GROUP_SN=#{groupSn}, EXCP_SCHDL_NM=#{scheduleNm},
+           BGNG_DT=#{bgngDt}, END_DT=#{endDt},
+           NO_END_YN=#{noEndYn}, REPT_START_TM=#{startTime}, REPT_END_TM=#{endTime},
+           REPT_CYCLE_CN=#{reptCycleCn}, EXCP_RSN=#{excpRsn},
+           USE_YN=#{useYn}, MDFCN_DT=NOW(), MDFR_ID=#{mdfrId}
      WHERE EXCP_SCHDL_SN=#{scheduleSn}
   </update>
   <delete id="deleteExceptionScheduleGrades" parameterType="long">DELETE FROM dsblty_excp_schdl_grd_rel WHERE EXCP_SCHDL_SN=#{_parameter}</delete>

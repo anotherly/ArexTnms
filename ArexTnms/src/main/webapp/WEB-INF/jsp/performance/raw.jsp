@@ -2,13 +2,13 @@
 <%
 request.setAttribute("pageKey", "raw");
 request.setAttribute("pageTitle", "Raw 데이터 조회");
-request.setAttribute("pageDescription", "수신 원본과 집계 데이터의 저장 현황·보존기간·수집 품질을 확인합니다.");
+request.setAttribute("pageDescription", "성능 Raw·시간·일 통계 데이터의 보관정책과 수집 데이터를 조회합니다.");
 %>
 <!doctype html>
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
-  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261008.1" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.3" />
 </head>
 <body>
 <div class="app">
@@ -17,7 +17,7 @@ request.setAttribute("pageDescription", "수신 원본과 집계 데이터의 �
     <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
     <section class="content">
       <div class="heading">
-        <div><h1>Raw 데이터 조회</h1><p>수신 원본과 집계 데이터의 저장 현황·보존기간·수집 품질을 확인합니다.</p></div>
+        <div><h1>Raw 데이터 조회</h1><p>성능 Raw·시간·일 통계 데이터의 보관정책과 수집 데이터를 조회합니다.</p></div>
         <div class="actions page-actions" id="pageActions"></div>
       </div>
       <div id="pageBody"></div>
@@ -25,7 +25,7 @@ request.setAttribute("pageDescription", "수신 원본과 집계 데이터의 �
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261008.1"></script>
-<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/raw.js?v=20261008.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.3"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/raw.js?v=20261010.3"></script>
 </body>
 </html>

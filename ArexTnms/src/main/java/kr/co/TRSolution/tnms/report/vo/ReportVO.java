@@ -6,6 +6,7 @@ public class ReportVO extends BaseVO {
     private static final long serialVersionUID = 1L;
     private String startDate;
     private String endDate;
+    private String selectedDate;
     private String linkSysCd;
     private String linkSysNm;
     private Integer totalNocs;
@@ -18,6 +19,8 @@ public class ReportVO extends BaseVO {
     public void setStartDate(String v) { this.startDate = v; }
     public String getEndDate() { return endDate; }
     public void setEndDate(String v) { this.endDate = v; }
+    public String getSelectedDate() { return selectedDate; }
+    public void setSelectedDate(String v) { this.selectedDate = v; }
     public String getLinkSysCd() { return linkSysCd; }
     public void setLinkSysCd(String v) { this.linkSysCd = v; }
     public String getLinkSysNm() { return linkSysNm; }

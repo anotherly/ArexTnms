@@ -81,6 +81,31 @@ public class FaultController extends BaseController {
     }
     @RequestMapping(value="/fault/history-data.ajax", method=RequestMethod.GET)
     public ModelAndView historyData(@RequestParam Map<String,String> p){try{return success(faultService.selectHistory(copy(p)));}catch(Exception e){return fail(msg(e));}}
+    @SuppressWarnings("unchecked")
+    @RequestMapping(value="/fault/history-excel.do", method=RequestMethod.GET)
+    public void historyExcel(@RequestParam Map<String,String> p, HttpServletResponse response) throws Exception {
+        Map<String,Object> data = faultService.selectHistory(copy(p));
+        List<Map<String,Object>> rows = (List<Map<String,Object>>) data.get("faults");
+        Workbook wb = new XSSFWorkbook();
+        try {
+            Sheet sheet = wb.createSheet("장애이력조치");
+            String[] headers = {"NO.","등급","장애판단","설비","역사/시설","장비명","IP","장애내용","발생일시","복구일시","조치상태"};
+            Row hr = sheet.createRow(0); for(int i=0;i<headers.length;i++) hr.createCell(i).setCellValue(headers[i]);
+            int rowNo=1, displayNo=rows==null?0:rows.size();
+            if(rows!=null) for(Map<String,Object> x:rows){
+                Row row=sheet.createRow(rowNo++); setCell(row,0,displayNo--); setCell(row,1,x.get("dsbltyGrdNm"));
+                String j=String.valueOf(x.get("dsbltyJgmtCd")==null?"":x.get("dsbltyJgmtCd"));
+                setCell(row,2,"SERVICE".equals(j)?"서비스장애":"STATUS".equals(j)?"상태장애":"INFO".equals(j)?"정보":"미판단");
+                setCell(row,3,x.get("linkSysNm")); setCell(row,4,x.get("stnNm")); setCell(row,5,x.get("eqpmntNm")); setCell(row,6,x.get("ipAddr"));
+                setCell(row,7,x.get("dsbltyOcrnCn")); setCell(row,8,x.get("dsbltyOcrnDt")); setCell(row,9,x.get("dsbltyEndDt")); setCell(row,10,x.get("prcsSttsNm"));
+            }
+            for(int i=0;i<headers.length;i++) sheet.autoSizeColumn(i);
+            String filename=URLEncoder.encode("TNMS_장애이력조치.xlsx","UTF-8").replace("+","%20");
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition","attachment; filename*=UTF-8''"+filename);
+            wb.write(response.getOutputStream()); response.getOutputStream().flush();
+        } finally { wb.close(); }
+    }
     @RequestMapping(value="/fault/detail.ajax", method=RequestMethod.GET)
     public ModelAndView detail(@RequestParam("dsbltyNo") String no){try{return success(faultService.selectFaultDetail(no));}catch(Exception e){return fail(msg(e));}}
     @RequestMapping(value="/fault/save.ajax", method=RequestMethod.POST)
@@ -101,6 +126,8 @@ public class FaultController extends BaseController {
     public ModelAndView exceptionsData(@RequestParam Map<String,String> p){try{return success(faultService.selectExceptions(copy(p)));}catch(Exception e){return fail(msg(e));}}
     @RequestMapping(value="/fault/exception-group-detail.ajax", method=RequestMethod.GET)
     public ModelAndView groupDetail(@RequestParam(value="groupSn",required=false) Long sn){try{return success(faultService.selectExceptionGroup(sn));}catch(Exception e){return fail(msg(e));}}
+    @RequestMapping(value="/fault/exception-equipment.ajax", method=RequestMethod.GET)
+    public ModelAndView exceptionEquipment(@RequestParam Map<String,String> p){try{return success(faultService.searchExceptionEquipment(copy(p)));}catch(Exception e){return fail(msg(e));}}
     @RequestMapping(value="/fault/exception-group-save.ajax", method=RequestMethod.POST)
     public ModelAndView groupSave(@RequestParam Map<String,String> p,HttpServletRequest r){UserVO a=loginUser(r);try{Long sn=faultService.saveExceptionGroup(copy(p),id(a));audit(a,r,"장애 예외설정","MDFCN",String.valueOf(sn),"예외그룹 저장");return success("예외그룹을 저장했습니다.",sn);}catch(Exception e){return fail(msg(e));}}
     @RequestMapping(value="/fault/exception-group-delete.ajax", method=RequestMethod.POST)

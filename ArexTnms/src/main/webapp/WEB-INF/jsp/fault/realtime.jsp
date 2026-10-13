@@ -8,7 +8,7 @@ request.setAttribute("pageDescription", "현재 발생 중인 장애를 조회�
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
-  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.1" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.3" />
 </head>
 <body>
 <div class="app">
@@ -25,7 +25,7 @@ request.setAttribute("pageDescription", "현재 발생 중인 장애를 조회�
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.3"></script>
 <script src="<%=request.getContextPath()%>/js/tnms/pages/fault/realtime.js?v=20261008.3"></script>
 </body>
 </html>

@@ -45,6 +45,19 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
             String requestedAction = request.getParameter("_authAction");
             requirement = new Requirement("settings", "REG".equals(requestedAction) ? "REG" : "MDFCN");
         }
+        // 같은 그룹/일정 저장 주소는 등록과 수정 요청을 구분합니다.
+        if ("/fault/exception-group-save.ajax".equals(path)) {
+            requirement = new Requirement("exceptions", hasValue(request.getParameter("groupSn")) ? "MDFCN" : "REG");
+        } else if ("/fault/exception-schedule-save.ajax".equals(path)) {
+            requirement = new Requirement("exceptions", hasValue(request.getParameter("scheduleSn")) ? "MDFCN" : "REG");
+        }
+        // 장애 상세는 실시간 장애 및 장애이력 화면에서 함께 사용합니다.
+        if ("/fault/detail.ajax".equals(path)) {
+            MenuAuthVO rt = permissionMap.get("faults");
+            MenuAuthVO hist = permissionMap.get("faultHistory");
+            if ((rt != null && rt.permits("DTL")) || (hist != null && hist.permits("DTL"))) return true;
+            return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 기능에 대한 권한이 없습니다.");
+        }
         if (requirement == null && path.startsWith("/facility/") && path.endsWith(".ajax")) {
             String action = "/facility/save.ajax".equals(path) ? (request.getParameter("eqpmntSn") == null || request.getParameter("eqpmntSn").length() == 0 ? "REG" : "MDFCN")
                     : "/facility/delete.ajax".equals(path) ? "DEL" : "/facility/detail.ajax".equals(path) ? "DTL" : "LIST";
@@ -85,6 +98,32 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/facility/pbx.do", new Requirement("switch", "LIST"));
         map.put("/facility/cctv.do", new Requirement("cctv", "LIST"));
         map.put("/facility/scada.do", new Requirement("scada", "LIST"));
+        // 성능관리 화면 및 AJAX는 화면 기능 권한과 서버 권한을 동일하게 적용합니다.
+        map.put("/performance/overview-data.ajax", new Requirement("performance", "LIST"));
+        map.put("/performance/equipment-detail.ajax", new Requirement("performance", "DTL"));
+        map.put("/performance/cycle-data.ajax", new Requirement("cycle", "LIST"));
+        map.put("/performance/cycle-detail.ajax", new Requirement("cycle", "DTL"));
+        map.put("/performance/cycle-save.ajax", new Requirement("cycle", "MDFCN"));
+        map.put("/performance/threshold-data.ajax", new Requirement("threshold", "LIST"));
+        map.put("/performance/threshold-detail.ajax", new Requirement("threshold", "DTL"));
+        map.put("/performance/threshold-save.ajax", new Requirement("threshold", "MDFCN"));
+        map.put("/performance/raw-data.ajax", new Requirement("raw", "LIST"));
+        // 장애관리: 조회와 조치·이관·예외 일정 관리를 분리합니다.
+        map.put("/fault/realtime-data.ajax", new Requirement("faults", "LIST"));
+        map.put("/fault/realtime-excel.do", new Requirement("faults", "LIST"));
+        map.put("/fault/history-data.ajax", new Requirement("faultHistory", "LIST"));
+        map.put("/fault/save.ajax", new Requirement("faults", "MDFCN"));
+        map.put("/fault/judgment.ajax", new Requirement("faults", "MDFCN"));
+        map.put("/fault/transfer.ajax", new Requirement("faults", "MDFCN"));
+        map.put("/fault/complete.ajax", new Requirement("faultHistory", "MDFCN"));
+        map.put("/fault/types-data.ajax", new Requirement("faultTypes", "LIST"));
+        map.put("/fault/type-detail.ajax", new Requirement("faultTypes", "DTL"));
+        map.put("/fault/exceptions-data.ajax", new Requirement("exceptions", "LIST"));
+        map.put("/fault/exception-group-detail.ajax", new Requirement("exceptions", "DTL"));
+        map.put("/fault/exception-equipment.ajax", new Requirement("exceptions", "LIST"));
+        map.put("/fault/exception-group-delete.ajax", new Requirement("exceptions", "DEL"));
+        map.put("/fault/exception-schedule-detail.ajax", new Requirement("exceptions", "DTL"));
+        map.put("/fault/exception-schedule-delete.ajax", new Requirement("exceptions", "DEL"));
         map.put("/performance/overview.do", new Requirement("performance", "LIST"));
         map.put("/performance/cycle.do", new Requirement("cycle", "LIST"));
         map.put("/performance/threshold.do", new Requirement("threshold", "LIST"));
@@ -125,6 +164,8 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/auth/savePermissions.ajax", new Requirement("auth", "MDFCN"));
         return Collections.unmodifiableMap(map);
     }
+
+    private static boolean hasValue(String value) { return value != null && value.trim().length() > 0; }
 
     private static String facilityScreenKey(String linkSysCd) {
         if ("EMS_PIDS".equals(linkSysCd)) return "equipment";

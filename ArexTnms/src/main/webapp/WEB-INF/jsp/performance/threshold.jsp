@@ -2,13 +2,13 @@
 <%
 request.setAttribute("pageKey", "threshold");
 request.setAttribute("pageTitle", "임계치 관리");
-request.setAttribute("pageDescription", "CPU·메모리·트래픽·에러패킷 등 지표별 다단계 임계치를 설정합니다.");
+request.setAttribute("pageDescription", "CPU·MEMORY 성능지표의 실제 장애등급 기반 다단계 임계치를 설정합니다.");
 %>
 <!doctype html>
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
-  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261008.1" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/management-screen.css?v=20261010.3" />
 </head>
 <body>
 <div class="app">
@@ -17,7 +17,7 @@ request.setAttribute("pageDescription", "CPU·메모리·트래픽·에러패킷
     <jsp:include page="/WEB-INF/jsp/common/header.jsp" />
     <section class="content">
       <div class="heading">
-        <div><h1>임계치 관리</h1><p>CPU·메모리·트래픽·에러패킷 등 지표별 다단계 임계치를 설정합니다.</p></div>
+        <div><h1>임계치 관리</h1><p>CPU·MEMORY 성능지표의 실제 장애등급 기반 다단계 임계치를 설정합니다.</p></div>
         <div class="actions page-actions" id="pageActions"></div>
       </div>
       <div id="pageBody"></div>
@@ -25,7 +25,7 @@ request.setAttribute("pageDescription", "CPU·메모리·트래픽·에러패킷
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261008.1"></script>
-<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/threshold.js?v=20261008.1"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.3"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/threshold.js?v=20261010.3"></script>
 </body>
 </html>

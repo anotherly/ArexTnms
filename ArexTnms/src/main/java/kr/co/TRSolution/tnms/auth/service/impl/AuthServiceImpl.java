@@ -32,7 +32,11 @@ public class AuthServiceImpl implements AuthService {
         String code = normalizeCode(authrtCd);
         AuthVO auth = authMapper.selectAuth(code);
         if (auth == null) throw new IllegalArgumentException("존재하지 않는 권한입니다.");
-        auth.setMenuAuthList(authMapper.selectMenuAuthList(code));
+        List<MenuAuthVO> menuAuthList = authMapper.selectMenuAuthList(code);
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(code)) {
+            for (MenuAuthVO menu : menuAuthList) normalizePermission(menu, true);
+        }
+        auth.setMenuAuthList(menuAuthList);
         return auth;
     }
 
@@ -52,6 +56,9 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public void updateAuth(AuthVO authVO, String actorId) {
         normalizeAndValidate(authVO, false);
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(authVO.getAuthrtCd())) {
+            throw new IllegalArgumentException("시스템 관리자 권한은 수정할 수 없습니다.");
+        }
         AuthVO existing = authMapper.selectAuth(authVO.getAuthrtCd());
         if (existing == null) throw new IllegalArgumentException("수정할 권한이 없습니다.");
         authVO.setMdfrId(actorId);
@@ -79,6 +86,9 @@ public class AuthServiceImpl implements AuthService {
     public void saveMenuPermissions(String authrtCd, List<MenuAuthVO> permissions) {
         String code = normalizeCode(authrtCd);
         if (authMapper.selectAuth(code) == null) throw new IllegalArgumentException("권한 정보가 없습니다.");
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(code)) {
+            throw new IllegalArgumentException("시스템 관리자 메뉴 권한은 변경할 수 없습니다.");
+        }
         Map<Long, String> screenByMenuSn = new HashMap<Long, String>();
         for (MenuAuthVO menu : authMapper.selectMenuAuthList(code)) screenByMenuSn.put(menu.getMenuSn(), menu.getScreenKey());
         authMapper.deleteAuthMenus(code);
@@ -97,6 +107,7 @@ public class AuthServiceImpl implements AuthService {
         Map<String, MenuAuthVO> map = new LinkedHashMap<String, MenuAuthVO>();
         String code = normalizeCode(authrtCd);
         for (MenuAuthVO item : authMapper.selectMenuAuthList(code)) {
+            if (SYSTEM_ADMIN_AUTHRT_CD.equals(code)) normalizePermission(item, true);
             map.put(item.getScreenKey(), item);
         }
         return map;
@@ -141,7 +152,14 @@ public class AuthServiceImpl implements AuthService {
         if ("systems".equals(screen) || "equipment".equals(screen) || "scada".equals(screen) ||
             "switch".equals(screen) || "cctv".equals(screen) || "users".equals(screen) || "auth".equals(screen)) return true;
         if ("settings".equals(screen)) return "LIST".equals(action) || "REG".equals(action) || "MDFCN".equals(action);
-        if ("logs".equals(screen)) return "LIST".equals(action) || "DTL".equals(action);
+        if ("logs".equals(screen) || "performance".equals(screen) || "faultTypes".equals(screen))
+            return "LIST".equals(action) || "DTL".equals(action);
+        if ("cycle".equals(screen) || "threshold".equals(screen) ||
+            "faults".equals(screen) || "faultHistory".equals(screen))
+            return "LIST".equals(action) || "DTL".equals(action) || "MDFCN".equals(action);
+        if ("exceptions".equals(screen))
+            return "LIST".equals(action) || "DTL".equals(action) || "REG".equals(action) ||
+                   "MDFCN".equals(action) || "DEL".equals(action);
         return "LIST".equals(action);
     }
 

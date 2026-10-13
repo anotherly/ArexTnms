@@ -3,6 +3,7 @@ package kr.co.TRSolution.tnms.report.service.impl;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Resource;
@@ -21,10 +22,15 @@ public class ReportServiceImpl implements ReportService {
     public Map<String, Object> selectFaultPerformance(ReportVO searchVO) {
         if (searchVO == null) searchVO = new ReportVO();
         defaultDates(searchVO);
+        List<Map<String,Object>> daily=reportMapper.selectDailyFaultSummary(searchVO);
+        if ((searchVO.getSelectedDate()==null || searchVO.getSelectedDate().trim().length()==0) && daily!=null && !daily.isEmpty()) {
+            Object latest=daily.get(daily.size()-1).get("reportDate");
+            if(latest!=null) searchVO.setSelectedDate(String.valueOf(latest));
+        }
         Map<String, Object> result = new HashMap<String, Object>();
         result.put("condition", searchVO);
         result.put("summary", reportMapper.selectFaultSummary(searchVO));
-        result.put("daily", reportMapper.selectDailyFaultSummary(searchVO));
+        result.put("daily", daily);
         result.put("systems", reportMapper.selectFaultSystemSummary(searchVO));
         result.put("stations", reportMapper.selectFaultStationSummary(searchVO));
         result.put("details", reportMapper.selectFaultDetailList(searchVO));

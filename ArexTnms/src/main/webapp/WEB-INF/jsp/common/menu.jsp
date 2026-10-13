@@ -35,7 +35,7 @@ if (menuPageKey == null) menuPageKey = "dashboard";
 @SuppressWarnings("unchecked")
 Map<String, MenuAuthVO> menuPermissions = (Map<String, MenuAuthVO>) session.getAttribute("menuAuthMap");
 Set<String> facilityKeys = new HashSet<String>(Arrays.asList("systems", "equipment", "switch", "cctv", "scada"));
-Set<String> faultKeys = new HashSet<String>(Arrays.asList("faults", "faultHistory", "exceptions", "faultTypes"));
+Set<String> faultKeys = new HashSet<String>(Arrays.asList("faults", "faultHistory", "exceptions"));
 Set<String> performanceKeys = new HashSet<String>(Arrays.asList("performance", "cycle", "threshold", "raw"));
 Set<String> operationKeys = new HashSet<String>(Arrays.asList("users", "logs"));
 Set<String> settingKeys = new HashSet<String>(Arrays.asList("auth", "settings"));
@@ -67,17 +67,16 @@ Set<String> settingKeys = new HashSet<String>(Arrays.asList("auth", "settings"))
         <a class="<%=itemClass(menuPermissions, menuPageKey, "faults", "nav-child")%>" href="<%=request.getContextPath()%>/fault/realtime.do?screen=faults" data-key="faults"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faults")%></svg></i><span>실시간 장애</span></a>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "faultHistory", "nav-child")%>" href="<%=request.getContextPath()%>/fault/history.do?screen=faultHistory" data-key="faultHistory"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faultHistory")%></svg></i><span>장애이력·조치</span></a>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "exceptions", "nav-child")%>" href="<%=request.getContextPath()%>/fault/exceptions.do?screen=exceptions" data-key="exceptions"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("exceptions")%></svg></i><span>장애 예외설정</span></a>
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "faultTypes", "nav-child")%>" href="<%=request.getContextPath()%>/fault/types.do?screen=faultTypes" data-key="faultTypes"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faultTypes")%></svg></i><span>장애유형 관리</span></a>
       </div>
     </section>
 
     <section class="nav-section <%=performanceKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=performanceKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("performance")%></svg></i><span>성능관리</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "performance", "nav-child")%>" href="<%=request.getContextPath()%>/performance/overview.do?screen=performance" data-key="performance"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("performance")%></svg></i><span>성능관리</span></a>
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "cycle", "nav-child")%>" href="<%=request.getContextPath()%>/performance/cycle.do?screen=cycle" data-key="cycle"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("cycle")%></svg></i><span>연동주기 관리</span></a>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "performance", "nav-child")%>" href="<%=request.getContextPath()%>/performance/overview.do?screen=performance" data-key="performance"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("performance")%></svg></i><span>성능현황</span></a>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "cycle", "nav-child")%>" href="<%=request.getContextPath()%>/performance/cycle.do?screen=cycle" data-key="cycle"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("cycle")%></svg></i><span>수집주기 관리</span></a>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "threshold", "nav-child")%>" href="<%=request.getContextPath()%>/performance/threshold.do?screen=threshold" data-key="threshold"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("threshold")%></svg></i><span>임계치 관리</span></a>
-        <a class="<%=itemClass(menuPermissions, menuPageKey, "raw", "nav-child")%>" href="<%=request.getContextPath()%>/performance/raw.do?screen=raw" data-key="raw"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("raw")%></svg></i><span>Raw 데이터 관리</span></a>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "raw", "nav-child")%>" href="<%=request.getContextPath()%>/performance/raw.do?screen=raw" data-key="raw"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("raw")%></svg></i><span>RAW 데이터 조회</span></a>
       </div>
     </section>
 
