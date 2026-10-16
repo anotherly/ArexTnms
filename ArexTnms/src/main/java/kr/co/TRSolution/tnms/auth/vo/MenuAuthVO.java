@@ -5,7 +5,7 @@ import kr.co.TRSolution.tnms.common.BaseVO;
 public class MenuAuthVO extends BaseVO {
     private static final long serialVersionUID = 1L;
 
-    private Long authrtSn;
+    private String authrtCd;
     private Long menuSn;
     private Long upMenuSn;
     private String menuNm;
@@ -19,8 +19,8 @@ public class MenuAuthVO extends BaseVO {
     private String delAuthrtYn;
     private String ctrlAuthrtYn;
 
-    public Long getAuthrtSn() { return authrtSn; }
-    public void setAuthrtSn(Long authrtSn) { this.authrtSn = authrtSn; }
+    public String getAuthrtCd() { return authrtCd; }
+    public void setAuthrtCd(String authrtCd) { this.authrtCd = authrtCd; }
     public Long getMenuSn() { return menuSn; }
     public void setMenuSn(Long menuSn) { this.menuSn = menuSn; }
     public Long getUpMenuSn() { return upMenuSn; }

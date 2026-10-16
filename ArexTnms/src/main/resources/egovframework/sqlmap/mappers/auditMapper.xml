@@ -3,10 +3,48 @@
 <mapper namespace="kr.co.TRSolution.tnms.audit.mapper.AuditMapper">
     <insert id="insertJobLog" parameterType="auditVO">
         INSERT INTO job_log
-        (USER_SN, USER_ID, USER_IP_ADDR, CNTN_MENU_NM, JOB_SE_CD, TRGT_KEY_VAL, LOG_CN,
+        (USER_ID, USER_IP_ADDR, CNTN_MENU_NM, JOB_SE_CD, TRGT_KEY_VL, LOG_CN,
          CHG_BFR_CN, CHG_AFTR_CN, JOB_RSLT_CD)
         VALUES
-        (#{userSn}, #{userId}, #{userIpAddr}, #{cntnMenuNm}, #{jobSeCd}, #{trgtKeyVal}, #{logCn},
+        (#{userId}, #{userIpAddr}, #{cntnMenuNm}, #{jobSeCd}, #{trgtKeyVal}, #{logCn},
          #{chgBfrCn}, #{chgAftrCn}, #{jobRsltCd})
     </insert>
+    <resultMap id="jobLogMap" type="auditVO">
+        <id property="jobLogSn" column="JOB_LOG_SN"/>
+        <result property="userId" column="USER_ID"/>
+        <result property="userNm" column="USER_NM"/>
+        <result property="userIpAddr" column="USER_IP_ADDR"/>
+        <result property="cntnMenuNm" column="CNTN_MENU_NM"/>
+        <result property="jobSeCd" column="JOB_SE_CD"/>
+        <result property="trgtKeyVal" column="TRGT_KEY_VL"/>
+        <result property="logCn" column="LOG_CN"/>
+        <result property="chgBfrCn" column="CHG_BFR_CN"/>
+        <result property="chgAftrCn" column="CHG_AFTR_CN"/>
+        <result property="jobRsltCd" column="JOB_RSLT_CD"/>
+        <result property="logCrtDt" column="LOG_CRT_DT"/>
+        <result property="lgnDt" column="LGN_DT"/>
+    </resultMap>
+    <select id="selectJobLogList" parameterType="auditVO" resultMap="jobLogMap">
+        SELECT J.*, U.USER_NM,
+               (SELECT MAX(C.CNTN_BGNG_DT) FROM cntn_log C
+                 WHERE C.USER_ID = J.USER_ID AND C.CNTN_YN = 'Y' AND C.CNTN_BGNG_DT &lt;= J.LOG_CRT_DT) AS LGN_DT
+          FROM job_log J LEFT JOIN user_info U ON U.USER_ID = J.USER_ID
+         WHERE 1 = 1
+        <if test="startDate != null and startDate != ''">AND J.LOG_CRT_DT &gt;= CONCAT(#{startDate}, ' 00:00:00')</if>
+        <if test="endDate != null and endDate != ''">AND J.LOG_CRT_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)</if>
+        <if test="cntnMenuNm != null and cntnMenuNm != ''">AND J.CNTN_MENU_NM = #{cntnMenuNm}</if>
+        <if test="jobSeCd != null and jobSeCd != ''">AND J.JOB_SE_CD = #{jobSeCd}</if>
+        <if test="searchKeyword != null and searchKeyword != ''">
+          AND (J.USER_ID LIKE CONCAT('%', #{searchKeyword}, '%') OR U.USER_NM LIKE CONCAT('%', #{searchKeyword}, '%')
+            OR J.USER_IP_ADDR LIKE CONCAT('%', #{searchKeyword}, '%') OR J.TRGT_KEY_VL LIKE CONCAT('%', #{searchKeyword}, '%'))
+        </if>
+         ORDER BY J.LOG_CRT_DT DESC, J.JOB_LOG_SN DESC LIMIT 500
+    </select>
+    <select id="selectJobLog" parameterType="long" resultMap="jobLogMap">
+        SELECT J.*, U.USER_NM,
+               (SELECT MAX(C.CNTN_BGNG_DT) FROM cntn_log C
+                 WHERE C.USER_ID = J.USER_ID AND C.CNTN_YN = 'Y' AND C.CNTN_BGNG_DT &lt;= J.LOG_CRT_DT) AS LGN_DT
+          FROM job_log J LEFT JOIN user_info U ON U.USER_ID = J.USER_ID
+         WHERE J.JOB_LOG_SN = #{_parameter}
+    </select>
 </mapper>
