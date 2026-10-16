@@ -264,6 +264,8 @@ window.addEventListener('message',function(event){
   if(event.origin!==location.origin||!event.data||event.data.source!=='tnms-shell')return;
   if(event.data.type==='dashboard-state'){
     document.body.classList.toggle('dashboard-expanded',event.data.mode==='expanded');
+    document.body.classList.toggle('dashboard-basic',event.data.mode!=='expanded');
+    document.body.classList.toggle('dashboard-dark',event.data.theme==='dark');
     if(event.data.data)applyDashboardData(event.data.data);
   }
   if(event.data.type==='station-detail')applyStationDetail(event.data.data);

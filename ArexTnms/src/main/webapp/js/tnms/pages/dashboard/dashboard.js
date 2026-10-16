@@ -1,12 +1,13 @@
-const DASHBOARD_ASSET_VERSION = '20260918.7';
+const DASHBOARD_ASSET_VERSION = '20261015.1';
 let DASHBOARD_DATA = null;
 let DASHBOARD_REFRESH_TIMER = null;
 let DASHBOARD_MODE = localStorage.getItem('tnmsDashboardMode') === 'expanded' ? 'expanded' : 'basic';
+let DASHBOARD_THEME = localStorage.getItem('tnmsDashboardTheme') === 'dark' ? 'dark' : 'light';
 
 function dashboardAsset(path) { return CONTEXT_PATH + path + '?v=' + DASHBOARD_ASSET_VERSION; }
 function sendDashboardState(frame) {
   if (!frame || !frame.contentWindow) return;
-  frame.contentWindow.postMessage({source:'tnms-shell',type:'dashboard-state',mode:DASHBOARD_MODE,data:DASHBOARD_DATA}, location.origin);
+  frame.contentWindow.postMessage({source:'tnms-shell',type:'dashboard-state',mode:DASHBOARD_MODE,theme:DASHBOARD_THEME,data:DASHBOARD_DATA}, location.origin);
 }
 function prepareDashboardFrame(frame) {
   try {
@@ -16,7 +17,7 @@ function prepareDashboardFrame(frame) {
     if (!doc.getElementById('tnms-embed-guard')) {
       const guard = doc.createElement('style');
       guard.id = 'tnms-embed-guard';
-      guard.textContent = 'html,body{width:100%;height:100%;min-height:0}body>.app-shell{height:100%;min-height:0;padding:0!important}body .sidebar,body .topbar{display:none!important}body.dashboard-expanded .analytics-grid,body.dashboard-expanded .page-dots{display:none!important}body.dashboard-expanded .dashboard{grid-template-rows:auto minmax(0,1fr)!important}';
+      guard.textContent = 'html,body{width:100%;height:100%;min-height:0}body>.app-shell{height:100%;min-height:0;padding:0!important}body .sidebar,body .topbar{display:none!important}';
       doc.head.appendChild(guard);
     }
     sendDashboardState(frame);
@@ -28,6 +29,20 @@ function updateModeButtons() {
     button.classList.toggle('active',active);
     button.setAttribute('aria-pressed',String(active));
   });
+}
+function updateThemeButtons() {
+  document.body.classList.toggle('dashboard-theme-dark', DASHBOARD_THEME === 'dark');
+  document.querySelectorAll('[data-dashboard-theme]').forEach(function(button){
+    const active = button.dataset.dashboardTheme === DASHBOARD_THEME;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+function setDashboardTheme(theme) {
+  DASHBOARD_THEME = theme === 'dark' ? 'dark' : 'light';
+  localStorage.setItem('tnmsDashboardTheme', DASHBOARD_THEME);
+  updateThemeButtons();
+  sendDashboardState(document.getElementById('plannerDashboardFrame'));
 }
 function setDashboardMode(mode) {
   DASHBOARD_MODE = mode === 'expanded' ? 'expanded' : 'basic';
@@ -71,6 +86,7 @@ window.TNMS_PAGE_INIT = async function () {
     + 'src="' + dashboardAsset('/css/tnms/planner-dashboard-map/index.html') + '" title="TNMS 통합 대시보드"></iframe></div>';
   renderPage('dashboard', html);
   updateModeButtons();
+  updateThemeButtons();
   const frame = document.getElementById('plannerDashboardFrame');
   if (frame) frame.addEventListener('load', function () { prepareDashboardFrame(frame); });
   await refreshDashboardData(true);

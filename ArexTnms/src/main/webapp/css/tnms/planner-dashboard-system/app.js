@@ -148,6 +148,22 @@
     return first < second ? `${first}|${second}` : `${second}|${first}`;
   }
 
+  // HEX 도형은 JS가 fill/stroke를 생성하므로 테마 변경 시 다시 렌더링한다.
+  // 장애등급별 색상은 서버 공통코드에서 받은 값을 그대로 사용한다.
+  function applyNetworkTheme(){
+    const dark = document.body.classList.contains('dashboard-dark');
+    const codes = {normal:'NORMAL',warning:'CAUTION',danger:'CRITICAL',unknown:'UNKNOWN',offline:'UNKNOWN'};
+    Object.keys(codes).forEach(function(status){
+      const color=statusPalette[codes[status]].color;
+      shapeStyles[status].stroke=color;
+      shapeStyles[status].fill=translucent(color);
+    });
+    shapeStyles.mnls.fill=dark ? 'rgba(105,191,248,.13)' : '#f2f9ff';
+    selectedStyle.fill=dark ? '#21456b' : '#176df4';
+    selectedStyle.stroke=dark ? '#61b5ff' : '#0b4fba';
+    renderNetworkShapes();
+  }
+
   function renderNetworkShapes(){
     shapeLayer.textContent = "";
     const edges = new Map();
@@ -341,7 +357,7 @@
   }
   window.addEventListener('message',function(event){
     if(event.origin!==location.origin||!event.data||event.data.source!=='tnms-shell')return;
-    if(event.data.type==='dashboard-state'){document.body.classList.toggle('dashboard-expanded',event.data.mode==='expanded');if(event.data.data)applyDashboardData(event.data.data);parent.postMessage({source:'tnms-planner',type:'system-stations',linkSysCd:currentSystemCode},location.origin)}
+    if(event.data.type==='dashboard-state'){document.body.classList.toggle('dashboard-expanded',event.data.mode==='expanded');document.body.classList.toggle('dashboard-basic',event.data.mode!=='expanded');document.body.classList.toggle('dashboard-dark',event.data.theme==='dark');applyNetworkTheme();if(event.data.data)applyDashboardData(event.data.data);parent.postMessage({source:'tnms-planner',type:'system-stations',linkSysCd:currentSystemCode},location.origin)}
     if(event.data.type==='system-stations'&&event.data.linkSysCd===currentSystemCode)applySystemStations(event.data.data);
   });
 

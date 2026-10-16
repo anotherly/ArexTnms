@@ -17,6 +17,10 @@ String headerUserName = headerLoginUser == null ? "사용자"
       <button type="button" data-dashboard-mode="basic" onclick="setDashboardMode('basic')">기본모드</button>
       <button type="button" data-dashboard-mode="expanded" onclick="setDashboardMode('expanded')">확장모드</button>
     </div>
+    <div class="dashboard-theme-switch" role="group" aria-label="대시보드 테마">
+      <button type="button" data-dashboard-theme="light" onclick="setDashboardTheme('light')" aria-pressed="true">Light</button>
+      <button type="button" data-dashboard-theme="dark" onclick="setDashboardTheme('dark')" aria-pressed="false">Dark</button>
+    </div>
     <% } %>
   </div>
   <div class="top-right">

@@ -8,6 +8,7 @@ request.setAttribute("pageDescription", "");
 <html lang="ko">
 <head>
   <jsp:include page="/WEB-INF/jsp/common/common-resources.jsp" />
+  <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/dashboard-theme.css?v=20261015.1" />
 </head>
 <body>
 <div class="app">
@@ -20,6 +21,6 @@ request.setAttribute("pageDescription", "");
   </main>
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
-<script src="<%=request.getContextPath()%>/js/tnms/pages/dashboard/dashboard.js?v=20260918.5"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/dashboard/dashboard.js?v=20261015.1"></script>
 </body>
 </html>
