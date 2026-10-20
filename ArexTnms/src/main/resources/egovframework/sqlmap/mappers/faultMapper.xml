@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.fault.mapper.FaultMapper">
+
+  <sql id="faultJoins">
+    LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN=D.EQPMNT_SN
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=E.LINK_SYS_CD
+    LEFT JOIN com_stn_info S ON S.STN_CD=E.STN_CD
+    LEFT JOIN web_eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD=E.EQPMNT_CLSF_CD
+    LEFT JOIN web_dsblty_type_info T ON T.DSBLTY_TYPE_SN=D.DSBLTY_TYPE_SN
+  </sql>
+  <sql id="faultFilters">
+    <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD=#{linkSysCd}</if>
+    <if test="stnCd != null and stnCd != ''">AND E.STN_CD=#{stnCd}</if>
+    <if test="grade != null and grade != ''">AND D.DSBLTY_GRD_CD=#{grade}</if>
+    <if test="prcsSttsCd != null and prcsSttsCd != ''">AND D.PRCS_STTS_CD=#{prcsSttsCd}</if>
+    <if test="judgment != null and judgment != ''">AND D.DSBLTY_JGMT_CD=#{judgment}</if>
+    <if test="keyword != null and keyword != ''">
+      AND (D.DSBLTY_NO LIKE CONCAT('%',#{keyword},'%')
+       OR E.EQPMNT_NM LIKE CONCAT('%',#{keyword},'%')
+       OR E.EQPMNT_MNG_NO LIKE CONCAT('%',#{keyword},'%')
+       OR D.DSBLTY_OCRN_CN LIKE CONCAT('%',#{keyword},'%'))
+    </if>
+  </sql>
+
+  <select id="selectLinkSystems" resultType="map">
+    SELECT LINK_SYS_CD AS linkSysCd, LINK_SYS_NM AS linkSysNm
+      FROM web_link_sys_info WHERE USE_YN='Y'
+     ORDER BY FIELD(LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), LINK_SYS_NM
+  </select>
+  <select id="selectStations" resultType="map">
+    SELECT STN_CD AS stnCd, STN_NM AS stnNm FROM com_stn_info WHERE USE_YN='Y' ORDER BY STN_SEQ
+  </select>
+  <select id="selectFaultGradeCodes" resultType="map">
+    SELECT COM_CD AS code, COM_CD_NM AS name, EXT1_CN AS ext1
+      FROM web_com_cd_info
+     WHERE COM_CD_GROUP_ID='DSBLTY_GRD' AND COM_CD_USE_YN='Y'
+       AND COM_CD IN ('EMERGENCY','HIGH','LOW','WARNING','INFO','CRITICAL','CAUTION')
+     ORDER BY FIELD(COM_CD,'EMERGENCY','HIGH','LOW','WARNING','INFO','CRITICAL','CAUTION')
+  </select>
+  <select id="selectProcessStatusCodes" resultType="map">
+    SELECT COM_CD AS code, COM_CD_NM AS name
+      FROM web_com_cd_info
+     WHERE COM_CD_GROUP_ID='PRCS_STTS' AND COM_CD_USE_YN='Y'
+     ORDER BY COM_CD_SEQ, COM_CD
+  </select>
+
+  <select id="selectRealtimeSummary" parameterType="map" resultType="map">
+    SELECT COUNT(*) AS totalCount,
+           SUM(CASE WHEN D.DSBLTY_GRD_CD IN ('EMERGENCY','CRITICAL') THEN 1 ELSE 0 END) AS emergencyCount,
+           SUM(CASE WHEN D.DSBLTY_GRD_CD='HIGH' THEN 1 ELSE 0 END) AS highCount,
+           SUM(CASE WHEN D.DSBLTY_GRD_CD IN ('LOW','CAUTION') THEN 1 ELSE 0 END) AS lowCount,
+           SUM(CASE WHEN D.DSBLTY_GRD_CD='WARNING' THEN 1 ELSE 0 END) AS warningCount,
+           SUM(CASE WHEN D.DSBLTY_GRD_CD='INFO' THEN 1 ELSE 0 END) AS infoCount
+      FROM web_dsblty_info D
+      <include refid="faultJoins"/>
+     WHERE D.DSBLTY_END_DT IS NULL AND D.EXCP_APLY_YN='N'
+       AND COALESCE(D.PRCS_STTS_CD,'UNCONFIRMED') NOT IN ('CONFIRMED','COMPLETED')
+     <include refid="faultFilters"/>
+  </select>
+
+  <select id="selectRealtimeFaults" parameterType="map" resultType="map">
+    SELECT D.DSBLTY_NO AS dsbltyNo, D.EMS_ID AS emsId, D.SOU_EQPMNT_ID AS souEqpmntId,
+           D.EQPMNT_SN AS eqpmntSn, E.EQPMNT_NM AS eqpmntNm, E.EQPMNT_MNG_NO AS eqpmntMngNo,
+           E.EQPMNT_IP_ADDR AS ipAddr, E.EQPMNT_SE_CD AS eqpmntSeCd, E.INSTL_PLC_NM AS instlPlcNm,
+           F.EQPMNT_CLSF_NM AS eqpmntClsfNm,
+           E.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
+           E.STN_CD AS stnCd, S.STN_NM AS stnNm, D.DSBLTY_TYPE_SN AS dsbltyTypeSn,
+           T.DSBLTY_TYPE_NM AS dsbltyTypeNm, D.DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,
+           D.DSBLTY_GRD_CD AS dsbltyGrdCd,
+           COALESCE(G.COM_CD_NM,D.DSBLTY_GRD_CD) AS dsbltyGrdNm,
+           D.DSBLTY_OCRN_DT AS dsbltyOcrnDt, D.DSBLTY_OCRN_CN AS dsbltyOcrnCn,
+           D.DSBLTY_RSN AS dsbltyRsn, D.DSBLTY_JGMT_CD AS dsbltyJgmtCd,
+           D.PRCS_STTS_CD AS prcsSttsCd, COALESCE(P.COM_CD_NM,D.PRCS_STTS_CD) AS prcsSttsNm,
+           D.IDNTY_USER_ID AS idntyUserId, D.IDNTY_DT AS idntyDt,
+           TIMESTAMPDIFF(SECOND,D.DSBLTY_OCRN_DT,NOW()) AS elapsedSec,
+           CASE WHEN EXISTS (
+             SELECT 1 FROM web_dsblty_actn_hstry A
+              WHERE A.DSBLTY_NO=D.DSBLTY_NO AND A.ACTN_SE_CD='TEMP'
+           ) THEN 'Y' ELSE 'N' END AS tempActionYn
+      FROM web_dsblty_info D
+      <include refid="faultJoins"/>
+      LEFT JOIN web_com_cd_info G ON G.COM_CD_GROUP_ID='DSBLTY_GRD' AND G.COM_CD=D.DSBLTY_GRD_CD
+      LEFT JOIN web_com_cd_info P ON P.COM_CD_GROUP_ID='PRCS_STTS' AND P.COM_CD=D.PRCS_STTS_CD
+     WHERE D.DSBLTY_END_DT IS NULL AND D.EXCP_APLY_YN='N'
+       AND COALESCE(D.PRCS_STTS_CD,'UNCONFIRMED') NOT IN ('CONFIRMED','COMPLETED')
+     <include refid="faultFilters"/>
+     ORDER BY D.DSBLTY_OCRN_DT DESC, FIELD(D.DSBLTY_GRD_CD,'EMERGENCY','CRITICAL','HIGH','LOW','CAUTION','WARNING','INFO')
+     LIMIT 500
+  </select>
+
+  <select id="selectHistorySummary" parameterType="map" resultType="map">
+    SELECT COUNT(*) AS totalCount,
+           SUM(CASE WHEN D.PRCS_STTS_CD='UNCONFIRMED' THEN 1 ELSE 0 END) AS unconfirmedCount,
+           SUM(CASE WHEN D.PRCS_STTS_CD='TEMP_ACTN' THEN 1 ELSE 0 END) AS tempCount,
+           SUM(CASE WHEN D.PRCS_STTS_CD='COMPLETED' THEN 1 ELSE 0 END) AS completedCount
+      FROM web_dsblty_info D
+      <include refid="faultJoins"/>
+     WHERE D.EXCP_APLY_YN='N'
+       <if test="startDt != null and startDt != ''">AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDt},' 00:00:00')</if>
+       <if test="endDt != null and endDt != ''">AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(CONCAT(#{endDt},' 00:00:00'),INTERVAL 1 DAY)</if>
+       <include refid="faultFilters"/>
+  </select>
+
+  <select id="selectHistoryFaults" parameterType="map" resultType="map">
+    SELECT D.DSBLTY_NO AS dsbltyNo, D.EQPMNT_SN AS eqpmntSn, E.EQPMNT_NM AS eqpmntNm,
+           E.EQPMNT_MNG_NO AS eqpmntMngNo, L.LINK_SYS_NM AS linkSysNm, S.STN_NM AS stnNm,
+           T.DSBLTY_TYPE_NM AS dsbltyTypeNm, D.DSBLTY_GRD_CD AS dsbltyGrdCd,
+           COALESCE(G.COM_CD_NM,D.DSBLTY_GRD_CD) AS dsbltyGrdNm,
+           D.DSBLTY_OCRN_CN AS dsbltyOcrnCn, D.DSBLTY_OCRN_DT AS dsbltyOcrnDt,
+           D.DSBLTY_END_DT AS dsbltyEndDt, D.DSBLTY_RSN AS dsbltyRsn,
+           D.DSBLTY_JGMT_CD AS dsbltyJgmtCd, D.PRCS_STTS_CD AS prcsSttsCd,
+           COALESCE(P.COM_CD_NM,D.PRCS_STTS_CD) AS prcsSttsNm,
+           D.IDNTY_USER_ID AS idntyUserId, D.IDNTY_DT AS idntyDt,
+           TIMESTAMPDIFF(SECOND,D.DSBLTY_OCRN_DT,COALESCE(D.DSBLTY_END_DT,NOW())) AS durationSec,
+           (SELECT A.ACTN_CN FROM web_dsblty_actn_hstry A WHERE A.DSBLTY_NO=D.DSBLTY_NO ORDER BY A.ACTN_DT DESC,A.ACTN_SN DESC LIMIT 1) AS lastActionCn,
+           (SELECT A.ACTN_PIC_NM FROM web_dsblty_actn_hstry A WHERE A.DSBLTY_NO=D.DSBLTY_NO ORDER BY A.ACTN_DT DESC,A.ACTN_SN DESC LIMIT 1) AS lastActorNm
+      FROM web_dsblty_info D
+      <include refid="faultJoins"/>
+      LEFT JOIN web_com_cd_info G ON G.COM_CD_GROUP_ID='DSBLTY_GRD' AND G.COM_CD=D.DSBLTY_GRD_CD
+      LEFT JOIN web_com_cd_info P ON P.COM_CD_GROUP_ID='PRCS_STTS' AND P.COM_CD=D.PRCS_STTS_CD
+     WHERE D.EXCP_APLY_YN='N'
+       <if test="startDt != null and startDt != ''">AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDt},' 00:00:00')</if>
+       <if test="endDt != null and endDt != ''">AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(CONCAT(#{endDt},' 00:00:00'),INTERVAL 1 DAY)</if>
+       <include refid="faultFilters"/>
+     ORDER BY D.DSBLTY_OCRN_DT DESC LIMIT 1000
+  </select>
+
+  <select id="selectFaultDetail" parameterType="string" resultType="map">
+    SELECT D.DSBLTY_NO AS dsbltyNo,D.EMS_ID AS emsId,D.SOU_EQPMNT_ID AS souEqpmntId,
+           D.EQPMNT_SN AS eqpmntSn,E.EQPMNT_NM AS eqpmntNm,E.EQPMNT_MNG_NO AS eqpmntMngNo,
+           E.EQPMNT_IP_ADDR AS ipAddr,E.EQPMNT_SE_CD AS eqpmntSeCd,E.INSTL_PLC_NM AS instlPlcNm,
+           F.EQPMNT_CLSF_NM AS eqpmntClsfNm,
+           L.LINK_SYS_CD AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,S.STN_NM AS stnNm,
+           D.DSBLTY_TYPE_SN AS dsbltyTypeSn,T.EVNT_CD AS evntCd,T.DSBLTY_TYPE_NM AS dsbltyTypeNm,
+           D.DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,D.DSBLTY_GRD_CD AS dsbltyGrdCd,
+           COALESCE(G.COM_CD_NM,D.DSBLTY_GRD_CD) AS dsbltyGrdNm,D.OCRN_RCVR_SE_CD AS ocrnRcvrSeCd,
+           D.DSBLTY_OCRN_DT AS dsbltyOcrnDt,D.DSBLTY_END_DT AS dsbltyEndDt,
+           D.DSBLTY_OCRN_CN AS dsbltyOcrnCn,D.DSBLTY_RSN AS dsbltyRsn,D.DSBLTY_JGMT_CD AS dsbltyJgmtCd,
+           D.PRCS_STTS_CD AS prcsSttsCd,COALESCE(P.COM_CD_NM,D.PRCS_STTS_CD) AS prcsSttsNm,
+           D.IDNTY_USER_ID AS idntyUserId,D.IDNTY_DT AS idntyDt,D.EXCP_APLY_YN AS excpAplyYn,
+           D.SRC_EVNT_NO AS srcEvntNo,D.LINK_RAW_SN AS linkRawSn,T.JGMT_CRTR_CN AS jgmtCrtrCn,
+           TIMESTAMPDIFF(SECOND,D.DSBLTY_OCRN_DT,COALESCE(D.DSBLTY_END_DT,NOW())) AS elapsedSec
+      FROM web_dsblty_info D
+      <include refid="faultJoins"/>
+      LEFT JOIN web_com_cd_info G ON G.COM_CD_GROUP_ID='DSBLTY_GRD' AND G.COM_CD=D.DSBLTY_GRD_CD
+      LEFT JOIN web_com_cd_info P ON P.COM_CD_GROUP_ID='PRCS_STTS' AND P.COM_CD=D.PRCS_STTS_CD
+     WHERE D.DSBLTY_NO=#{_parameter}
+  </select>
+  <select id="selectFaultActions" parameterType="string" resultType="map">
+    SELECT ACTN_SN AS actnSn,ACTN_SE_CD AS actnSeCd,ACTN_CN AS actnCn,DSBLTY_SYMPTM_CN AS symptom,
+           DSBLTY_RSN AS reason,AFTR_PLAN_CN AS plan,ACTN_RSLT_CN AS result,
+           ACTN_PIC_NM AS actorName,ACTN_USER_ID AS actorId,ACTN_DT AS actnDt,CTRL_CMD_CN AS ctrlCmdCn
+      FROM web_dsblty_actn_hstry WHERE DSBLTY_NO=#{_parameter} ORDER BY ACTN_DT,ACTN_SN
+  </select>
+  <update id="updateFault" parameterType="map">
+    UPDATE web_dsblty_info
+    <set>
+      <if test="dsbltyGrdCd != null and dsbltyGrdCd != ''">DSBLTY_GRD_CD=#{dsbltyGrdCd},</if>
+      <if test="reason != null">DSBLTY_RSN=#{reason},</if>
+      <if test="dsbltyRsn != null">DSBLTY_RSN=#{dsbltyRsn},</if>
+      <if test="dsbltyJgmtCd != null and dsbltyJgmtCd != ''">DSBLTY_JGMT_CD=#{dsbltyJgmtCd},</if>
+      <if test="prcsSttsCd != null and prcsSttsCd != ''">PRCS_STTS_CD=#{prcsSttsCd},</if>
+      LAST_MDFCN_DT=NOW()
+    </set>
+    WHERE DSBLTY_NO=#{dsbltyNo}
+  </update>
+  <update id="updateFaultStatus" parameterType="map">
+    UPDATE web_dsblty_info
+    <set>
+      <if test="prcsSttsCd != null and prcsSttsCd != ''">PRCS_STTS_CD=#{prcsSttsCd},</if>
+      <if test="idntyUserId != null and idntyUserId != ''">IDNTY_USER_ID=#{idntyUserId},IDNTY_DT=NOW(),</if>
+      <if test="completeYn != null and completeYn == &quot;Y&quot;">DSBLTY_END_DT=COALESCE(DSBLTY_END_DT,NOW()),</if>
+      LAST_MDFCN_DT=NOW()
+    </set>
+    WHERE DSBLTY_NO=#{dsbltyNo}
+  </update>
+  <insert id="insertFaultAction" parameterType="map" useGeneratedKeys="true" keyProperty="actnSn">
+    INSERT INTO web_dsblty_actn_hstry
+      (DSBLTY_NO,ACTN_SE_CD,ACTN_CN,DSBLTY_SYMPTM_CN,DSBLTY_RSN,AFTR_PLAN_CN,ACTN_RSLT_CN,ACTN_PIC_NM,ACTN_USER_ID,ACTN_DT,CTRL_CMD_CN)
+    VALUES
+      (#{dsbltyNo},#{actnSeCd},#{actnCn},#{symptom},#{reason},#{plan},#{result},#{actorName},#{actorId},NOW(),#{ctrlCmdCn})
+  </insert>
+
+  <select id="selectFaultTypes" parameterType="map" resultType="map">
+    SELECT T.DSBLTY_TYPE_SN AS dsbltyTypeSn,T.EVNT_CD AS evntCd,T.DSBLTY_TYPE_NM AS dsbltyTypeNm,
+           T.LINK_SYS_CD AS linkSysCd,COALESCE(L.LINK_SYS_NM,'공통') AS linkSysNm,
+           T.DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,T.DSBLTY_NM AS dsbltyNm,
+           T.BSC_GRD_CD AS bscGrdCd,COALESCE(G.COM_CD_NM,T.BSC_GRD_CD) AS bscGrdNm,
+           T.JGMT_CRTR_CN AS jgmtCrtrCn,T.AUTO_END_YN AS autoEndYn,T.SMS_USE_YN AS smsUseYn,
+           T.USE_YN AS useYn,T.AUTO_REG_YN AS autoRegYn,T.REG_DT AS regDt,T.MDFCN_DT AS mdfcnDt
+      FROM web_dsblty_type_info T
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=T.LINK_SYS_CD
+      LEFT JOIN web_com_cd_info G ON G.COM_CD_GROUP_ID='DSBLTY_GRD' AND G.COM_CD=T.BSC_GRD_CD
+     WHERE 1=1
+       <if test="linkSysCd != null and linkSysCd != ''">AND T.LINK_SYS_CD=#{linkSysCd}</if>
+       <if test="grade != null and grade != ''">AND T.BSC_GRD_CD=#{grade}</if>
+       <if test="useYn != null and useYn != ''">AND T.USE_YN=#{useYn}</if>
+       <if test="keyword != null and keyword != ''">AND (T.EVNT_CD LIKE CONCAT('%',#{keyword},'%') OR T.DSBLTY_TYPE_NM LIKE CONCAT('%',#{keyword},'%') OR T.DSBLTY_NM LIKE CONCAT('%',#{keyword},'%'))</if>
+     ORDER BY COALESCE(L.LINK_SYS_NM,'공통'),T.EVNT_CD
+  </select>
+  <select id="selectFaultType" parameterType="long" resultType="map">
+    SELECT T.DSBLTY_TYPE_SN AS dsbltyTypeSn,T.EVNT_CD AS evntCd,T.DSBLTY_TYPE_NM AS dsbltyTypeNm,
+           T.LINK_SYS_CD AS linkSysCd,COALESCE(L.LINK_SYS_NM,'공통') AS linkSysNm,T.DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,
+           T.DSBLTY_NM AS dsbltyNm,T.BSC_GRD_CD AS bscGrdCd,COALESCE(G.COM_CD_NM,T.BSC_GRD_CD) AS bscGrdNm,
+           T.JGMT_CRTR_CN AS jgmtCrtrCn,T.AUTO_END_YN AS autoEndYn,T.SMS_USE_YN AS smsUseYn,
+           T.USE_YN AS useYn,T.AUTO_REG_YN AS autoRegYn,T.REG_DT AS regDt,T.RGTR_ID AS rgtrId,T.MDFCN_DT AS mdfcnDt,T.MDFR_ID AS mdfrId
+      FROM web_dsblty_type_info T LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=T.LINK_SYS_CD
+      LEFT JOIN web_com_cd_info G ON G.COM_CD_GROUP_ID='DSBLTY_GRD' AND G.COM_CD=T.BSC_GRD_CD
+     WHERE T.DSBLTY_TYPE_SN=#{_parameter}
+  </select>
+
+  <select id="selectExceptionGroups" resultType="map">
+    SELECT G.EXCP_GROUP_SN AS groupSn,G.EXCP_GROUP_NM AS groupNm,G.EXCP_GROUP_EXPLN AS groupExpln,G.USE_YN AS useYn,
+           COUNT(R.EQPMNT_SN) AS memberCount
+      FROM web_dsblty_excp_group_info G LEFT JOIN web_dsblty_excp_group_eqpmnt_rel R ON R.EXCP_GROUP_SN=G.EXCP_GROUP_SN
+     GROUP BY G.EXCP_GROUP_SN,G.EXCP_GROUP_NM,G.EXCP_GROUP_EXPLN,G.USE_YN
+     ORDER BY G.USE_YN DESC,G.EXCP_GROUP_NM
+  </select>
+  <select id="selectExceptionGroup" parameterType="long" resultType="map">
+    SELECT EXCP_GROUP_SN AS groupSn,EXCP_GROUP_NM AS groupNm,EXCP_GROUP_EXPLN AS groupExpln,USE_YN AS useYn,REG_DT AS regDt,MDFCN_DT AS mdfcnDt
+      FROM web_dsblty_excp_group_info WHERE EXCP_GROUP_SN=#{_parameter}
+  </select>
+  <select id="selectExceptionGroupMembers" parameterType="long" resultType="map">
+    SELECT R.EQPMNT_SN AS eqpmntSn,E.EQPMNT_NM AS eqpmntNm,E.EQPMNT_MNG_NO AS eqpmntMngNo,
+           L.LINK_SYS_NM AS linkSysNm,S.STN_NM AS stnNm,R.ALL_IDCT_YN AS allIdctYn
+      FROM web_dsblty_excp_group_eqpmnt_rel R JOIN web_eqpmnt_info E ON E.EQPMNT_SN=R.EQPMNT_SN
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=E.LINK_SYS_CD LEFT JOIN com_stn_info S ON S.STN_CD=E.STN_CD
+     WHERE R.EXCP_GROUP_SN=#{_parameter} ORDER BY COALESCE(S.STN_SEQ,999),L.LINK_SYS_NM,E.EQPMNT_NM
+  </select>
+  <select id="selectExceptionEquipmentCandidates" parameterType="map" resultType="map">
+    SELECT E.EQPMNT_SN AS eqpmntSn,E.EQPMNT_NM AS eqpmntNm,E.EQPMNT_MNG_NO AS eqpmntMngNo,E.LINK_SYS_CD AS linkSysCd,
+           L.LINK_SYS_NM AS linkSysNm,E.STN_CD AS stnCd,S.STN_NM AS stnNm,E.EQPMNT_IP_ADDR AS ipAddr
+      FROM web_eqpmnt_info E JOIN web_link_sys_info L ON L.LINK_SYS_CD=E.LINK_SYS_CD LEFT JOIN com_stn_info S ON S.STN_CD=E.STN_CD
+     WHERE E.USE_YN='Y'
+       <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD=#{linkSysCd}</if>
+       <if test="stnCd != null and stnCd != ''">AND E.STN_CD=#{stnCd}</if>
+       <if test="keyword != null and keyword != ''">AND (E.EQPMNT_NM LIKE CONCAT('%',#{keyword},'%') OR E.EQPMNT_MNG_NO LIKE CONCAT('%',#{keyword},'%'))</if>
+     ORDER BY COALESCE(S.STN_SEQ,999),L.LINK_SYS_NM,E.EQPMNT_NM LIMIT 1000
+  </select>
+  <insert id="insertExceptionGroup" parameterType="map" useGeneratedKeys="true" keyProperty="groupSn">
+    INSERT INTO web_dsblty_excp_group_info(EXCP_GROUP_NM,EXCP_GROUP_EXPLN,USE_YN,REG_DT,RGTR_ID)
+    VALUES(#{groupNm},#{groupExpln},#{useYn},NOW(),#{rgtrId})
+  </insert>
+  <update id="updateExceptionGroup" parameterType="map">
+    UPDATE web_dsblty_excp_group_info SET EXCP_GROUP_NM=#{groupNm},EXCP_GROUP_EXPLN=#{groupExpln},USE_YN=#{useYn},MDFCN_DT=NOW(),MDFR_ID=#{mdfrId}
+     WHERE EXCP_GROUP_SN=#{groupSn}
+  </update>
+  <delete id="deleteExceptionGroupMemberIndicators" parameterType="long">DELETE FROM web_dsblty_excp_group_eqpmnt_idct_rel WHERE EXCP_GROUP_SN=#{_parameter}</delete>
+  <delete id="deleteExceptionGroupMembers" parameterType="long">DELETE FROM web_dsblty_excp_group_eqpmnt_rel WHERE EXCP_GROUP_SN=#{_parameter}</delete>
+  <insert id="insertExceptionGroupMember" parameterType="map">
+    INSERT INTO web_dsblty_excp_group_eqpmnt_rel(EXCP_GROUP_SN,EQPMNT_SN,ALL_IDCT_YN,REG_DT) VALUES(#{groupSn},#{eqpmntSn},#{allIdctYn},NOW())
+  </insert>
+  <delete id="deleteExceptionScheduleGradesByGroup" parameterType="long">
+    DELETE R FROM web_dsblty_excp_schdl_grd_rel R JOIN web_dsblty_excp_schdl_info S ON S.EXCP_SCHDL_SN=R.EXCP_SCHDL_SN WHERE S.EXCP_GROUP_SN=#{_parameter}
+  </delete>
+  <delete id="deleteExceptionSchedulesByGroup" parameterType="long">DELETE FROM web_dsblty_excp_schdl_info WHERE EXCP_GROUP_SN=#{_parameter}</delete>
+  <delete id="deleteExceptionGroup" parameterType="long">DELETE FROM web_dsblty_excp_group_info WHERE EXCP_GROUP_SN=#{_parameter}</delete>
+
+  <select id="selectExceptionSchedules" parameterType="map" resultType="map">
+    SELECT S.EXCP_SCHDL_SN AS scheduleSn, S.EXCP_GROUP_SN AS groupSn, G.EXCP_GROUP_NM AS groupNm,
+           S.EXCP_SCHDL_NM AS scheduleNm, S.BGNG_DT AS bgngDt, S.END_DT AS endDt,
+           S.REPT_CYCLE_CN AS reptCycleCn, S.EXCP_RSN AS excpRsn, S.USE_YN AS useYn,
+           S.NO_END_YN AS noEndYn,
+           TIME_FORMAT(S.REPT_START_TM, '%H:%i') AS startTime,
+           TIME_FORMAT(S.REPT_END_TM, '%H:%i') AS endTime,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END AS runType,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',2),'|',-1) ELSE NULL END AS repeatCycle,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',-1) ELSE NULL END AS repeatDays,
+           S.REG_DT AS regDt, S.MDFCN_DT AS mdfcnDt,
+           GROUP_CONCAT(R.DSBLTY_GRD_CD ORDER BY FIELD(R.DSBLTY_GRD_CD,'EMERGENCY','HIGH','LOW','WARNING','INFO') SEPARATOR ',') AS grades
+      FROM web_dsblty_excp_schdl_info S
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN
+      LEFT JOIN web_dsblty_excp_schdl_grd_rel R ON R.EXCP_SCHDL_SN=S.EXCP_SCHDL_SN
+     WHERE 1=1
+       <if test="groupSn != null and groupSn != ''">AND S.EXCP_GROUP_SN=#{groupSn}</if>
+       <if test="runType != null and runType != ''">
+         AND (CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END)=#{runType}
+       </if>
+       <if test="useYn != null and useYn != ''">AND S.USE_YN=#{useYn}</if>
+       <if test="keyword != null and keyword != ''">AND (S.EXCP_SCHDL_NM LIKE CONCAT('%',#{keyword},'%') OR S.EXCP_RSN LIKE CONCAT('%',#{keyword},'%'))</if>
+     GROUP BY S.EXCP_SCHDL_SN, S.EXCP_GROUP_SN, G.EXCP_GROUP_NM, S.EXCP_SCHDL_NM,
+              S.BGNG_DT, S.END_DT, S.REPT_CYCLE_CN, S.EXCP_RSN, S.USE_YN,
+              S.NO_END_YN, S.REPT_START_TM, S.REPT_END_TM, S.REG_DT, S.MDFCN_DT
+     ORDER BY S.BGNG_DT DESC, S.EXCP_SCHDL_SN DESC
+  </select>
+  <select id="selectExceptionSchedule" parameterType="long" resultType="map">
+    SELECT S.EXCP_SCHDL_SN AS scheduleSn, S.EXCP_GROUP_SN AS groupSn, G.EXCP_GROUP_NM AS groupNm,
+           S.EXCP_SCHDL_NM AS scheduleNm, S.BGNG_DT AS bgngDt, S.END_DT AS endDt,
+           S.REPT_CYCLE_CN AS reptCycleCn, S.EXCP_RSN AS excpRsn, S.USE_YN AS useYn,
+           S.NO_END_YN AS noEndYn,
+           TIME_FORMAT(S.REPT_START_TM, '%H:%i') AS startTime,
+           TIME_FORMAT(S.REPT_END_TM, '%H:%i') AS endTime,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN 'REPEAT' ELSE 'ONCE' END AS runType,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',2),'|',-1) ELSE NULL END AS repeatCycle,
+           CASE WHEN S.REPT_CYCLE_CN LIKE 'REPEAT|%' THEN SUBSTRING_INDEX(S.REPT_CYCLE_CN,'|',-1) ELSE NULL END AS repeatDays,
+           S.REG_DT AS regDt, S.MDFCN_DT AS mdfcnDt
+      FROM web_dsblty_excp_schdl_info S
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=S.EXCP_GROUP_SN
+     WHERE S.EXCP_SCHDL_SN=#{_parameter}
+  </select>
+  <select id="selectExceptionScheduleGrades" parameterType="long" resultType="string">
+    SELECT DSBLTY_GRD_CD FROM web_dsblty_excp_schdl_grd_rel WHERE EXCP_SCHDL_SN=#{_parameter}
+    ORDER BY FIELD(DSBLTY_GRD_CD,'EMERGENCY','HIGH','LOW','WARNING','INFO')
+  </select>
+  <insert id="insertExceptionSchedule" parameterType="map" useGeneratedKeys="true" keyProperty="scheduleSn">
+    INSERT INTO web_dsblty_excp_schdl_info
+      (EXCP_GROUP_SN, EXCP_SCHDL_NM, BGNG_DT, END_DT,
+       NO_END_YN, REPT_START_TM, REPT_END_TM,
+       REPT_CYCLE_CN, EXCP_RSN, USE_YN, REG_DT, RGTR_ID)
+    VALUES
+      (#{groupSn}, #{scheduleNm}, #{bgngDt}, #{endDt},
+       #{noEndYn}, #{startTime}, #{endTime},
+       #{reptCycleCn}, #{excpRsn}, #{useYn}, NOW(), #{rgtrId})
+  </insert>
+  <update id="updateExceptionSchedule" parameterType="map">
+    UPDATE web_dsblty_excp_schdl_info
+       SET EXCP_GROUP_SN=#{groupSn}, EXCP_SCHDL_NM=#{scheduleNm},
+           BGNG_DT=#{bgngDt}, END_DT=#{endDt},
+           NO_END_YN=#{noEndYn}, REPT_START_TM=#{startTime}, REPT_END_TM=#{endTime},
+           REPT_CYCLE_CN=#{reptCycleCn}, EXCP_RSN=#{excpRsn},
+           USE_YN=#{useYn}, MDFCN_DT=NOW(), MDFR_ID=#{mdfrId}
+     WHERE EXCP_SCHDL_SN=#{scheduleSn}
+  </update>
+  <delete id="deleteExceptionScheduleGrades" parameterType="long">DELETE FROM web_dsblty_excp_schdl_grd_rel WHERE EXCP_SCHDL_SN=#{_parameter}</delete>
+  <insert id="insertExceptionScheduleGrade" parameterType="map">
+    INSERT INTO web_dsblty_excp_schdl_grd_rel(EXCP_SCHDL_SN,DSBLTY_GRD_CD,REG_DT) VALUES(#{scheduleSn},#{grade},NOW())
+  </insert>
+  <delete id="deleteExceptionSchedule" parameterType="long">DELETE FROM web_dsblty_excp_schdl_info WHERE EXCP_SCHDL_SN=#{_parameter}</delete>
+</mapper>

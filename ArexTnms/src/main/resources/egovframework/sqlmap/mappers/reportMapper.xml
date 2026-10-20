@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.report.mapper.ReportMapper">
+    <sql id="gradeCase">
+      CASE D.DSBLTY_GRD_CD
+        WHEN 'CRITICAL' THEN 'EMERGENCY'
+        WHEN 'CAUTION' THEN 'WARNING'
+        ELSE D.DSBLTY_GRD_CD
+      END
+    </sql>
+    <sql id="rangeWhere">
+        WHERE D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDate}, ' 00:00:00')
+          AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          AND D.EXCP_APLY_YN = 'N'
+        <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD = #{linkSysCd}</if>
+    </sql>
+    <sql id="selectedWhere">
+        WHERE D.EXCP_APLY_YN='N'
+        <choose>
+          <when test="selectedDate != null and selectedDate != ''">
+            AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{selectedDate},' 00:00:00')
+            AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{selectedDate}, INTERVAL 1 DAY)
+          </when>
+          <otherwise>
+            AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDate},' 00:00:00')
+            AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          </otherwise>
+        </choose>
+        <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD=#{linkSysCd}</if>
+    </sql>
+    <sql id="selectedJoinCondition">
+        AND D.EXCP_APLY_YN='N'
+        <choose>
+          <when test="selectedDate != null and selectedDate != ''">
+            AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{selectedDate},' 00:00:00')
+            AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{selectedDate}, INTERVAL 1 DAY)
+          </when>
+          <otherwise>
+            AND D.DSBLTY_OCRN_DT &gt;= CONCAT(#{startDate},' 00:00:00')
+            AND D.DSBLTY_OCRN_DT &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          </otherwise>
+        </choose>
+    </sql>
+
+    <select id="selectFaultSummary" parameterType="reportVO" resultType="reportVO">
+        SELECT COUNT(*) AS TOTAL_NOCS,
+               SUM(CASE WHEN <include refid="gradeCase"/> IN ('EMERGENCY','HIGH') THEN 1 ELSE 0 END) AS CRITICAL_NOCS,
+               SUM(CASE WHEN D.DSBLTY_JGMT_CD = 'SERVICE' THEN 1 ELSE 0 END) AS SERVICE_NOCS,
+               SUM(CASE WHEN D.DSBLTY_END_DT IS NOT NULL OR D.PRCS_STTS_CD = 'COMPLETED' THEN 1 ELSE 0 END) AS COMPLETE_NOCS,
+               CAST(COALESCE(ROUND(AVG(CASE WHEN D.DSBLTY_END_DT IS NOT NULL THEN TIMESTAMPDIFF(SECOND,D.DSBLTY_OCRN_DT,D.DSBLTY_END_DT) END),0),0) AS SIGNED) AS AVG_RECOVERY_SEC,
+               CASE WHEN COUNT(*)=0 THEN 0 ELSE ROUND(100*SUM(CASE WHEN D.DSBLTY_END_DT IS NOT NULL OR D.PRCS_STTS_CD='COMPLETED' THEN 1 ELSE 0 END)/COUNT(*),1) END AS COMPLETE_RATE
+          FROM web_dsblty_info D LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN=D.EQPMNT_SN
+        <include refid="rangeWhere"/>
+    </select>
+
+    <select id="selectDailyFaultSummary" parameterType="reportVO" resultType="map">
+      SELECT DATE_FORMAT(D.DSBLTY_OCRN_DT,'%Y-%m-%d') AS reportDate, COUNT(*) AS totalNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='EMERGENCY' THEN 1 ELSE 0 END) AS emergencyNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='HIGH' THEN 1 ELSE 0 END) AS highNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='LOW' THEN 1 ELSE 0 END) AS lowNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='WARNING' THEN 1 ELSE 0 END) AS warningNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='INFO' THEN 1 ELSE 0 END) AS infoNocs
+        FROM web_dsblty_info D LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN=D.EQPMNT_SN
+        <include refid="rangeWhere"/>
+       GROUP BY DATE_FORMAT(D.DSBLTY_OCRN_DT,'%Y-%m-%d') ORDER BY reportDate
+    </select>
+
+    <select id="selectFaultSystemSummary" parameterType="reportVO" resultType="map">
+      SELECT L.LINK_SYS_CD AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,COUNT(D.DSBLTY_NO) AS totalNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='EMERGENCY' THEN 1 ELSE 0 END) AS emergencyNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='HIGH' THEN 1 ELSE 0 END) AS highNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='LOW' THEN 1 ELSE 0 END) AS lowNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='WARNING' THEN 1 ELSE 0 END) AS warningNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='INFO' THEN 1 ELSE 0 END) AS infoNocs
+        FROM web_link_sys_info L
+        LEFT JOIN web_eqpmnt_info E ON E.LINK_SYS_CD=L.LINK_SYS_CD AND E.USE_YN='Y'
+        LEFT JOIN web_dsblty_info D ON D.EQPMNT_SN=E.EQPMNT_SN <include refid="selectedJoinCondition"/>
+       WHERE L.USE_YN='Y'
+       <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+       GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
+       ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    </select>
+
+    <select id="selectFaultStationSummary" parameterType="reportVO" resultType="map">
+      SELECT S.STN_CD AS stnCd,S.STN_NM AS stnNm,COUNT(D.DSBLTY_NO) AS totalNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='EMERGENCY' THEN 1 ELSE 0 END) AS emergencyNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='HIGH' THEN 1 ELSE 0 END) AS highNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='LOW' THEN 1 ELSE 0 END) AS lowNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='WARNING' THEN 1 ELSE 0 END) AS warningNocs,
+             SUM(CASE WHEN <include refid="gradeCase"/>='INFO' THEN 1 ELSE 0 END) AS infoNocs
+        FROM com_stn_info S
+        LEFT JOIN web_eqpmnt_info E ON E.STN_CD=S.STN_CD AND E.USE_YN='Y'
+        LEFT JOIN web_dsblty_info D ON D.EQPMNT_SN=E.EQPMNT_SN <include refid="selectedJoinCondition"/>
+       WHERE S.USE_YN='Y' AND S.MNLS_STN_YN='N'
+       <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD=#{linkSysCd}</if>
+       GROUP BY S.STN_CD,S.STN_NM,S.STN_SEQ HAVING COUNT(D.DSBLTY_NO)&gt;0 ORDER BY S.STN_SEQ
+    </select>
+
+    <select id="selectFaultDetailList" parameterType="reportVO" resultType="map">
+      SELECT D.DSBLTY_NO AS dsbltyNo,S.STN_NM AS stnNm,L.LINK_SYS_NM AS linkSysNm,E.EQPMNT_NM AS eqpmntNm,E.EQPMNT_IP_ADDR AS ipAddr,
+             DATE_FORMAT(D.DSBLTY_OCRN_DT,'%Y-%m-%d %H:%i:%s') AS ocrnDt,
+             DATE_FORMAT(COALESCE((SELECT MAX(A.ACTN_DT) FROM web_dsblty_actn_hstry A WHERE A.DSBLTY_NO=D.DSBLTY_NO AND A.ACTN_SE_CD='TRANSFER'),D.DSBLTY_END_DT),'%Y-%m-%d %H:%i:%s') AS transferEndDt,
+             TIMESTAMPDIFF(SECOND,D.DSBLTY_OCRN_DT,COALESCE(D.DSBLTY_END_DT,NOW())) AS durationSec,
+             <include refid="gradeCase"/> AS gradeCd,D.DSBLTY_OCRN_CN AS faultCn
+        FROM web_dsblty_info D
+        LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN=D.EQPMNT_SN
+        LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=E.LINK_SYS_CD
+        LEFT JOIN com_stn_info S ON S.STN_CD=E.STN_CD
+        <include refid="selectedWhere"/>
+       ORDER BY D.DSBLTY_OCRN_DT DESC LIMIT 500
+    </select>
+</mapper>
