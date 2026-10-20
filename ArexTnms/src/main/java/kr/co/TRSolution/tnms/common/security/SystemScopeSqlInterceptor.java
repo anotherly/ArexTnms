@@ -28,7 +28,7 @@ import org.apache.ibatis.reflection.SystemMetaObject;
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
 public class SystemScopeSqlInterceptor implements Interceptor {
     private static final Pattern TABLE = Pattern.compile(
-        "(?i)\\b(FROM|JOIN)\\s+`?(eqpmnt_info|link_sys_info|dsblty_info|link_raw_data|clct_cycle_info|clct_excn_hstry|thrshld_info|perf_raw_data|perf_hr_stats|perf_day_stats|eqpmnt_perf_stts|eqpmnt_stts|vw_eqpmnt_main_stts|eqpmnt_clsf_info|dsblty_type_info|dsblty_exprs_info|pids_eqpmnt_lse_rel|dsblty_excp_group_eqpmnt_idct_rel|dsblty_actn_hstry|dsblty_excp_group_info|dsblty_excp_schdl_info|dsblty_excp_group_eqpmnt_rel|dsblty_excp_schdl_grd_rel|enex_evnt_hstry)`?(?![A-Za-z0-9_])");
+        "(?i)\\b(FROM|JOIN)\\s+`?(web_eqpmnt_info|web_link_sys_info|web_dsblty_info|web_link_raw_data|web_clct_cycle_info|web_clct_excn_hstry|web_thrshld_info|web_perf_raw_data|web_perf_hr_stats|web_perf_day_stats|web_eqpmnt_perf_stts|web_eqpmnt_stts|vw_eqpmnt_main_stts|web_eqpmnt_clsf_info|web_dsblty_type_info|web_dsblty_exprs_info|web_pids_eqpmnt_lse_rel|web_dsblty_excp_group_eqpmnt_idct_rel|web_dsblty_actn_hstry|web_dsblty_excp_group_info|web_dsblty_excp_schdl_info|web_dsblty_excp_group_eqpmnt_rel|web_dsblty_excp_schdl_grd_rel|web_enex_evnt_hstry)`?(?![A-Za-z0-9_])");
     private static final Set<String> CODES = new java.util.HashSet<String>(Arrays.asList("EMS_TX", "SCADA_SEC", "VMS", "PBX", "EMS_PIDS"));
     private static final Map<String,String> RULES = rules();
     private static final Pattern NEXT_WORD = Pattern.compile("^\\s+([A-Za-z_][A-Za-z0-9_]*)");
@@ -38,21 +38,21 @@ public class SystemScopeSqlInterceptor implements Interceptor {
 
     private static Map<String,String> rules() {
         Map<String,String> m = new HashMap<String,String>();
-        for (String name : Arrays.asList("eqpmnt_info","link_sys_info","link_raw_data","clct_cycle_info","eqpmnt_clsf_info","dsblty_exprs_info"))
+        for (String name : Arrays.asList("web_eqpmnt_info","web_link_sys_info","web_link_raw_data","web_clct_cycle_info","web_eqpmnt_clsf_info","web_dsblty_exprs_info"))
             m.put(name, "_TNMS_SCOPE.LINK_SYS_CD IN (%s)");
-        m.put("clct_excn_hstry", "EXISTS (SELECT 1 FROM clct_cycle_info _TNMS_ALLOW_C WHERE _TNMS_ALLOW_C.CLCT_CYCLE_SN = _TNMS_SCOPE.CLCT_CYCLE_SN AND _TNMS_ALLOW_C.LINK_SYS_CD IN (%s))");
-        m.put("thrshld_info", "(_TNMS_SCOPE.LINK_SYS_CD IS NULL OR _TNMS_SCOPE.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_type_info", "(_TNMS_SCOPE.LINK_SYS_CD IS NULL OR _TNMS_SCOPE.LINK_SYS_CD IN (%s))");
-        m.put("pids_eqpmnt_lse_rel", "EXISTS (SELECT 1 FROM eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_excp_group_eqpmnt_idct_rel", "EXISTS (SELECT 1 FROM eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        for (String name : Arrays.asList("perf_raw_data","perf_hr_stats","perf_day_stats","eqpmnt_perf_stts","eqpmnt_stts","vw_eqpmnt_main_stts","enex_evnt_hstry"))
-            m.put(name, "EXISTS (SELECT 1 FROM eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_info", "EXISTS (SELECT 1 FROM eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_actn_hstry", "EXISTS (SELECT 1 FROM dsblty_info _TNMS_ALLOW_D JOIN eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_D.EQPMNT_SN WHERE _TNMS_ALLOW_D.DSBLTY_NO = _TNMS_SCOPE.DSBLTY_NO AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_excp_group_eqpmnt_rel", "EXISTS (SELECT 1 FROM eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_excp_group_info", "EXISTS (SELECT 1 FROM dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R JOIN eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_R.EXCP_GROUP_SN = _TNMS_SCOPE.EXCP_GROUP_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_excp_schdl_info", "EXISTS (SELECT 1 FROM dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R JOIN eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_R.EXCP_GROUP_SN = _TNMS_SCOPE.EXCP_GROUP_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
-        m.put("dsblty_excp_schdl_grd_rel", "EXISTS (SELECT 1 FROM dsblty_excp_schdl_info _TNMS_ALLOW_S JOIN dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R ON _TNMS_ALLOW_R.EXCP_GROUP_SN=_TNMS_ALLOW_S.EXCP_GROUP_SN JOIN eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_S.EXCP_SCHDL_SN = _TNMS_SCOPE.EXCP_SCHDL_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_clct_excn_hstry", "EXISTS (SELECT 1 FROM web_clct_cycle_info _TNMS_ALLOW_C WHERE _TNMS_ALLOW_C.CLCT_CYCLE_SN = _TNMS_SCOPE.CLCT_CYCLE_SN AND _TNMS_ALLOW_C.LINK_SYS_CD IN (%s))");
+        m.put("web_thrshld_info", "(_TNMS_SCOPE.LINK_SYS_CD IS NULL OR _TNMS_SCOPE.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_type_info", "(_TNMS_SCOPE.LINK_SYS_CD IS NULL OR _TNMS_SCOPE.LINK_SYS_CD IN (%s))");
+        m.put("web_pids_eqpmnt_lse_rel", "EXISTS (SELECT 1 FROM web_eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_excp_group_eqpmnt_idct_rel", "EXISTS (SELECT 1 FROM web_eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        for (String name : Arrays.asList("web_perf_raw_data","web_perf_hr_stats","web_perf_day_stats","web_eqpmnt_perf_stts","web_eqpmnt_stts","vw_eqpmnt_main_stts","web_enex_evnt_hstry"))
+            m.put(name, "EXISTS (SELECT 1 FROM web_eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_info", "EXISTS (SELECT 1 FROM web_eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_actn_hstry", "EXISTS (SELECT 1 FROM web_dsblty_info _TNMS_ALLOW_D JOIN web_eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_D.EQPMNT_SN WHERE _TNMS_ALLOW_D.DSBLTY_NO = _TNMS_SCOPE.DSBLTY_NO AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_excp_group_eqpmnt_rel", "EXISTS (SELECT 1 FROM web_eqpmnt_info _TNMS_ALLOW_E WHERE _TNMS_ALLOW_E.EQPMNT_SN = _TNMS_SCOPE.EQPMNT_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_excp_group_info", "EXISTS (SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R JOIN web_eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_R.EXCP_GROUP_SN = _TNMS_SCOPE.EXCP_GROUP_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_excp_schdl_info", "EXISTS (SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R JOIN web_eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_R.EXCP_GROUP_SN = _TNMS_SCOPE.EXCP_GROUP_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
+        m.put("web_dsblty_excp_schdl_grd_rel", "EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_info _TNMS_ALLOW_S JOIN web_dsblty_excp_group_eqpmnt_rel _TNMS_ALLOW_R ON _TNMS_ALLOW_R.EXCP_GROUP_SN=_TNMS_ALLOW_S.EXCP_GROUP_SN JOIN web_eqpmnt_info _TNMS_ALLOW_E ON _TNMS_ALLOW_E.EQPMNT_SN=_TNMS_ALLOW_R.EQPMNT_SN WHERE _TNMS_ALLOW_S.EXCP_SCHDL_SN = _TNMS_SCOPE.EXCP_SCHDL_SN AND _TNMS_ALLOW_E.LINK_SYS_CD IN (%s))");
         return m;
     }
 

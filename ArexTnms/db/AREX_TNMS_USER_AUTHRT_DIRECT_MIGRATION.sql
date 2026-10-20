@@ -3,8 +3,8 @@
  * 대상: USER_ID 자연키 전환이 완료된 현재 스키마
  * MariaDB 10.6
  *
- * 변경 전: user_info 1:N user_authrt_rel N:1 authrt_info
- * 변경 후: user_info.AUTHRT_SN -> authrt_info.AUTHRT_SN
+ * 변경 전: web_user_info 1:N user_authrt_rel N:1 web_authrt_info
+ * 변경 후: web_user_info.AUTHRT_SN -> web_authrt_info.AUTHRT_SN
  *
  * 전제: TNMS 애플리케이션 정책상 활성 사용자 1명은 현재 권한 1개만 가짐.
  * 주의: DDL은 자동 COMMIT되므로 실행 전 DB 백업 권장. 본 파일은 1회만 실행.
@@ -20,11 +20,11 @@ BEGIN
         SELECT 1
           FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME = 'user_info'
+           AND TABLE_NAME = 'web_user_info'
            AND COLUMN_NAME = 'AUTHRT_SN'
     ) THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Migration aborted: user_info.AUTHRT_SN already exists.';
+            SET MESSAGE_TEXT = 'Migration aborted: web_user_info.AUTHRT_SN already exists.';
     END IF;
 
     IF NOT EXISTS (
@@ -53,7 +53,7 @@ BEGIN
     /* 사용중인 사용자는 반드시 현재 유효 권한이 1개 있어야 함 */
     IF EXISTS (
         SELECT 1
-          FROM user_info U
+          FROM web_user_info U
           LEFT JOIN user_authrt_rel R
             ON R.USER_ID = U.USER_ID
            AND R.AUTHRT_BGNG_DT <= NOW()
@@ -71,14 +71,14 @@ DELIMITER ;
 CALL sp_tnms_user_authrt_direct_precheck();
 DROP PROCEDURE sp_tnms_user_authrt_direct_precheck;
 
-/* 1. user_info에 현재 권한 FK 컬럼 추가 */
-ALTER TABLE user_info
+/* 1. web_user_info에 현재 권한 FK 컬럼 추가 */
+ALTER TABLE web_user_info
     ADD COLUMN AUTHRT_SN BIGINT(20) UNSIGNED NULL COMMENT '권한일련번호' AFTER USER_ENPSWD;
 
 /* 2. 현재 유효한 단일 권한을 사용자 본체로 이관
  *    삭제 사용자(USE_YN='N')는 기존 서비스의 권한관계 삭제 동작과 동일하게 NULL 유지.
  */
-UPDATE user_info U
+UPDATE web_user_info U
 LEFT JOIN user_authrt_rel R
   ON R.USER_ID = U.USER_ID
  AND R.AUTHRT_BGNG_DT <= NOW()
@@ -88,10 +88,10 @@ SET U.AUTHRT_SN = CASE WHEN U.USE_YN = 'N' THEN NULL ELSE R.AUTHRT_SN END;
 /* 3. FK / 무결성 제약 추가
  *    활성 사용자에는 권한이 필수이고, 삭제 사용자만 NULL 허용.
  */
-ALTER TABLE user_info
+ALTER TABLE web_user_info
     ADD KEY FK_USER_AUTHRT (AUTHRT_SN),
     ADD CONSTRAINT FK_USER_AUTHRT
-        FOREIGN KEY (AUTHRT_SN) REFERENCES authrt_info (AUTHRT_SN),
+        FOREIGN KEY (AUTHRT_SN) REFERENCES web_authrt_info (AUTHRT_SN),
     ADD CONSTRAINT CK_USER_AUTHRT
         CHECK (USE_YN = 'N' OR AUTHRT_SN IS NOT NULL);
 
@@ -105,11 +105,11 @@ SELECT 'user_authrt_rel table remnants' AS CHECK_ITEM, COUNT(*) AS CNT
    AND TABLE_NAME = 'user_authrt_rel';
 
 SELECT 'active users without authority' AS CHECK_ITEM, COUNT(*) AS CNT
-  FROM user_info
+  FROM web_user_info
  WHERE USE_YN != 'N'
    AND AUTHRT_SN IS NULL;
 
 SELECT U.USER_ID, U.USER_NM, U.AUTHRT_SN, A.AUTHRT_NM, U.USE_YN
-  FROM user_info U
-  LEFT JOIN authrt_info A ON A.AUTHRT_SN = U.AUTHRT_SN
+  FROM web_user_info U
+  LEFT JOIN web_authrt_info A ON A.AUTHRT_SN = U.AUTHRT_SN
  ORDER BY U.USER_ID;

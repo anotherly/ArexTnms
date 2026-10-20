@@ -27,18 +27,18 @@
                U.OGDP_BZENTY_NM, U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR,
                U.DMND_AUTHRT_CD, A.AUTHRT_NM AS DMND_AUTHRT_NM,
                U.APLY_RSN, U.APLY_DT, U.APLY_STTS_CD, U.APRV_USER_ID, U.APRV_DT, U.RFSL_RSN
-          FROM user_acnt_aply_info U
-          LEFT JOIN authrt_info A ON A.AUTHRT_CD = U.DMND_AUTHRT_CD
+          FROM web_user_acnt_aply_info U
+          LEFT JOIN web_authrt_info A ON A.AUTHRT_CD = U.DMND_AUTHRT_CD
     </sql>
 
     <select id="countUnavailableUserId" parameterType="string" resultType="int">
-        SELECT (SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter})
-             + (SELECT COUNT(*) FROM user_acnt_aply_info
+        SELECT (SELECT COUNT(*) FROM web_user_info WHERE USER_ID = #{_parameter})
+             + (SELECT COUNT(*) FROM web_user_acnt_aply_info
                  WHERE USER_ID = #{_parameter} AND APLY_STTS_CD IN ('WAITING', 'APPROVED'))
     </select>
 
     <insert id="insertAccountApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
-        INSERT INTO user_acnt_aply_info
+        INSERT INTO web_user_acnt_aply_info
         (APLY_NO, USER_ID, USER_NM, USER_ENPSWD, USER_SE_CD, OGDP_BZENTY_NM, DEPT_NM,
          MBL_TELNO, TELNO, EML_ADDR, DMND_AUTHRT_CD, APLY_RSN, APLY_DT, APLY_STTS_CD)
         VALUES
@@ -71,23 +71,23 @@
     </select>
 
     <select id="countActiveAuthrt" parameterType="string" resultType="int">
-        SELECT COUNT(*) FROM authrt_info WHERE AUTHRT_CD = #{_parameter} AND USE_YN = 'Y'
+        SELECT COUNT(*) FROM web_authrt_info WHERE AUTHRT_CD = #{_parameter} AND USE_YN = 'Y'
     </select>
 
     <update id="updateRequestedAuthrt" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
-        UPDATE user_acnt_aply_info
+        UPDATE web_user_acnt_aply_info
            SET DMND_AUTHRT_CD = #{dmndAuthrtCd}
          WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
     </update>
 
     <update id="approveApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
-        UPDATE user_acnt_aply_info
+        UPDATE web_user_acnt_aply_info
            SET APLY_STTS_CD = 'APPROVED', APRV_USER_ID = #{aprvUserId}, APRV_DT = NOW(), RFSL_RSN = NULL
          WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
     </update>
 
     <update id="rejectApplication" parameterType="kr.co.TRSolution.tnms.user.vo.UserAccountApplicationVO">
-        UPDATE user_acnt_aply_info
+        UPDATE web_user_acnt_aply_info
            SET APLY_STTS_CD = 'REJECTED', RFSL_RSN = #{rfslRsn}
          WHERE APLY_NO = #{aplyNo} AND APLY_STTS_CD = 'WAITING'
     </update>

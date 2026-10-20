@@ -28,7 +28,7 @@ public class EquipmentVO extends MonitoringBaseVO {
     private String flrNm;
     private Integer cmraQty;
 
-    // CCTV(VMS) 상세정보 - cctv_info (업체 엑셀 기준)
+    // CCTV(VMS) 상세정보 - web_cctv_info (업체 엑셀 기준)
     private String vmsNm;
     private String strgMthNm;
     private String cctvNm;
@@ -43,7 +43,7 @@ public class EquipmentVO extends MonitoringBaseVO {
     private String cmpntNm;
     private Long mtbfHr;
 
-    // eqpmnt_perf_stts 현재 성능값. 컬럼을 장비 테이블에 중복 생성하지 않고 지표 테이블에서 조회합니다.
+    // web_eqpmnt_perf_stts 현재 성능값. 컬럼을 장비 테이블에 중복 생성하지 않고 지표 테이블에서 조회합니다.
     private Double cpuUsgrt;
     private Double mmryUsgrt;
     private Integer ifUseNocs;

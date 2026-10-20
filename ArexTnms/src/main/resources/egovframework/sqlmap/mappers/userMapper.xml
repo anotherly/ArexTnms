@@ -25,11 +25,11 @@
     <sql id="userJoin">
         SELECT U.USER_ID, U.USER_NM, U.USER_ENPSWD, U.USER_SE_CD, U.OGDP_BZENTY_NM,
                U.DEPT_NM, U.MBL_TELNO, U.TELNO, U.EML_ADDR, U.USER_STTS_CD,
-               DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), COALESCE(U.PSWD_CHG_DT, U.REG_DT))) AS PSWD_EXPRY_YMD,
+               DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM web_ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), COALESCE(U.PSWD_CHG_DT, U.REG_DT))) AS PSWD_EXPRY_YMD,
                U.LAST_LGN_DT, U.LGN_FAIL_NOCS, U.USE_YN, U.REG_DT, U.MDFCN_DT,
                U.AUTHRT_CD, A.AUTHRT_NM
-          FROM user_info U
-          LEFT JOIN authrt_info A
+          FROM web_user_info U
+          LEFT JOIN web_authrt_info A
             ON A.AUTHRT_CD = U.AUTHRT_CD
            AND A.USE_YN = 'Y'
     </sql>
@@ -60,22 +60,22 @@
     </select>
 
     <select id="countByUserId" parameterType="string" resultType="int">
-        SELECT COUNT(*) FROM user_info WHERE USER_ID = #{_parameter}
+        SELECT COUNT(*) FROM web_user_info WHERE USER_ID = #{_parameter}
     </select>
 
     <insert id="insertUser" parameterType="userVO">
-        INSERT INTO user_info
+        INSERT INTO web_user_info
         (USER_ID, USER_NM, USER_ENPSWD, AUTHRT_CD, USER_SE_CD, OGDP_BZENTY_NM, DEPT_NM,
          MBL_TELNO, TELNO, EML_ADDR, USER_STTS_CD, PSWD_EXPRY_YMD, PSWD_CHG_DT, LGN_FAIL_NOCS, USE_YN, RGTR_ID)
         VALUES
         (#{userId}, #{userNm}, #{userEnpswd}, #{authrtCd}, #{userSeCd}, #{ogdpBzentyNm}, #{deptNm},
          #{mobileNo}, #{telno}, #{emlAddr}, #{userSttsCd},
-         DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
+         DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM web_ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
          NOW(), 0, #{useYn}, #{rgtrId})
     </insert>
 
     <update id="updateUser" parameterType="userVO">
-        UPDATE user_info
+        UPDATE web_user_info
            SET USER_NM = #{userNm}, AUTHRT_CD = #{authrtCd}, USER_SE_CD = #{userSeCd},
                OGDP_BZENTY_NM = #{ogdpBzentyNm}, DEPT_NM = #{deptNm}, MBL_TELNO = #{mobileNo},
                TELNO = #{telno}, EML_ADDR = #{emlAddr}, USER_STTS_CD = #{userSttsCd},
@@ -84,43 +84,43 @@
     </update>
 
     <update id="updatePassword" parameterType="userVO">
-        UPDATE user_info
+        UPDATE web_user_info
            SET USER_ENPSWD = #{userEnpswd},
-               PSWD_EXPRY_YMD = DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
+               PSWD_EXPRY_YMD = DATE(TIMESTAMPADD(MONTH, CAST((SELECT S.UI_STNG_VL FROM web_ui_stng_info S WHERE S.UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND S.USE_YN = 'Y') AS UNSIGNED), NOW())),
                PSWD_CHG_DT = NOW(),
                MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE USER_ID = #{userId} AND USE_YN != 'N'
     </update>
 
     <update id="softDeleteUser" parameterType="userVO">
-        UPDATE user_info SET AUTHRT_CD = NULL, USE_YN = 'N', USER_STTS_CD = 'DELETED', MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+        UPDATE web_user_info SET AUTHRT_CD = NULL, USE_YN = 'N', USER_STTS_CD = 'DELETED', MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE USER_ID = #{userId} AND USE_YN != 'N'
     </update>
 
     <update id="unlockUser" parameterType="userVO">
-        UPDATE user_info SET USER_STTS_CD = 'NORMAL', LGN_FAIL_NOCS = 0, MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+        UPDATE web_user_info SET USER_STTS_CD = 'NORMAL', LGN_FAIL_NOCS = 0, MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE USER_ID = #{userId} AND USE_YN = 'Y' AND USER_STTS_CD = 'LOCKED'
     </update>
 
     <update id="increaseLoginFailure" parameterType="string">
-        UPDATE user_info
+        UPDATE web_user_info
            SET USER_STTS_CD = CASE WHEN LGN_FAIL_NOCS + 1 &gt;= 5 THEN 'LOCKED' ELSE USER_STTS_CD END,
                LGN_FAIL_NOCS = LGN_FAIL_NOCS + 1
          WHERE USER_ID = #{_parameter}
     </update>
 
     <update id="resetLoginFailure" parameterType="string">
-        UPDATE user_info SET LGN_FAIL_NOCS = 0, LAST_LGN_DT = NOW() WHERE USER_ID = #{_parameter}
+        UPDATE web_user_info SET LGN_FAIL_NOCS = 0, LAST_LGN_DT = NOW() WHERE USER_ID = #{_parameter}
     </update>
 
     <insert id="insertLoginLog" parameterType="userVO">
-        INSERT INTO cntn_log
+        INSERT INTO web_cntn_log
         (USER_ID, LGN_IP_ADDR, CNTN_BGNG_DT, CNTN_BRWSR_NM, CNTN_YN, FAIL_RSN)
         VALUES (#{userId}, #{loginIp}, NOW(), #{browserNm}, #{loginSuccessYn}, #{failRsn})
     </insert>
 
     <update id="updateLogoutLog" parameterType="string">
-        UPDATE cntn_log SET LGT_DT = NOW()
+        UPDATE web_cntn_log SET LGT_DT = NOW()
          WHERE USER_ID = #{_parameter} AND CNTN_YN = 'Y' AND LGT_DT IS NULL
          ORDER BY CNTN_BGNG_DT DESC LIMIT 1
     </update>

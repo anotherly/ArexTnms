@@ -1,9 +1,9 @@
 -- ============================================================================
 -- TNMS 화면 표출용 테스트 데이터 갱신 프로시저 / 5분 이벤트
 -- 대상: MariaDB 10.6
--- 목적: eqpmnt_stts / eqpmnt_perf_stts "현재값"만 UPSERT하여 화면 테스트용 데이터를 유지
+-- 목적: web_eqpmnt_stts / web_eqpmnt_perf_stts "현재값"만 UPSERT하여 화면 테스트용 데이터를 유지
 -- 주의: 운영 연계 수집기가 붙은 DB에서는 실행하지 마십시오. 실제 수집값을 덮어쓸 수 있습니다.
---      이 스크립트는 장애이력(dsblty_info) 같은 누적 이력 테이블에는 5분마다 INSERT하지 않습니다.
+--      이 스크립트는 장애이력(web_dsblty_info) 같은 누적 이력 테이블에는 5분마다 INSERT하지 않습니다.
 -- ============================================================================
 
 -- 이벤트 스케줄러 상태 확인
@@ -27,7 +27,7 @@ BEGIN
          - 일부 장비 UNKNOWN/CAUTION을 섞고 나머지는 NORMAL
          - PK(EQPMNT_SN) UPSERT이므로 행 수가 계속 증가하지 않음
     */
-    INSERT INTO eqpmnt_stts
+    INSERT INTO web_eqpmnt_stts
         (EQPMNT_SN, CNTN_YN, PING_RSPNS_MS, STTS_CD, STTS_EXPLN, LAST_RSPNS_DT, CLCT_DT)
     SELECT
         E.EQPMNT_SN,
@@ -55,10 +55,10 @@ BEGIN
         END AS STTS_EXPLN,
         NOW(),
         NOW()
-    FROM eqpmnt_info E
+    FROM web_eqpmnt_info E
     LEFT JOIN (
         SELECT STN_CD, LINK_SYS_CD, MIN(EQPMNT_SN) AS REP_SN
-          FROM eqpmnt_info
+          FROM web_eqpmnt_info
          WHERE USE_YN = 'Y'
            AND LINK_SYS_CD IN ('EMS_TX', 'EMS_PIDS', 'SCADA_SEC', 'PBX', 'VMS')
          GROUP BY STN_CD, LINK_SYS_CD
@@ -77,10 +77,10 @@ BEGIN
 
     /*
       2) CPU / MEMORY 현재값 갱신
-         - perf_idct_info에 실제 등록된 지표만 JOIN
+         - web_perf_idct_info에 실제 등록된 지표만 JOIN
          - PK(EQPMNT_SN, PERF_IDCT_CD) UPSERT -> 누적 증가 없음
     */
-    INSERT INTO eqpmnt_perf_stts
+    INSERT INTO web_eqpmnt_perf_stts
         (EQPMNT_SN, PERF_IDCT_CD, MSRMT_VL, LTR_VL, UNIT_NM, STTS_CD, CLCT_DT)
     SELECT
         E.EQPMNT_SN,
@@ -93,8 +93,8 @@ BEGIN
         '%',
         'NORMAL',
         NOW()
-    FROM eqpmnt_info E
-    JOIN perf_idct_info P
+    FROM web_eqpmnt_info E
+    JOIN web_perf_idct_info P
       ON P.PERF_IDCT_CD IN ('CPU_USGRT', 'MMRY_USGRT')
     WHERE E.USE_YN = 'Y'
       AND E.LINK_SYS_CD IN ('EMS_TX', 'EMS_PIDS', 'SCADA_SEC', 'PBX', 'VMS')
@@ -106,7 +106,7 @@ BEGIN
         CLCT_DT  = VALUES(CLCT_DT);
 
     /* 3) 전송설비 Interface 사용/전체 포트 테스트값 */
-    INSERT INTO eqpmnt_perf_stts
+    INSERT INTO web_eqpmnt_perf_stts
         (EQPMNT_SN, PERF_IDCT_CD, MSRMT_VL, LTR_VL, UNIT_NM, STTS_CD, CLCT_DT)
     SELECT
         E.EQPMNT_SN,
@@ -119,8 +119,8 @@ BEGIN
         'port',
         'NORMAL',
         NOW()
-    FROM eqpmnt_info E
-    JOIN perf_idct_info P
+    FROM web_eqpmnt_info E
+    JOIN web_perf_idct_info P
       ON P.PERF_IDCT_CD IN ('IF_USE_NOCS', 'IF_TOTAL_NOCS')
     WHERE E.USE_YN = 'Y'
       AND E.LINK_SYS_CD = 'EMS_TX'

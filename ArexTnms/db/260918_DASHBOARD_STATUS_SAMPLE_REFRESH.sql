@@ -7,8 +7,8 @@
 -- ============================================================
 
 -- 김포공항(AREX06): 심각 상태 확인용
-UPDATE eqpmnt_stts S
-JOIN eqpmnt_info E ON E.EQPMNT_SN = S.EQPMNT_SN
+UPDATE web_eqpmnt_stts S
+JOIN web_eqpmnt_info E ON E.EQPMNT_SN = S.EQPMNT_SN
 SET S.CNTN_YN       = 'Y',
     S.STTS_CD       = 'CRITICAL',
     S.STTS_EXPLN    = '김포공항 심각 상태 확인용',
@@ -19,8 +19,8 @@ WHERE E.EQPMNT_MNG_NO = 'UIUX-SAMPLE-VMS-01'
   AND E.USE_YN = 'Y';
 
 -- 계양(AREX07): 주의 상태 확인용
-UPDATE eqpmnt_stts S
-JOIN eqpmnt_info E ON E.EQPMNT_SN = S.EQPMNT_SN
+UPDATE web_eqpmnt_stts S
+JOIN web_eqpmnt_info E ON E.EQPMNT_SN = S.EQPMNT_SN
 SET S.CNTN_YN       = 'Y',
     S.STTS_CD       = 'CAUTION',
     S.STTS_EXPLN    = '계양 주의 상태 확인용',
@@ -32,13 +32,13 @@ WHERE E.EQPMNT_MNG_NO = 'UIUX-SAMPLE-VMS-03'
 
 -- 설정값/샘플 상태 확인
 SELECT UI_STNG_CD, UI_STNG_VL
-  FROM ui_stng_info
+  FROM web_ui_stng_info
  WHERE UI_STNG_CD IN ('DASHBOARD_OFFLINE_MIN', 'STATION_STATUS_PRIORITY')
  ORDER BY UI_STNG_CD;
 
 SELECT E.STN_CD, E.EQPMNT_MNG_NO, E.EQPMNT_NM,
        S.CNTN_YN, S.STTS_CD, S.STTS_EXPLN, S.CLCT_DT
-  FROM eqpmnt_info E
-  JOIN eqpmnt_stts S ON S.EQPMNT_SN = E.EQPMNT_SN
+  FROM web_eqpmnt_info E
+  JOIN web_eqpmnt_stts S ON S.EQPMNT_SN = E.EQPMNT_SN
  WHERE E.EQPMNT_MNG_NO IN ('UIUX-SAMPLE-VMS-01', 'UIUX-SAMPLE-VMS-03')
  ORDER BY E.STN_CD;

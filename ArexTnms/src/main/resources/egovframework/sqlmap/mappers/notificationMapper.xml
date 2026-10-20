@@ -29,10 +29,10 @@
                D.DSBLTY_NO AS REF_KEY,
                D.DSBLTY_OCRN_DT AS EVENT_DT_RAW,
                '/fault/realtime.do?screen=faults' AS TARGET_URL
-          FROM dsblty_info D
-          LEFT JOIN eqpmnt_info E ON E.EQPMNT_SN = D.EQPMNT_SN
-          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
-          LEFT JOIN link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
+          FROM web_dsblty_info D
+          LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN = D.EQPMNT_SN
+          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
          WHERE D.EXCP_APLY_YN = 'N'
            AND D.DSBLTY_OCRN_DT &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)
         UNION ALL
@@ -48,7 +48,7 @@
                A.APLY_NO AS REF_KEY,
                COALESCE(A.APRV_DT, A.APLY_DT) AS EVENT_DT_RAW,
                '/user/list.do?screen=users' AS TARGET_URL
-          FROM user_acnt_aply_info A
+          FROM web_user_acnt_aply_info A
          WHERE A.APLY_DT &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)
         UNION ALL
         SELECT CONCAT('OP:', J.JOB_LOG_SN) AS NOTIFICATION_ID,
@@ -64,7 +64,7 @@
                CAST(J.JOB_LOG_SN AS CHAR) AS REF_KEY,
                J.LOG_CRT_DT AS EVENT_DT_RAW,
                '/audit/job-log.do?screen=logs' AS TARGET_URL
-          FROM job_log J
+          FROM web_job_log J
          WHERE J.LOG_CRT_DT &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
            AND (J.JOB_RSLT_CD &lt;&gt; 'SUCCESS'
                 OR J.CNTN_MENU_NM LIKE '%권한%'
@@ -83,7 +83,7 @@
           FROM (
                <include refid="notificationUnion"/>
           ) N
-          LEFT JOIN user_ntcn_read_info R
+          LEFT JOIN web_user_ntcn_read_info R
             ON R.USER_ID = #{_parameter}
            AND R.NTCN_ID = N.NOTIFICATION_ID
          ORDER BY N.EVENT_DT_RAW DESC, N.NOTIFICATION_ID DESC
@@ -91,7 +91,7 @@
     </select>
 
     <insert id="upsertNotificationRead" parameterType="kr.co.TRSolution.tnms.notification.vo.NotificationVO">
-        INSERT INTO user_ntcn_read_info (USER_ID, NTCN_ID, READ_DT)
+        INSERT INTO web_user_ntcn_read_info (USER_ID, NTCN_ID, READ_DT)
         VALUES (#{userId}, #{notificationId}, NOW())
         ON DUPLICATE KEY UPDATE READ_DT = VALUES(READ_DT)
     </insert>

@@ -99,14 +99,14 @@
     </sql>
 
     <sql id="isDisconnected">
-        (C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL OR C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(CAST((SELECT U.UI_STNG_VL FROM ui_stng_info U WHERE U.UI_STNG_CD='DASHBOARD_OFFLINE_MIN' AND U.USE_YN='Y') AS UNSIGNED),5) MINUTE) OR C.STTS_CD='OFFLINE')
+        (C.EQPMNT_SN IS NULL OR C.CLCT_DT IS NULL OR C.CNTN_YN = 'N' OR C.CLCT_DT &lt; DATE_SUB(NOW(), INTERVAL COALESCE(CAST((SELECT U.UI_STNG_VL FROM web_ui_stng_info U WHERE U.UI_STNG_CD='DASHBOARD_OFFLINE_MIN' AND U.USE_YN='Y') AS UNSIGNED),5) MINUTE) OR C.STTS_CD='OFFLINE')
     </sql>
 
     <sql id="performanceJoins">
-          LEFT JOIN eqpmnt_perf_stts CPU ON CPU.EQPMNT_SN = E.EQPMNT_SN AND CPU.PERF_IDCT_CD = 'CPU_USGRT'
-          LEFT JOIN eqpmnt_perf_stts MMRY ON MMRY.EQPMNT_SN = E.EQPMNT_SN AND MMRY.PERF_IDCT_CD = 'MMRY_USGRT'
-          LEFT JOIN eqpmnt_perf_stts IFU ON IFU.EQPMNT_SN = E.EQPMNT_SN AND IFU.PERF_IDCT_CD = 'IF_USE_NOCS'
-          LEFT JOIN eqpmnt_perf_stts IFT ON IFT.EQPMNT_SN = E.EQPMNT_SN AND IFT.PERF_IDCT_CD = 'IF_TOTAL_NOCS'
+          LEFT JOIN web_eqpmnt_perf_stts CPU ON CPU.EQPMNT_SN = E.EQPMNT_SN AND CPU.PERF_IDCT_CD = 'CPU_USGRT'
+          LEFT JOIN web_eqpmnt_perf_stts MMRY ON MMRY.EQPMNT_SN = E.EQPMNT_SN AND MMRY.PERF_IDCT_CD = 'MMRY_USGRT'
+          LEFT JOIN web_eqpmnt_perf_stts IFU ON IFU.EQPMNT_SN = E.EQPMNT_SN AND IFU.PERF_IDCT_CD = 'IF_USE_NOCS'
+          LEFT JOIN web_eqpmnt_perf_stts IFT ON IFT.EQPMNT_SN = E.EQPMNT_SN AND IFT.PERF_IDCT_CD = 'IF_TOTAL_NOCS'
     </sql>
 
     <sql id="pidsRelationJoin">
@@ -114,8 +114,8 @@
                 SELECT R.EQPMNT_SN,
                        GROUP_CONCAT(CAST(R.LSE_EQPMNT_SN AS CHAR) ORDER BY R.LSE_EQPMNT_SN SEPARATOR ',') AS LSE_EQPMNT_SNS_CSV,
                        GROUP_CONCAT(LSE.EQPMNT_NM ORDER BY LSE.EQPMNT_NM SEPARATOR ', ') AS LSE_EQPMNT_NMS
-                  FROM pids_eqpmnt_lse_rel R
-                  JOIN eqpmnt_info LSE ON LSE.EQPMNT_SN = R.LSE_EQPMNT_SN AND LSE.USE_YN = 'Y'
+                  FROM web_pids_eqpmnt_lse_rel R
+                  JOIN web_eqpmnt_info LSE ON LSE.EQPMNT_SN = R.LSE_EQPMNT_SN AND LSE.USE_YN = 'Y'
                  GROUP BY R.EQPMNT_SN
           ) PR ON PR.EQPMNT_SN = E.EQPMNT_SN
     </sql>
@@ -136,9 +136,9 @@
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
-          FROM link_sys_info S
-          LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = S.LINK_SYS_CD AND E.USE_YN = 'Y'
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          FROM web_link_sys_info S
+          LEFT JOIN web_eqpmnt_info E ON E.LINK_SYS_CD = S.LINK_SYS_CD AND E.USE_YN = 'Y'
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE S.USE_YN = 'Y'
          GROUP BY S.LINK_SYS_CD, S.LINK_SYS_NM
@@ -161,10 +161,10 @@
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
-          FROM stn_info S
-          LEFT JOIN eqpmnt_info E ON E.STN_CD = S.STN_CD AND E.USE_YN = 'Y'
+          FROM com_stn_info S
+          LEFT JOIN web_eqpmnt_info E ON E.STN_CD = S.STN_CD AND E.USE_YN = 'Y'
           <if test="linkSysCd != null and linkSysCd != ''">AND E.LINK_SYS_CD = #{linkSysCd}</if>
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE S.USE_YN = 'Y'
          GROUP BY S.STN_CD, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN
@@ -185,20 +185,20 @@
                PR.LSE_EQPMNT_SNS_CSV, PR.LSE_EQPMNT_NMS,
                C.PING_RSPNS_MS, <include refid="effectiveStatus"/> AS STTS_CD,
                COALESCE((SELECT CC.COM_CD_NM
-                           FROM com_cd_info CC
+                           FROM web_com_cd_info CC
                           WHERE CC.COM_CD_GROUP_ID = 'SYS_STTS'
                             AND CC.COM_CD = <include refid="effectiveStatus"/>
                             AND CC.COM_CD_USE_YN = 'Y'
                           LIMIT 1), <include refid="effectiveStatus"/>) AS STTS_NM,
                C.STTS_EXPLN, C.LAST_RSPNS_DT, C.CLCT_DT, E.USE_YN, E.REG_DT, E.MDFCN_DT
-          FROM eqpmnt_info E
-          JOIN link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
-          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
-          LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          FROM web_eqpmnt_info E
+          JOIN web_link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
+          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
+          LEFT JOIN web_eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
-          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
-          LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
           <include refid="pidsRelationJoin"/>
          WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
@@ -230,10 +230,10 @@
                ROUND(AVG(MMRY.MSRMT_VL), 1) AS MMRY_USGRT,
                CAST(COALESCE(SUM(IFU.MSRMT_VL), 0) AS UNSIGNED) AS IF_USE_NOCS,
                CAST(COALESCE(SUM(IFT.MSRMT_VL), 0) AS UNSIGNED) AS IF_TOTAL_NOCS
-          FROM eqpmnt_info E
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          FROM web_eqpmnt_info E
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
-          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
          WHERE E.USE_YN = 'Y' AND E.LINK_SYS_CD = #{linkSysCd}
         <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
@@ -267,9 +267,9 @@
                  WHEN SUM(CASE WHEN <include refid="effectiveStatus"/> = 'NORMAL' THEN 1 ELSE 0 END) &gt; 0 THEN 'NORMAL'
                  ELSE 'UNKNOWN'
                END AS STTS_CD
-          FROM link_sys_info L
-          LEFT JOIN eqpmnt_info E ON E.LINK_SYS_CD = L.LINK_SYS_CD AND E.STN_CD = #{_parameter} AND E.USE_YN = 'Y'
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          FROM web_link_sys_info L
+          LEFT JOIN web_eqpmnt_info E ON E.LINK_SYS_CD = L.LINK_SYS_CD AND E.STN_CD = #{_parameter} AND E.USE_YN = 'Y'
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
          WHERE L.USE_YN = 'Y'
          GROUP BY L.LINK_SYS_CD, L.LINK_SYS_NM
@@ -287,14 +287,14 @@
                PR.LSE_EQPMNT_SNS_CSV, PR.LSE_EQPMNT_NMS,
                C.CNTN_YN, C.PING_RSPNS_MS,
                <include refid="effectiveStatus"/> AS STTS_CD, C.STTS_EXPLN, C.LAST_RSPNS_DT, C.CLCT_DT
-          FROM eqpmnt_info E
-          JOIN link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
-          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
-          LEFT JOIN eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
-          LEFT JOIN eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
+          FROM web_eqpmnt_info E
+          JOIN web_link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
+          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
+          LEFT JOIN web_eqpmnt_clsf_info F ON F.EQPMNT_CLSF_CD = E.EQPMNT_CLSF_CD
+          LEFT JOIN web_eqpmnt_stts C ON C.EQPMNT_SN = E.EQPMNT_SN
           LEFT JOIN vw_eqpmnt_main_stts ES ON ES.EQPMNT_SN = E.EQPMNT_SN
-          LEFT JOIN cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
-          LEFT JOIN pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_cctv_info V ON V.EQPMNT_SN = E.EQPMNT_SN
+          LEFT JOIN web_pbx_info P ON P.EQPMNT_SN = E.EQPMNT_SN
           <include refid="performanceJoins"/>
           <include refid="pidsRelationJoin"/>
          WHERE E.EQPMNT_SN = #{_parameter} AND E.USE_YN = 'Y'
@@ -304,8 +304,8 @@
         SELECT E.EQPMNT_SN, E.EQPMNT_MNG_NO, E.EQPMNT_NM, E.EQPMNT_SE_CD,
                E.LINK_SYS_CD, E.STN_CD, S.STN_NM, E.INSTL_PLC_NM, E.EQPMNT_IP_ADDR,
                E.EQPMNT_EXPLN, E.USE_YN
-          FROM eqpmnt_info E
-          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+          FROM web_eqpmnt_info E
+          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
          WHERE E.USE_YN = 'Y'
            AND E.LINK_SYS_CD = 'EMS_PIDS'
            AND (UPPER(E.EQPMNT_SE_CD) = 'LSE' OR UPPER(E.EQPMNT_NM) LIKE '%LSE%')
@@ -317,9 +317,9 @@
         SELECT R.FROM_EQPMNT_SN, F.EQPMNT_NM AS FROM_EQPMNT_NM,
                R.TO_EQPMNT_SN, T.EQPMNT_NM AS TO_EQPMNT_NM,
                R.LINK_TYPE_CD, R.LINK_NM
-          FROM eqpmnt_lnk_rel R
-          JOIN eqpmnt_info F ON F.EQPMNT_SN = R.FROM_EQPMNT_SN AND F.USE_YN = 'Y'
-          JOIN eqpmnt_info T ON T.EQPMNT_SN = R.TO_EQPMNT_SN AND T.USE_YN = 'Y'
+          FROM web_eqpmnt_lnk_rel R
+          JOIN web_eqpmnt_info F ON F.EQPMNT_SN = R.FROM_EQPMNT_SN AND F.USE_YN = 'Y'
+          JOIN web_eqpmnt_info T ON T.EQPMNT_SN = R.TO_EQPMNT_SN AND T.USE_YN = 'Y'
          WHERE R.USE_YN = 'Y'
            AND F.LINK_SYS_CD = #{linkSysCd}
            AND T.LINK_SYS_CD = #{linkSysCd}
@@ -332,9 +332,9 @@
         SELECT H.ENEX_EVNT_SN, H.EQPMNT_SN, E.EQPMNT_NM, S.STN_NM,
                H.EVNT_CD, H.EVNT_NM, DATE_FORMAT(H.ENEX_DT, '%Y-%m-%d %H:%i:%s') AS ENEX_DT,
                H.ENEX_RSLT_CD, H.APRV_YN, H.EVNT_CN
-          FROM enex_evnt_hstry H
-          JOIN eqpmnt_info E ON E.EQPMNT_SN = H.EQPMNT_SN AND E.USE_YN = 'Y'
-          LEFT JOIN stn_info S ON S.STN_CD = E.STN_CD
+          FROM web_enex_evnt_hstry H
+          JOIN web_eqpmnt_info E ON E.EQPMNT_SN = H.EQPMNT_SN AND E.USE_YN = 'Y'
+          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
          WHERE E.LINK_SYS_CD = 'SCADA_SEC'
         <if test="stnCd != null and stnCd != ''">AND E.STN_CD = #{stnCd}</if>
          ORDER BY H.ENEX_DT DESC, H.ENEX_EVNT_SN DESC
@@ -346,7 +346,7 @@
         SELECT EQPMNT_CLSF_CD AS eqpmntClsfCd,
                EQPMNT_CLSF_NM AS eqpmntClsfNm,
                EQPM_NM AS eqpmNm
-          FROM eqpmnt_clsf_info
+          FROM web_eqpmnt_clsf_info
          WHERE LINK_SYS_CD = #{_parameter}
            AND USE_YN = 'Y'
          ORDER BY COALESCE(EQPM_NM, ''), EQPMNT_CLSF_NM, EQPMNT_CLSF_CD
@@ -354,20 +354,20 @@
 
     <select id="countEquipmentMngNo" parameterType="equipmentVO" resultType="int">
         SELECT COUNT(*)
-          FROM eqpmnt_info
+          FROM web_eqpmnt_info
          WHERE EQPMNT_MNG_NO = #{eqpmntMngNo}
         <if test="eqpmntSn != null">AND EQPMNT_SN != #{eqpmntSn}</if>
     </select>
 
     <select id="countEquipmentClassification" parameterType="equipmentVO" resultType="int">
         SELECT COUNT(*)
-          FROM eqpmnt_clsf_info
+          FROM web_eqpmnt_clsf_info
          WHERE EQPMNT_CLSF_CD = #{eqpmntClsfCd}
            AND LINK_SYS_CD = #{linkSysCd}
            AND USE_YN = 'Y'
     </select>
     <insert id="insertEquipment" parameterType="equipmentVO" useGeneratedKeys="true" keyProperty="eqpmntSn" keyColumn="EQPMNT_SN">
-        INSERT INTO eqpmnt_info
+        INSERT INTO web_eqpmnt_info
         (EQPMNT_MNG_NO, EQPMNT_NM, EQPMNT_SE_CD, EQPMNT_CLSF_CD, LINK_SYS_CD,
          EMS_ID, STN_CD, INSTL_PLC_NM, EQPMNT_IP_ADDR, MAC_ADDR, EQPMNT_MDL_NM,
          EQPMNT_EXPLN, PING_MNTR_YN, PING_CYCLE_SEC, USE_YN, RGTR_ID)
@@ -378,7 +378,7 @@
     </insert>
 
     <update id="updateEquipment" parameterType="equipmentVO">
-        UPDATE eqpmnt_info
+        UPDATE web_eqpmnt_info
            SET EQPMNT_MNG_NO = #{eqpmntMngNo}, EQPMNT_NM = #{eqpmntNm},
                EQPMNT_SE_CD = #{eqpmntSeCd}, EQPMNT_CLSF_CD = #{eqpmntClsfCd},
                LINK_SYS_CD = #{linkSysCd}, EMS_ID = #{emsId}, STN_CD = #{stnCd},
@@ -390,7 +390,7 @@
     </update>
 
     <insert id="upsertCctvInfo" parameterType="equipmentVO">
-        INSERT INTO cctv_info
+        INSERT INTO web_cctv_info
         (EQPMNT_SN, VMS_NM, STRG_MTH_NM, CCTV_NM, CNSMR_NM, CCTV_MDL_NM,
          FRMWR_VER_NO, CCTV_IP_ADDR, CCTV_MAC_ADDR, ACNT_NM, VMS_SRVR_IP_ADDR,
          FLR_NM, CMRA_QTY, REG_DT, MDFCN_DT)
@@ -415,7 +415,7 @@
     </insert>
 
     <update id="updateCctvEquipmentMirror" parameterType="equipmentVO">
-        UPDATE eqpmnt_info
+        UPDATE web_eqpmnt_info
            SET EQPMNT_NM = #{cctvNm},
                EQPMNT_SE_CD = 'CCTV',
                EQPMNT_CLSF_CD = NULL,
@@ -430,18 +430,18 @@
     </update>
 
     <update id="disableEquipment" parameterType="equipmentVO">
-        UPDATE eqpmnt_info SET USE_YN = 'N', MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+        UPDATE web_eqpmnt_info SET USE_YN = 'N', MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
          WHERE EQPMNT_SN = #{eqpmntSn} AND USE_YN = 'Y'
     </update>
 
     <delete id="deletePidsLseRelations" parameterType="long">
-        DELETE FROM pids_eqpmnt_lse_rel WHERE EQPMNT_SN = #{_parameter}
+        DELETE FROM web_pids_eqpmnt_lse_rel WHERE EQPMNT_SN = #{_parameter}
     </delete>
 
     <insert id="insertPidsLseRelation" parameterType="equipmentVO">
-        INSERT INTO pids_eqpmnt_lse_rel (EQPMNT_SN, LSE_EQPMNT_SN, REG_DT)
+        INSERT INTO web_pids_eqpmnt_lse_rel (EQPMNT_SN, LSE_EQPMNT_SN, REG_DT)
         SELECT #{eqpmntSn}, #{lseEqpmntSn}, NOW()
-          FROM eqpmnt_info P, eqpmnt_info L
+          FROM web_eqpmnt_info P, web_eqpmnt_info L
          WHERE P.EQPMNT_SN = #{eqpmntSn}
            AND L.EQPMNT_SN = #{lseEqpmntSn}
            AND P.LINK_SYS_CD = 'EMS_PIDS'
