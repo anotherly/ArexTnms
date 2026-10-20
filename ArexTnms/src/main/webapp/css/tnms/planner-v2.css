@@ -173,3 +173,13 @@
 .subarea-card em,
 .cctv-health-card .health-list span,
 .cctv-health-card .health-list em{font-size:10px!important;}
+
+/* 2026-10-16: 시스템 단위 조회 권한과 화면 표출 권한 */
+.auth-system-section{margin-top:20px;padding-top:14px;border-top:1px solid #dce6f0}
+.auth-system-section .planner-card-head{padding:0 0 12px}
+.auth-system-table{min-width:650px;table-layout:fixed}
+.auth-system-table th:first-child,.auth-system-table td:first-child{text-align:left;width:150px}
+.auth-system-table th:not(:first-child),.auth-system-table td:not(:first-child){text-align:center}
+.auth-system-table input{width:17px;height:17px;accent-color:#1769df}
+.auth-system-help{margin:9px 0 0;color:#6d7f94;font-size:11px;line-height:1.55}
+.permission-table th:first-child{min-width:145px}

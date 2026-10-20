@@ -11,7 +11,7 @@ if (commonPageTitle == null || commonPageTitle.length() == 0) commonPageTitle = 
 <link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/modern-ui.css?v=20260918.6" />
 
 <% if (!"settings".equals((String) request.getAttribute("pageKey"))) { %>
-<link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/planner-v2.css?v=20260918.5" />
+<link rel="stylesheet" href="<%=request.getContextPath()%>/css/tnms/planner-v2.css?v=20261016.1" />
 <% } %>
 
 <%

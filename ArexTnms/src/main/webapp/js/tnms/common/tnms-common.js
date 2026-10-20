@@ -5,6 +5,7 @@
   global.CSRF_TOKEN = '';
   global.PERMISSIONS = {};
   global.RUNTIME_SETTINGS = {};
+  global.ALLOWED_SYSTEM_CODES = [];
   global.CURRENT_USER = {userNm: '사용자'};
 
   global.escapeHtml = function (value) {
@@ -17,7 +18,7 @@
     if (screen === 'dashboard') return true;
     if (screen === 'applications') screen = 'users';
     const permission = global.PERMISSIONS[screen];
-    return !!permission && permission[property || 'listAuthrtYn'] === 'Y';
+    return !!permission && permission.displayYn === 'Y' && permission[property || 'listAuthrtYn'] === 'Y';
   };
 
   global.getUiSetting = function (code, fallback) {
@@ -87,6 +88,7 @@
     const data = await global.api('/auth/myPermissions.ajax');
     global.CURRENT_USER = data.user || global.CURRENT_USER;
     global.PERMISSIONS = data.permissions || {};
+    global.ALLOWED_SYSTEM_CODES = data.allowedSystemCodes || [];
     global.RUNTIME_SETTINGS = data.uiSettings || {};
     global.CSRF_TOKEN = data.csrfToken || '';
     const userName = document.getElementById('headerUserName');

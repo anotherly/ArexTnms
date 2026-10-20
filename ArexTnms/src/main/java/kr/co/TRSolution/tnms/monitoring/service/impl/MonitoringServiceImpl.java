@@ -1,5 +1,7 @@
 package kr.co.TRSolution.tnms.monitoring.service.impl;
 
+import kr.co.TRSolution.tnms.common.security.SystemDataScope;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -97,6 +99,9 @@ public class MonitoringServiceImpl implements MonitoringService {
             syncCctvMasterFields(equipmentVO);
         }
         validateEquipment(equipmentVO);
+        SystemDataScope.requireSystem(equipmentVO.getLinkSysCd());
+        if (equipmentVO.getEqpmntSn() != null && monitoringMapper.selectEquipment(equipmentVO.getEqpmntSn()) == null)
+            throw new SecurityException("수정할 장비에 대한 데이터 접근 권한이 없습니다.");
         if (equipmentVO.getEqpmntSn() == null) {
             equipmentVO.setRgtrId(actorId);
             if (monitoringMapper.insertEquipment(equipmentVO) != 1) throw new IllegalStateException("장비 등록에 실패했습니다.");
@@ -119,6 +124,8 @@ public class MonitoringServiceImpl implements MonitoringService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteEquipment(Long eqpmntSn, String actorId) {
         if (eqpmntSn == null) throw new IllegalArgumentException("삭제할 장비를 선택해 주세요.");
+        if (monitoringMapper.selectEquipment(eqpmntSn) == null)
+            throw new SecurityException("삭제할 장비에 대한 데이터 접근 권한이 없습니다.");
         EquipmentVO equipment = new EquipmentVO();
         equipment.setEqpmntSn(eqpmntSn);
         equipment.setMdfrId(actorId);

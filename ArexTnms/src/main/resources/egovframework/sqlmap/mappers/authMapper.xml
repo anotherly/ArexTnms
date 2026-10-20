@@ -18,6 +18,7 @@
         <result property="menuUrlAddr" column="MENU_URL_ADDR"/>
         <result property="screenKey" column="SCREEN_KEY"/>
         <result property="menuSeq" column="MENU_SEQ"/>
+        <result property="displayYn" column="DISPLAY_YN"/>
         <result property="listAuthrtYn" column="LIST_AUTHRT_YN"/>
         <result property="dtlAuthrtYn" column="DTL_AUTHRT_YN"/>
         <result property="regAuthrtYn" column="REG_AUTHRT_YN"/>
@@ -63,6 +64,8 @@
     <select id="selectMenuAuthList" parameterType="string" resultMap="menuAuthMap">
         SELECT #{_parameter} AS AUTHRT_CD, M.MENU_SN, M.UP_MENU_SN, M.MENU_NM, M.MENU_URL_ADDR,
                SUBSTRING_INDEX(M.MENU_URL_ADDR, 'screen=', -1) AS SCREEN_KEY, M.MENU_SEQ,
+               CASE WHEN COALESCE(R.LIST_AUTHRT_YN, 'N') = 'Y'
+                    THEN COALESCE(R.DISPLAY_YN, 'Y') ELSE 'N' END AS DISPLAY_YN,
                COALESCE(R.LIST_AUTHRT_YN, 'N') AS LIST_AUTHRT_YN,
                COALESCE(R.DTL_AUTHRT_YN, 'N') AS DTL_AUTHRT_YN,
                COALESCE(R.REG_AUTHRT_YN, 'N') AS REG_AUTHRT_YN,
@@ -78,8 +81,28 @@
     </select>
     <insert id="insertMenuAuth" parameterType="menuAuthVO">
         INSERT INTO authrt_menu_rel
-        (AUTHRT_CD, MENU_SN, LIST_AUTHRT_YN, DTL_AUTHRT_YN, REG_AUTHRT_YN, MDFCN_AUTHRT_YN, DEL_AUTHRT_YN, CTRL_AUTHRT_YN)
+        (AUTHRT_CD, MENU_SN, DISPLAY_YN, LIST_AUTHRT_YN, DTL_AUTHRT_YN, REG_AUTHRT_YN, MDFCN_AUTHRT_YN, DEL_AUTHRT_YN, CTRL_AUTHRT_YN)
         VALUES
-        (#{authrtCd}, #{menuSn}, #{listAuthrtYn}, #{dtlAuthrtYn}, #{regAuthrtYn}, #{mdfcnAuthrtYn}, #{delAuthrtYn}, #{ctrlAuthrtYn})
+        (#{authrtCd}, #{menuSn}, #{displayYn}, #{listAuthrtYn}, #{dtlAuthrtYn}, #{regAuthrtYn}, #{mdfcnAuthrtYn}, #{delAuthrtYn}, #{ctrlAuthrtYn})
+    </insert>
+    <resultMap id="systemAuthMap" type="kr.co.TRSolution.tnms.auth.vo.SystemAuthVO">
+        <id property="linkSysCd" column="LINK_SYS_CD"/>
+        <result property="linkSysNm" column="LINK_SYS_NM"/>
+        <result property="readAuthrtYn" column="READ_AUTHRT_YN"/>
+    </resultMap>
+    <select id="selectSystemAuthList" parameterType="string" resultMap="systemAuthMap">
+        SELECT S.LINK_SYS_CD, S.LINK_SYS_NM,
+               COALESCE(R.READ_AUTHRT_YN, 'N') AS READ_AUTHRT_YN
+          FROM link_sys_info S
+          LEFT JOIN authrt_sys_rel R ON R.LINK_SYS_CD = S.LINK_SYS_CD AND R.AUTHRT_CD = #{_parameter}
+         WHERE S.LINK_SYS_CD IN ('EMS_TX','SCADA_SEC','VMS','PBX','EMS_PIDS')
+         ORDER BY FIELD(S.LINK_SYS_CD, 'EMS_TX','SCADA_SEC','VMS','PBX','EMS_PIDS')
+    </select>
+    <delete id="deleteSystemAuths" parameterType="string">
+        DELETE FROM authrt_sys_rel WHERE AUTHRT_CD = #{_parameter}
+    </delete>
+    <insert id="insertSystemAuth" parameterType="map">
+        INSERT INTO authrt_sys_rel (AUTHRT_CD, LINK_SYS_CD, READ_AUTHRT_YN)
+        VALUES (#{authrtCd}, #{linkSysCd}, 'Y')
     </insert>
 </mapper>

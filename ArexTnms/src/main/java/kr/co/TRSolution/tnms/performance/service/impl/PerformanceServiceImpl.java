@@ -1,5 +1,7 @@
 package kr.co.TRSolution.tnms.performance.service.impl;
 
+import kr.co.TRSolution.tnms.common.security.SystemDataScope;
+
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -66,6 +68,8 @@ public class PerformanceServiceImpl implements PerformanceService {
     public void saveCycle(Map<String, Object> params, String actorId) {
         Long sn = longValue(params.get("clctCycleSn"));
         if (sn == null) throw new IllegalArgumentException("수정할 수집주기를 선택해 주세요.");
+        if (performanceMapper.selectCollectionCycle(sn) == null)
+            throw new SecurityException("수집주기 수정 권한이 없는 시스템입니다.");
         String perfUse = "N".equalsIgnoreCase(value(params.get("perfClctUseYn"))) ? "N" : "Y";
         String pingUse = "N".equalsIgnoreCase(value(params.get("pingMntrUseYn"))) ? "N" : "Y";
         int cycle = intValue(params.get("clctCycleSec"), 300);
@@ -101,6 +105,12 @@ public class PerformanceServiceImpl implements PerformanceService {
     public Long saveThreshold(Map<String, Object> params, String actorId) {
         if (blank(params.get("perfIdctCd"))) throw new IllegalArgumentException("성능지표가 필요합니다.");
         Long sn = longValue(params.get("thrshldSn"));
+        if (SystemDataScope.isLimited()) {
+            String linkSysCd = value(params.get("linkSysCd"));
+            SystemDataScope.requireSystem(linkSysCd);
+            if (sn != null && performanceMapper.selectThreshold(sn) == null)
+                throw new SecurityException("수정할 임계치의 시스템 조회 권한이 없습니다.");
+        }
         BigDecimal info = decimal(params.get("infoVl"));
         BigDecimal warning = decimal(params.get("warningVl"));
         BigDecimal low = decimal(params.get("lowVl"));

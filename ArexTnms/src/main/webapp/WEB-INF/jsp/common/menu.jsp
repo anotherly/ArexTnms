@@ -9,7 +9,11 @@ private boolean canList(Map<String, MenuAuthVO> permissions, String key) {
     if ("dashboard".equals(key)) return true;
     if (permissions == null) return true;
     MenuAuthVO permission = permissions.get(key);
-    return permission != null && "Y".equals(permission.getListAuthrtYn());
+    return permission != null && "Y".equals(permission.getListAuthrtYn()) && "Y".equals(permission.getDisplayYn());
+}
+private boolean anyVisible(Map<String, MenuAuthVO> permissions, Set<String> keys) {
+    for (String key : keys) if (canList(permissions, key)) return true;
+    return false;
 }
 private String itemClass(Map<String, MenuAuthVO> permissions, String activeKey, String key, String type) {
     return "nav-item " + type + (key.equals(activeKey) ? " active" : "")
@@ -48,58 +52,104 @@ Set<String> settingKeys = new HashSet<String>(Arrays.asList("auth", "settings"))
       <i class="dot"><svg viewBox="0 0 24 24"><%=icon("dashboard")%></svg></i><span>대시보드</span>
     </a>
 
+    <% if (anyVisible(menuPermissions, facilityKeys)) { %>
     <section class="nav-section <%=facilityKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=facilityKeys.contains(menuPageKey)%>">
         <i class="dot"><svg viewBox="0 0 24 24"><%=icon("systems")%></svg></i><span>설비관리</span><b class="nav-chevron"></b>
       </button>
       <div class="nav-children">
+        <% if (canList(menuPermissions, "systems")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "systems", "nav-child")%>" href="<%=request.getContextPath()%>/facility/transmission.do?screen=systems" data-key="systems"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("systems")%></svg></i><span>전송설비</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "equipment")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "equipment", "nav-child")%>" href="<%=request.getContextPath()%>/facility/pids.do?screen=equipment" data-key="equipment"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("equipment")%></svg></i><span>행선안내설비</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "scada")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "scada", "nav-child")%>" href="<%=request.getContextPath()%>/facility/scada.do?screen=scada" data-key="scada"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("scada")%></svg></i><span>SCADA 출입보안설비</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "switch")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "switch", "nav-child")%>" href="<%=request.getContextPath()%>/facility/pbx.do?screen=switch" data-key="switch"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("switch")%></svg></i><span>전화교환설비</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "cctv")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "cctv", "nav-child")%>" href="<%=request.getContextPath()%>/facility/cctv.do?screen=cctv" data-key="cctv"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("cctv")%></svg></i><span>영상감시설비(CCTV)</span></a>
+        <% } %>
       </div>
     </section>
+    <% } %>
 
+    <% if (anyVisible(menuPermissions, faultKeys)) { %>
     <section class="nav-section <%=faultKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=faultKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faults")%></svg></i><span>장애관리</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
+        <% if (canList(menuPermissions, "faults")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "faults", "nav-child")%>" href="<%=request.getContextPath()%>/fault/realtime.do?screen=faults" data-key="faults"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faults")%></svg></i><span>실시간 장애</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "faultHistory")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "faultHistory", "nav-child")%>" href="<%=request.getContextPath()%>/fault/history.do?screen=faultHistory" data-key="faultHistory"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("faultHistory")%></svg></i><span>장애이력·조치</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "exceptions")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "exceptions", "nav-child")%>" href="<%=request.getContextPath()%>/fault/exceptions.do?screen=exceptions" data-key="exceptions"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("exceptions")%></svg></i><span>장애 예외설정</span></a>
+        <% } %>
       </div>
     </section>
+    <% } %>
 
+    <% if (anyVisible(menuPermissions, performanceKeys)) { %>
     <section class="nav-section <%=performanceKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=performanceKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("performance")%></svg></i><span>성능관리</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
+        <% if (canList(menuPermissions, "performance")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "performance", "nav-child")%>" href="<%=request.getContextPath()%>/performance/overview.do?screen=performance" data-key="performance"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("performance")%></svg></i><span>성능현황</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "cycle")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "cycle", "nav-child")%>" href="<%=request.getContextPath()%>/performance/cycle.do?screen=cycle" data-key="cycle"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("cycle")%></svg></i><span>수집주기 관리</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "threshold")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "threshold", "nav-child")%>" href="<%=request.getContextPath()%>/performance/threshold.do?screen=threshold" data-key="threshold"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("threshold")%></svg></i><span>임계치 관리</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "raw")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "raw", "nav-child")%>" href="<%=request.getContextPath()%>/performance/raw.do?screen=raw" data-key="raw"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("raw")%></svg></i><span>RAW 데이터 조회</span></a>
+        <% } %>
       </div>
     </section>
+    <% } %>
 
+    <% if (canList(menuPermissions, "reports")) { %>
     <section class="nav-section <%="reports".equals(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%="reports".equals(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("reports")%></svg></i><span>보고서</span><b class="nav-chevron"></b></button>
-      <div class="nav-children"><a class="<%=itemClass(menuPermissions, menuPageKey, "reports", "nav-child")%>" href="<%=request.getContextPath()%>/report/fault-performance.do?screen=reports" data-key="reports"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("reports")%></svg></i><span>장애·성능 보고서</span></a></div>
+      <div class="nav-children"><% if (canList(menuPermissions, "reports")) { %>
+        <a class="<%=itemClass(menuPermissions, menuPageKey, "reports", "nav-child")%>" href="<%=request.getContextPath()%>/report/fault-performance.do?screen=reports" data-key="reports"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("reports")%></svg></i><span>장애·성능 보고서</span></a>
+        <% } %></div>
     </section>
+    <% } %>
 
+    <% if (anyVisible(menuPermissions, operationKeys)) { %>
     <section class="nav-section <%=operationKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=operationKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("users")%></svg></i><span>운영관리</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
+        <% if (canList(menuPermissions, "users")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "users", "nav-child")%>" href="<%=request.getContextPath()%>/user/list.do?screen=users" data-key="users"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("users")%></svg></i><span>계정관리</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "logs")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "logs", "nav-child")%>" href="<%=request.getContextPath()%>/audit/job-log.do?screen=logs" data-key="logs"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("logs")%></svg></i><span>작업로그 조회</span></a>
+        <% } %>
       </div>
     </section>
+    <% } %>
 
+    <% if (anyVisible(menuPermissions, settingKeys)) { %>
     <section class="nav-section <%=settingKeys.contains(menuPageKey) ? "open" : ""%>">
       <button class="nav-parent" type="button" aria-expanded="<%=settingKeys.contains(menuPageKey)%>"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>설정</span><b class="nav-chevron"></b></button>
       <div class="nav-children">
+        <% if (canList(menuPermissions, "auth")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "auth", "nav-child")%>" href="<%=request.getContextPath()%>/auth/list.do?screen=auth" data-key="auth"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("auth")%></svg></i><span>권한관리</span></a>
+        <% } %>
+        <% if (canList(menuPermissions, "settings")) { %>
         <a class="<%=itemClass(menuPermissions, menuPageKey, "settings", "nav-child")%>" href="<%=request.getContextPath()%>/setting/common-ui.do?screen=settings" data-key="settings"><i class="dot"><svg viewBox="0 0 24 24"><%=icon("settings")%></svg></i><span>공통코드·UI 설정</span></a>
+        <% } %>
       </div>
     </section>
+    <% } %>
   </nav>
   <div class="side-footer"><button class="side-collapse" type="button">← 메뉴 접기</button></div>
 </aside>

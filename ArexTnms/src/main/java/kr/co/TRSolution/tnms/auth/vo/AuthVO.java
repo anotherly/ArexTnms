@@ -12,7 +12,10 @@ public class AuthVO extends BaseVO {
     private String authrtExpln;
     private Integer userNocs;
     private List<MenuAuthVO> menuAuthList;
+    private List<SystemAuthVO> systemAuthList;
 
+    public List<SystemAuthVO> getSystemAuthList() { return systemAuthList; }
+    public void setSystemAuthList(List<SystemAuthVO> list) { this.systemAuthList = list; }
     public String getAuthrtCd() { return authrtCd; }
     public void setAuthrtCd(String authrtCd) { this.authrtCd = authrtCd; }
     public String getAuthrtNm() { return authrtNm; }

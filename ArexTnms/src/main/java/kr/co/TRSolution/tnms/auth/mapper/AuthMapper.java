@@ -5,6 +5,7 @@ import java.util.List;
 import egovframework.rte.psl.dataaccess.mapper.Mapper;
 import kr.co.TRSolution.tnms.auth.vo.AuthVO;
 import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
+import kr.co.TRSolution.tnms.auth.vo.SystemAuthVO;
 
 @Mapper("authMapper")
 public interface AuthMapper {
@@ -19,4 +20,7 @@ public interface AuthMapper {
     int disableAuth(AuthVO authVO);
     List<MenuAuthVO> selectMenuAuthList(String authrtCd);
     int insertMenuAuth(MenuAuthVO menuAuthVO);
+    List<SystemAuthVO> selectSystemAuthList(String authrtCd);
+    int deleteSystemAuths(String authrtCd);
+    int insertSystemAuth(java.util.Map<String, Object> params);
 }

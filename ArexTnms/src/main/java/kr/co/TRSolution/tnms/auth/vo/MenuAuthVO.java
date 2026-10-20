@@ -12,6 +12,7 @@ public class MenuAuthVO extends BaseVO {
     private String menuUrlAddr;
     private String screenKey;
     private Integer menuSeq;
+    private String displayYn;
     private String listAuthrtYn;
     private String dtlAuthrtYn;
     private String regAuthrtYn;
@@ -33,6 +34,8 @@ public class MenuAuthVO extends BaseVO {
     public void setScreenKey(String screenKey) { this.screenKey = screenKey; }
     public Integer getMenuSeq() { return menuSeq; }
     public void setMenuSeq(Integer menuSeq) { this.menuSeq = menuSeq; }
+    public String getDisplayYn() { return displayYn; }
+    public void setDisplayYn(String value) { this.displayYn = value; }
     public String getListAuthrtYn() { return listAuthrtYn; }
     public void setListAuthrtYn(String value) { this.listAuthrtYn = value; }
     public String getDtlAuthrtYn() { return dtlAuthrtYn; }
@@ -47,6 +50,7 @@ public class MenuAuthVO extends BaseVO {
     public void setCtrlAuthrtYn(String value) { this.ctrlAuthrtYn = value; }
 
     public boolean permits(String action) {
+        if (!"Y".equals(displayYn)) return false;
         if ("LIST".equals(action)) return "Y".equals(listAuthrtYn);
         if ("DTL".equals(action)) return "Y".equals(dtlAuthrtYn);
         if ("REG".equals(action)) return "Y".equals(regAuthrtYn);

@@ -1,5 +1,7 @@
 package kr.co.TRSolution.tnms.fault.service.impl;
 
+import kr.co.TRSolution.tnms.common.security.SystemDataScope;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +51,7 @@ public class FaultServiceImpl implements FaultService {
     public void saveFault(Map<String, Object> params, String actorId, String actorName) {
         String no = value(params.get("dsbltyNo"));
         if (blank(no)) throw new IllegalArgumentException("장애를 선택해 주세요.");
+        requireFaultAccess(no);
         String judgment = value(params.get("dsbltyJgmtCd"));
         if (!blank(judgment) && !("SERVICE".equals(judgment) || "STATUS".equals(judgment) || "INFO".equals(judgment))) {
             throw new IllegalArgumentException("장애 판단값이 올바르지 않습니다.");
@@ -90,6 +93,7 @@ public class FaultServiceImpl implements FaultService {
         }
         String judgmentNm = "SERVICE".equals(judgment) ? "서비스장애" : "STATUS".equals(judgment) ? "상태장애" : "정보";
         for (String no : split(dsbltyNos)) {
+            requireFaultAccess(no);
             Map<String, Object> p = new HashMap<String, Object>();
             p.put("dsbltyNo", no); p.put("dsbltyJgmtCd", judgment); p.put("lastMdfrId", actorId);
             faultMapper.updateFault(p);
@@ -101,6 +105,7 @@ public class FaultServiceImpl implements FaultService {
     @Transactional(rollbackFor = Exception.class)
     public void transfer(String dsbltyNos, String actorId, String actorName) {
         for (String no : split(dsbltyNos)) {
+            requireFaultAccess(no);
             Map<String, Object> p = new HashMap<String, Object>();
             p.put("dsbltyNo", no); p.put("prcsSttsCd", "CONFIRMED"); p.put("idntyUserId", actorId);
             faultMapper.updateFaultStatus(p);
@@ -113,6 +118,7 @@ public class FaultServiceImpl implements FaultService {
     public void complete(Map<String, Object> params, String actorId, String actorName) {
         String no = value(params.get("dsbltyNo"));
         if (blank(no)) throw new IllegalArgumentException("장애를 선택해 주세요.");
+        requireFaultAccess(no);
         params.put("prcsSttsCd", "COMPLETED"); params.put("idntyUserId", actorId); params.put("completeYn", "Y");
         faultMapper.updateFaultStatus(params);
         insertAction(no, "COMPLETE", valueOr(params.get("actionCn"), "완료조치 등록"), params, actorId, actorName);
@@ -167,6 +173,7 @@ public class FaultServiceImpl implements FaultService {
     public Long saveExceptionGroup(Map<String, Object> params, String actorId) {
         String name = value(params.get("groupNm"));
         if (blank(name)) throw new IllegalArgumentException("그룹명을 입력해 주세요.");
+        if (SystemDataScope.isLimited()) throw new SecurityException("시스템별 예외설정 변경은 관리자 권한에서 처리해 주세요.");
         Long sn = longValue(params.get("groupSn"));
         params.put("rgtrId", actorId); params.put("mdfrId", actorId); params.put("useYn", "N".equals(value(params.get("useYn"))) ? "N" : "Y");
         if (sn == null) { faultMapper.insertExceptionGroup(params); sn = longValue(params.get("groupSn")); }
@@ -183,6 +190,7 @@ public class FaultServiceImpl implements FaultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteExceptionGroup(Long groupSn) {
+        if (SystemDataScope.isLimited()) throw new SecurityException("시스템별 예외설정 변경은 관리자 권한에서 처리해 주세요.");
         if (groupSn == null) throw new IllegalArgumentException("삭제할 그룹을 선택해 주세요.");
         faultMapper.deleteExceptionScheduleGradesByGroup(groupSn);
         faultMapper.deleteExceptionSchedulesByGroup(groupSn);
@@ -206,6 +214,7 @@ public class FaultServiceImpl implements FaultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveExceptionSchedule(Map<String, Object> params, String actorId) {
+        if (SystemDataScope.isLimited()) throw new SecurityException("시스템별 예외설정 변경은 관리자 권한에서 처리해 주세요.");
         Long groupSn = longValue(params.get("groupSn"));
         if (groupSn == null) throw new IllegalArgumentException("예외그룹을 선택해 주세요.");
         if (blank(params.get("beginDt"))) throw new IllegalArgumentException("시작일시를 입력해 주세요.");
@@ -267,6 +276,7 @@ public class FaultServiceImpl implements FaultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteExceptionSchedule(Long scheduleSn) {
+        if (SystemDataScope.isLimited()) throw new SecurityException("시스템별 예외설정 변경은 관리자 권한에서 처리해 주세요.");
         if (scheduleSn == null) throw new IllegalArgumentException("삭제할 일정을 선택해 주세요.");
         faultMapper.deleteExceptionScheduleGrades(scheduleSn);
         if (faultMapper.deleteExceptionSchedule(scheduleSn) != 1) throw new IllegalArgumentException("예외일정을 찾을 수 없습니다.");
@@ -278,6 +288,11 @@ public class FaultServiceImpl implements FaultService {
         result.put("gradeCodes", faultMapper.selectFaultGradeCodes()); result.put("processCodes", faultMapper.selectProcessStatusCodes());
         return result;
     }
+    private void requireFaultAccess(String no) {
+        if (faultMapper.selectFaultDetail(no) == null)
+            throw new SecurityException("해당 장애정보의 데이터 조회 권한이 없습니다.");
+    }
+
     private void insertAction(String no, String type, String cn, Map<String,Object> source, String actorId, String actorName) {
         Map<String,Object> a = new HashMap<String,Object>(); a.put("dsbltyNo", no); a.put("actnSeCd", type); a.put("actnCn", cn);
         a.put("symptom", source.get("symptom")); a.put("reason", source.get("reason")); a.put("plan", source.get("plan")); a.put("result", source.get("result"));

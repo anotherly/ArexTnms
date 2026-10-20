@@ -1,5 +1,9 @@
 package kr.co.TRSolution.tnms.auth.service.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,10 +19,12 @@ import kr.co.TRSolution.tnms.auth.mapper.AuthMapper;
 import kr.co.TRSolution.tnms.auth.service.AuthService;
 import kr.co.TRSolution.tnms.auth.vo.AuthVO;
 import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
+import kr.co.TRSolution.tnms.auth.vo.SystemAuthVO;
 
 @Service("authService")
 public class AuthServiceImpl implements AuthService {
     private static final String SYSTEM_ADMIN_AUTHRT_CD = "SYS_ADMIN";
+    private static final Set<String> SYSTEM_CODES = new HashSet<String>(Arrays.asList("EMS_TX", "SCADA_SEC", "VMS", "PBX", "EMS_PIDS"));
     private static final Pattern AUTHRT_CD = Pattern.compile("^[A-Z][A-Z0-9_]{2,29}$");
 
     @Resource(name = "authMapper")
@@ -37,6 +43,9 @@ public class AuthServiceImpl implements AuthService {
             for (MenuAuthVO menu : menuAuthList) normalizePermission(menu, true);
         }
         auth.setMenuAuthList(menuAuthList);
+        List<SystemAuthVO> systemAuthList = authMapper.selectSystemAuthList(code);
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(code)) for (SystemAuthVO item : systemAuthList) item.setReadAuthrtYn("Y");
+        auth.setSystemAuthList(systemAuthList);
         return auth;
     }
 
@@ -75,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
         if (authMapper.selectAuth(code) == null) throw new IllegalArgumentException("삭제할 권한이 없습니다.");
         if (authMapper.countAuthUsers(code) > 0) throw new IllegalStateException("해당 권한을 사용 중인 사용자가 있습니다.");
         authMapper.deleteAuthMenus(code);
+        authMapper.deleteSystemAuths(code);
         AuthVO auth = new AuthVO();
         auth.setAuthrtCd(code);
         auth.setMdfrId(actorId);
@@ -83,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void saveMenuPermissions(String authrtCd, List<MenuAuthVO> permissions) {
+    public void saveMenuPermissions(String authrtCd, List<MenuAuthVO> permissions, List<SystemAuthVO> systemAuthList) {
         String code = normalizeCode(authrtCd);
         if (authMapper.selectAuth(code) == null) throw new IllegalArgumentException("권한 정보가 없습니다.");
         if (SYSTEM_ADMIN_AUTHRT_CD.equals(code)) {
@@ -92,14 +102,38 @@ public class AuthServiceImpl implements AuthService {
         Map<Long, String> screenByMenuSn = new HashMap<Long, String>();
         for (MenuAuthVO menu : authMapper.selectMenuAuthList(code)) screenByMenuSn.put(menu.getMenuSn(), menu.getScreenKey());
         authMapper.deleteAuthMenus(code);
-        if (permissions == null) return;
-        for (MenuAuthVO permission : permissions) {
+        if (permissions != null) for (MenuAuthVO permission : permissions) {
             if (permission.getMenuSn() == null || !screenByMenuSn.containsKey(permission.getMenuSn())) continue;
             permission.setAuthrtCd(code);
             permission.setScreenKey(screenByMenuSn.get(permission.getMenuSn()));
             normalizePermission(permission, SYSTEM_ADMIN_AUTHRT_CD.equals(code));
             authMapper.insertMenuAuth(permission);
         }
+        // 메뉴/시스템 조회 범위는 단일 트랜잭션으로 함께 저장합니다.
+        if (systemAuthList != null) {
+            authMapper.deleteSystemAuths(code);
+            Set<String> seen = new HashSet<String>();
+            for (SystemAuthVO item : systemAuthList) {
+                if (item == null || !SYSTEM_CODES.contains(item.getLinkSysCd()) || !seen.add(item.getLinkSysCd()))
+                    throw new IllegalArgumentException("올바르지 않은 연계시스템 권한입니다.");
+                if ("Y".equals(item.getReadAuthrtYn())) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put("authrtCd", code);
+                    params.put("linkSysCd", item.getLinkSysCd());
+                    authMapper.insertSystemAuth(params);
+                }
+            }
+        }
+    }
+
+    @Override
+    public List<String> selectAllowedSystemCodes(String authrtCd) {
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(normalizeCode(authrtCd))) return new ArrayList<String>(SYSTEM_CODES);
+        List<String> allowed = new ArrayList<String>();
+        for (SystemAuthVO item : authMapper.selectSystemAuthList(normalizeCode(authrtCd))) {
+            if (SYSTEM_CODES.contains(item.getLinkSysCd()) && "Y".equals(item.getReadAuthrtYn())) allowed.add(item.getLinkSysCd());
+        }
+        return allowed;
     }
 
     @Override
@@ -136,6 +170,7 @@ public class AuthServiceImpl implements AuthService {
 
     private void normalizePermission(MenuAuthVO item, boolean systemAdmin) {
         String screen = item.getScreenKey();
+        item.setDisplayYn(systemAdmin || "Y".equals(item.getDisplayYn()) ? "Y" : "N");
         item.setListAuthrtYn(systemAdmin || "Y".equals(item.getListAuthrtYn()) ? "Y" : "N");
         item.setDtlAuthrtYn(supports(screen, "DTL") && (systemAdmin || "Y".equals(item.getDtlAuthrtYn())) ? "Y" : "N");
         item.setRegAuthrtYn(supports(screen, "REG") && (systemAdmin || "Y".equals(item.getRegAuthrtYn())) ? "Y" : "N");

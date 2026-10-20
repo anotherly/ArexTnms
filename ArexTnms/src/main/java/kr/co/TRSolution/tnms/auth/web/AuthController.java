@@ -84,7 +84,7 @@ public class AuthController extends BaseController {
     public ModelAndView savePermissions(@RequestBody AuthVO requestVO, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            authService.saveMenuPermissions(requestVO.getAuthrtCd(), requestVO.getMenuAuthList());
+            authService.saveMenuPermissions(requestVO.getAuthrtCd(), requestVO.getMenuAuthList(), requestVO.getSystemAuthList());
             auditService.record(actor, ClientIpUtil.getClientIp(request), "권한 관리", "MDFCN",
                     requestVO.getAuthrtCd(), "메뉴·기능 권한 저장", "SUCCESS");
             refreshOwnPermissions(request, actor, requestVO.getAuthrtCd());
@@ -101,6 +101,7 @@ public class AuthController extends BaseController {
             Map<String, Object> result = new HashMap<String, Object>();
             result.put("user", user);
             result.put("permissions", permissions);
+            result.put("allowedSystemCodes", authService.selectAllowedSystemCodes(user.getAuthrtCd()));
             result.put("uiSettings", settingService.selectRuntimeSettings());
             result.put("csrfToken", request.getSession().getAttribute("csrfToken"));
             return success(result);

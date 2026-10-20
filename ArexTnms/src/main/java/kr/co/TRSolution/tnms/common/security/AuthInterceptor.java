@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -15,12 +16,17 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import kr.co.TRSolution.tnms.auth.service.AuthService;
 import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
 import kr.co.TRSolution.tnms.user.vo.UserVO;
+import kr.co.TRSolution.tnms.monitoring.service.MonitoringService;
+import kr.co.TRSolution.tnms.monitoring.vo.EquipmentVO;
 
 public class AuthInterceptor extends HandlerInterceptorAdapter {
     private static final Map<String, Requirement> REQUIREMENTS = createRequirements();
 
     @Resource(name = "authService")
     private AuthService authService;
+
+    @Resource(name = "monitoringService")
+    private MonitoringService monitoringService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -38,6 +44,8 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
         Map<String, MenuAuthVO> permissionMap = authService.selectPermissionMap(loginUser.getAuthrtCd());
         session.setAttribute("menuAuthMap", permissionMap);
+        List<String> allowedSystems = authService.selectAllowedSystemCodes(loginUser.getAuthrtCd());
+        request.setAttribute(SystemDataScope.REQUEST_ATTRIBUTE, allowedSystems);
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
@@ -59,9 +67,25 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
             return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 기능에 대한 권한이 없습니다.");
         }
         if (requirement == null && path.startsWith("/facility/") && path.endsWith(".ajax")) {
-            String action = "/facility/save.ajax".equals(path) ? (request.getParameter("eqpmntSn") == null || request.getParameter("eqpmntSn").length() == 0 ? "REG" : "MDFCN")
+            String linkSysCd = request.getParameter("linkSysCd");
+            String equipmentNo = request.getParameter("eqpmntSn");
+            // 상세/수정/삭제는 브라우저에서 전달한 시스템코드가 아니라 DB의 실제 장비를 기준으로 권한 검증.
+            if (hasValue(equipmentNo)) {
+                try {
+                    EquipmentVO actual = monitoringService.selectEquipment(Long.valueOf(equipmentNo));
+                    if (actual == null) throw new IllegalArgumentException("장비 없음");
+                    if (hasValue(linkSysCd) && !linkSysCd.equals(actual.getLinkSysCd()))
+                        return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "장비 연계시스템 정보가 일치하지 않습니다.");
+                    linkSysCd = actual.getLinkSysCd();
+                } catch (Exception exception) {
+                    return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 장비의 데이터 접근 권한이 없습니다.");
+                }
+            }
+            String action = "/facility/save.ajax".equals(path) ? (hasValue(equipmentNo) ? "MDFCN" : "REG")
                     : "/facility/delete.ajax".equals(path) ? "DEL" : "/facility/detail.ajax".equals(path) ? "DTL" : "LIST";
-            requirement = new Requirement(facilityScreenKey(request.getParameter("linkSysCd")), action);
+            if (hasValue(linkSysCd) && !allowedSystems.contains(linkSysCd))
+                return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 연계시스템의 데이터 조회 권한이 없습니다.");
+            requirement = new Requirement(facilityScreenKey(linkSysCd), action);
         }
         if (requirement == null) return true;
         MenuAuthVO permission = permissionMap.get(requirement.screenKey);
