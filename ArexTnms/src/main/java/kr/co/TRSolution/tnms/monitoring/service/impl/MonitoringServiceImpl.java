@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper;
+import kr.co.TRSolution.tnms.gateway.service.GatewayLiveService;
 import kr.co.TRSolution.tnms.monitoring.service.MonitoringService;
 import kr.co.TRSolution.tnms.monitoring.vo.EquipmentVO;
 import kr.co.TRSolution.tnms.monitoring.vo.StationStatusVO;
@@ -27,6 +28,7 @@ public class MonitoringServiceImpl implements MonitoringService {
     private static final String STATION_STATUS_PRIORITY = "STATION_STATUS_PRIORITY";
     private static final List<String> DEFAULT_STATUS_PRIORITY = Arrays.asList("CRITICAL", "CAUTION", "NORMAL");
     @Resource(name = "monitoringMapper") private MonitoringMapper monitoringMapper;
+    @Resource(name = "gatewayLiveService") private GatewayLiveService gatewayLiveService;
     @Resource(name = "settingMapper") private SettingMapper settingMapper;
 
     @Override
@@ -34,13 +36,13 @@ public class MonitoringServiceImpl implements MonitoringService {
         Map<String, Object> result = new HashMap<String, Object>();
         EquipmentVO all = new EquipmentVO();
         List<String> priority = loadStatusPriority();
-        List<EquipmentVO> systems = monitoringMapper.selectSystemSummary();
+        List<EquipmentVO> systems = gatewayLiveService.systems();
         applyEquipmentPriority(systems, priority);
-        List<StationStatusVO> stations = monitoringMapper.selectStationSummary(all);
+        List<StationStatusVO> stations = gatewayLiveService.stations(all);
         applyStationPriority(stations, priority);
         result.put("systems", systems);
         result.put("stations", stations);
-        result.put("statusCodes", settingMapper.selectCommonCodeList("SYS_STTS"));
+        result.put("statusCodes", dashboardStatusCodes());
         return result;
     }
 
@@ -48,29 +50,35 @@ public class MonitoringServiceImpl implements MonitoringService {
     public Map<String, Object> selectFacility(EquipmentVO searchVO) {
         validateSystem(searchVO == null ? null : searchVO.getLinkSysCd());
         Map<String, Object> result = new HashMap<String, Object>();
-        List<StationStatusVO> stations = monitoringMapper.selectStationSummary(searchVO);
+        List<StationStatusVO> stations = gatewayLiveService.stations(searchVO);
         applyStationPriority(stations, loadStatusPriority());
-        List<EquipmentVO> equipments = monitoringMapper.selectEquipmentList(searchVO);
+        List<EquipmentVO> equipments = gatewayLiveService.devices(searchVO);
         result.put("stations", stations);
         result.put("equipments", equipments);
-        result.put("summary", monitoringMapper.selectEquipmentSummary(searchVO));
-        result.put("statusCodes", settingMapper.selectCommonCodeList("SYS_STTS"));
+        result.put("summary", gatewayLiveService.summary(searchVO));
+        result.put("statusCodes", dashboardStatusCodes());
         result.put("equipmentClassifications", monitoringMapper.selectEquipmentClassifications(searchVO.getLinkSysCd()));
         if ("EMS_PIDS".equals(searchVO.getLinkSysCd())) {
-            result.put("lseCandidates", monitoringMapper.selectPidsLseCandidates(searchVO));
+            result.put("lseCandidates", java.util.Collections.<EquipmentVO>emptyList());
+            // 장애 메시지는 raw_event_action에서 수신된 장애만 사용한다.
+            Map<String,Object> faultArgs = new HashMap<String,Object>();
+            faultArgs.put("linkSysCd", "EMS_PIDS");
+            if (searchVO.getStnCd()!=null && !searchVO.getStnCd().trim().isEmpty())
+                faultArgs.put("stnCd", searchVO.getStnCd());
+            result.put("gatewayFaults", gatewayLiveService.activeFaults(faultArgs));
         }
         if ("EMS_TX".equals(searchVO.getLinkSysCd())) {
-            result.put("equipmentLinks", monitoringMapper.selectEquipmentLinks(searchVO));
+            result.put("equipmentLinks", java.util.Collections.<kr.co.TRSolution.tnms.monitoring.vo.EquipmentLinkVO>emptyList());
         }
         if ("SCADA_SEC".equals(searchVO.getLinkSysCd())) {
-            result.put("scadaEvents", monitoringMapper.selectRecentScadaEvents(searchVO));
+            result.put("scadaEvents", java.util.Collections.<kr.co.TRSolution.tnms.monitoring.vo.ScadaEventVO>emptyList());
         }
         return result;
     }
 
     @Override
     public List<StationStatusVO> selectStationSummary(EquipmentVO searchVO) {
-        List<StationStatusVO> stations = monitoringMapper.selectStationSummary(searchVO == null ? new EquipmentVO() : searchVO);
+        List<StationStatusVO> stations = gatewayLiveService.stations(searchVO == null ? new EquipmentVO() : searchVO);
         applyStationPriority(stations, loadStatusPriority());
         return stations;
     }
@@ -78,145 +86,87 @@ public class MonitoringServiceImpl implements MonitoringService {
     @Override
     public List<EquipmentVO> selectStationSystemSummary(String stnCd) {
         if (stnCd == null || stnCd.trim().length() == 0) throw new IllegalArgumentException("역사코드가 필요합니다.");
-        List<EquipmentVO> systems = monitoringMapper.selectStationSystemSummary(stnCd);
+        List<EquipmentVO> systems = gatewayLiveService.stationSystems(stnCd);
         applyEquipmentPriority(systems, loadStatusPriority());
         return systems;
     }
 
     @Override
     public EquipmentVO selectEquipment(Long eqpmntSn) {
-        EquipmentVO equipment = monitoringMapper.selectEquipment(eqpmntSn);
-        if (equipment == null) throw new IllegalArgumentException("장비 정보를 찾을 수 없습니다.");
-        return equipment;
+        throw new UnsupportedOperationException("기존 EQPMNT_SN 상세조회는 종료되었습니다. (emsId, deviceId)로 /facility/gateway-detail.ajax를 사용하세요.");
     }
 
+    /** Web edits only user-maintained equipment metadata; ping status/timestamps remain gateway-owned. */
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public Long saveEquipment(EquipmentVO equipmentVO, String actorId) {
-        normalize(equipmentVO);
-        if ("VMS".equals(equipmentVO.getLinkSysCd())) {
-            normalizeCctv(equipmentVO);
-            syncCctvMasterFields(equipmentVO);
-        }
-        validateEquipment(equipmentVO);
-        SystemDataScope.requireSystem(equipmentVO.getLinkSysCd());
-        if (equipmentVO.getEqpmntSn() != null && monitoringMapper.selectEquipment(equipmentVO.getEqpmntSn()) == null)
-            throw new SecurityException("수정할 장비에 대한 데이터 접근 권한이 없습니다.");
-        if (equipmentVO.getEqpmntSn() == null) {
-            equipmentVO.setRgtrId(actorId);
-            if (monitoringMapper.insertEquipment(equipmentVO) != 1) throw new IllegalStateException("장비 등록에 실패했습니다.");
+    @Transactional(rollbackFor=Exception.class)
+    public Long saveEquipment(EquipmentVO vo, String actorId) {
+        if (vo==null || blank(vo.getLinkSysCd())) throw new IllegalArgumentException("연계시스템을 선택해 주세요.");
+        int ems=emsId(vo.getLinkSysCd());
+        if (vo.getEmsId()!=null && !blank(vo.getEmsId()) && Integer.parseInt(vo.getEmsId())!=ems)
+            throw new IllegalArgumentException("EMS ID와 화면의 연계시스템이 일치하지 않습니다.");
+        kr.co.TRSolution.tnms.common.security.SystemDataScope.requireSystem(vo.getLinkSysCd());
+        String key=vo.getGatewayDeviceId();
+        boolean modify=!blank(key);
+        if (!modify) key=vo.getEqpmntMngNo();
+        if (blank(key) || key.length()>50 || blank(vo.getEqpmntNm()) || blank(vo.getEqpmntSeCd()) || blank(vo.getEqpmntIpAddr()) || blank(vo.getInstlPlcNm()))
+            throw new IllegalArgumentException("장비 ID(50자 이하), 장비명, 종류, IP, 설치장소는 필수입니다.");
+        if (vo.getEqpmntIpAddr().length()>20) throw new IllegalArgumentException("IP는 20자 이하여야 합니다.");
+        vo.setEmsId(String.valueOf(ems));
+        vo.setEqpmntMngNo(key);
+        if (blank(vo.getStnCd())) vo.setStnCd("Unknown");
+        if (vo.getDeviceCheck()==null) vo.setDeviceCheck(0);
+        if (blank(vo.getTestYn())) vo.setTestYn("N");
+        if (blank(vo.getUseYn())) vo.setUseYn("Y");
+        if (!"Y".equals(vo.getTestYn()) && !"N".equals(vo.getTestYn())) throw new IllegalArgumentException("테스트 장비 여부가 올바르지 않습니다.");
+        vo.setRegId(actorId);vo.setModId(actorId);
+        if (modify) {
+            if (monitoringMapper.updateGatewayDevice(vo)!=1) throw new IllegalArgumentException("수정 대상 장비가 없습니다.");
         } else {
-            equipmentVO.setMdfrId(actorId);
-            if (monitoringMapper.updateEquipment(equipmentVO) != 1) throw new IllegalArgumentException("수정할 장비를 찾을 수 없습니다.");
+            monitoringMapper.insertGatewayDevice(vo);
         }
-        if ("EMS_PIDS".equals(equipmentVO.getLinkSysCd())) {
-            savePidsLseRelations(equipmentVO);
-        }
-        if ("VMS".equals(equipmentVO.getLinkSysCd())) {
-            equipmentVO.setMdfrId(actorId);
-            monitoringMapper.updateCctvEquipmentMirror(equipmentVO);
-            monitoringMapper.upsertCctvInfo(equipmentVO);
-        }
-        return equipmentVO.getEqpmntSn();
+        return Long.valueOf(1L);
+    }
+
+    @Override public void deleteEquipment(Long sn, String actorId) {
+        throw new IllegalArgumentException("일련번호가 아니라 EMS ID와 장비 ID로 삭제해야 합니다.");
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteEquipment(Long eqpmntSn, String actorId) {
-        if (eqpmntSn == null) throw new IllegalArgumentException("삭제할 장비를 선택해 주세요.");
-        if (monitoringMapper.selectEquipment(eqpmntSn) == null)
-            throw new SecurityException("삭제할 장비에 대한 데이터 접근 권한이 없습니다.");
-        EquipmentVO equipment = new EquipmentVO();
-        equipment.setEqpmntSn(eqpmntSn);
-        equipment.setMdfrId(actorId);
-        if (monitoringMapper.disableEquipment(equipment) != 1) throw new IllegalArgumentException("삭제할 장비를 찾을 수 없습니다.");
+    @Transactional(rollbackFor=Exception.class)
+    public void deleteEquipmentByKey(int ems, String key, String actorId) {
+        String sys=systemCode(ems);
+        kr.co.TRSolution.tnms.common.security.SystemDataScope.requireSystem(sys);
+        if (blank(key)) throw new IllegalArgumentException("장비 ID가 필요합니다.");
+        Map<String,Object> q=new HashMap<String,Object>();q.put("emsId",ems);q.put("deviceId",key);
+        if (monitoringMapper.deleteGatewayDevice(q)!=1) throw new IllegalArgumentException("장비가 없거나 이미 삭제되었습니다.");
+    }
+    private int emsId(String code) {
+        if ("EMS_TX".equals(code))return 1;if ("VMS".equals(code))return 4;
+        if ("PBX".equals(code))return 11;if ("EMS_PIDS".equals(code))return 13;
+        if ("SCADA_SEC".equals(code))return 16;
+        throw new IllegalArgumentException("허용되지 않은 연계시스템입니다.");
+    }
+    private String systemCode(int id){
+        if(id==1)return "EMS_TX";if(id==4)return "VMS";if(id==11)return "PBX";
+        if(id==13)return "EMS_PIDS";if(id==16)return "SCADA_SEC";
+        throw new IllegalArgumentException("허용되지 않은 EMS ID입니다.");
     }
 
     private void validateSystem(String linkSysCd) {
-        if (linkSysCd == null || linkSysCd.trim().length() == 0) throw new IllegalArgumentException("연계시스템 코드가 필요합니다.");
+        if (blank(linkSysCd)) throw new IllegalArgumentException("연계시스템 코드가 필요합니다.");
     }
 
-    private void validateEquipment(EquipmentVO vo) {
-        if (vo == null) throw new IllegalArgumentException("장비 정보가 없습니다.");
-        validateSystem(vo.getLinkSysCd());
-        if (blank(vo.getEqpmntMngNo())) throw new IllegalArgumentException("장비관리번호를 입력해 주세요.");
-        if (blank(vo.getEqpmntNm())) throw new IllegalArgumentException("장비명을 입력해 주세요.");
-        if (blank(vo.getEqpmntSeCd())) throw new IllegalArgumentException("장비구분코드를 입력해 주세요.");
-        if ("VMS".equals(vo.getLinkSysCd())) validateCctv(vo);
-        if (monitoringMapper.countEquipmentMngNo(vo) > 0) {
-            throw new IllegalArgumentException("이미 사용 중인 장비관리번호입니다. 다른 번호를 입력해 주세요.");
+    /** 신규 CD_SYST_### 식별자를 화면 상태코드 NORMAL/CAUTION/CRITICAL/UNKNOWN으로 변환. */
+    private List<kr.co.TRSolution.tnms.setting.vo.CommonCodeVO> dashboardStatusCodes() {
+        List<kr.co.TRSolution.tnms.setting.vo.CommonCodeVO> codes = settingMapper.selectCommonCodeList("CD_SYST");
+        for (kr.co.TRSolution.tnms.setting.vo.CommonCodeVO code : codes) {
+            String id=code.getComCd();
+            if ("CD_SYST_001".equals(id)) code.setComCd("CRITICAL");
+            else if ("CD_SYST_002".equals(id)) code.setComCd("CAUTION");
+            else if ("CD_SYST_003".equals(id)) code.setComCd("NORMAL");
+            else if ("CD_SYST_004".equals(id)) code.setComCd("UNKNOWN");
         }
-        if (!blank(vo.getEqpmntClsfCd()) && monitoringMapper.countEquipmentClassification(vo) == 0) {
-            throw new IllegalArgumentException("선택한 장비분류가 현재 설비 시스템에 존재하지 않습니다. 장비분류를 다시 선택해 주세요.");
-        }
-        if (vo.getUseYn() == null) vo.setUseYn("Y");
-    }
-
-    private void normalize(EquipmentVO vo) {
-        if (vo == null) return;
-        vo.setEqpmntMngNo(trim(vo.getEqpmntMngNo()));
-        vo.setEqpmntNm(trim(vo.getEqpmntNm()));
-        vo.setEqpmntSeCd(trim(vo.getEqpmntSeCd()));
-        vo.setEqpmntClsfCd(trim(vo.getEqpmntClsfCd()));
-        vo.setLinkSysCd(trim(vo.getLinkSysCd()));
-        vo.setStnCd(trim(vo.getStnCd()));
-        vo.setEmsId(trim(vo.getEmsId()));
-        vo.setInstlPlcNm(trim(vo.getInstlPlcNm()));
-        vo.setEqpmntIpAddr(trim(vo.getEqpmntIpAddr()));
-        vo.setMacAddr(trim(vo.getMacAddr()));
-        vo.setEqpmntMdlNm(trim(vo.getEqpmntMdlNm()));
-        vo.setEqpmntExpln(trim(vo.getEqpmntExpln()));
-    }
-
-    private void normalizeCctv(EquipmentVO vo) {
-        vo.setVmsNm(trim(vo.getVmsNm()));
-        vo.setStrgMthNm(trim(vo.getStrgMthNm()));
-        vo.setCctvNm(trim(vo.getCctvNm()));
-        vo.setCnsmrNm(trim(vo.getCnsmrNm()));
-        vo.setCctvMdlNm(trim(vo.getCctvMdlNm()));
-        vo.setFrmwrVerNo(trim(vo.getFrmwrVerNo()));
-        vo.setCctvIpAddr(trim(vo.getCctvIpAddr()));
-        vo.setCctvMacAddr(trim(vo.getCctvMacAddr()));
-        vo.setAcntNm(trim(vo.getAcntNm()));
-        vo.setVmsSrvrIpAddr(trim(vo.getVmsSrvrIpAddr()));
-        vo.setFlrNm(trim(vo.getFlrNm()));
-        if (vo.getCmraQty() == null || vo.getCmraQty().intValue() < 1) vo.setCmraQty(Integer.valueOf(1));
-    }
-
-    private void syncCctvMasterFields(EquipmentVO vo) {
-        vo.setEqpmntSeCd("CCTV");
-        vo.setEqpmntClsfCd(null);
-        vo.setEqpmntNm(vo.getCctvNm());
-        vo.setEqpmntIpAddr(vo.getCctvIpAddr());
-        vo.setMacAddr(vo.getCctvMacAddr());
-        vo.setEqpmntMdlNm(vo.getCctvMdlNm());
-        vo.setInstlPlcNm(!blank(vo.getFlrNm()) ? vo.getFlrNm() : vo.getVmsNm());
-    }
-
-    private void validateCctv(EquipmentVO vo) {
-        if (blank(vo.getVmsNm())) throw new IllegalArgumentException("역사_VMS 명을 입력해 주세요.");
-        if (blank(vo.getStrgMthNm())) throw new IllegalArgumentException("저장방식을 입력해 주세요.");
-        if (blank(vo.getCctvNm())) throw new IllegalArgumentException("CCTV 이름을 입력해 주세요.");
-        if (blank(vo.getCnsmrNm())) throw new IllegalArgumentException("수요자를 입력해 주세요.");
-        if (blank(vo.getCctvMdlNm())) throw new IllegalArgumentException("CCTV 모델을 입력해 주세요.");
-        if (blank(vo.getCctvIpAddr())) throw new IllegalArgumentException("CCTV IP를 입력해 주세요.");
-        if (blank(vo.getCctvMacAddr())) throw new IllegalArgumentException("CCTV MAC 주소를 입력해 주세요.");
-        if (blank(vo.getVmsSrvrIpAddr())) throw new IllegalArgumentException("VMS 서버 IP를 입력해 주세요.");
-    }
-
-    private void savePidsLseRelations(EquipmentVO vo) {
-        monitoringMapper.deletePidsLseRelations(vo.getEqpmntSn());
-        if ("LSE".equalsIgnoreCase(vo.getEqpmntSeCd())) return;
-        Long[] lseSns = vo.getLseEqpmntSns();
-        if (lseSns == null || lseSns.length == 0) return;
-        Set<Long> unique = new HashSet<Long>();
-        for (Long lseSn : lseSns) {
-            if (lseSn == null || lseSn.equals(vo.getEqpmntSn()) || !unique.add(lseSn)) continue;
-            EquipmentVO rel = new EquipmentVO();
-            rel.setEqpmntSn(vo.getEqpmntSn());
-            rel.setLseEqpmntSn(lseSn);
-            monitoringMapper.insertPidsLseRelation(rel);
-        }
+        return codes;
     }
 
     private String trim(String value) { return value == null || value.trim().length() == 0 ? null : value.trim(); }
@@ -263,6 +213,11 @@ public class MonitoringServiceImpl implements MonitoringService {
     private String resolveStatus(Integer total, Integer normal, Integer caution, Integer critical,
                                  Integer offline, Integer unknown, List<String> priority) {
         if (!positive(total)) return "UNKNOWN";
+        // 실제 장애·주의가 있을 경우 우선 반영; 그 외에는 PING 실패 및 수집 지연을 정상으로 표시하지 않음.
+        if (positive(critical)) return "CRITICAL";
+        if (positive(caution)) return "CAUTION";
+        if (positive(offline)) return "OFFLINE";
+        if (positive(unknown)) return "UNKNOWN";
         for (String code : priority) {
             if ("CRITICAL".equals(code) && positive(critical)) return code;
             if ("CAUTION".equals(code) && positive(caution)) return code;

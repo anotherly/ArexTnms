@@ -1,6 +1,12 @@
 package kr.co.TRSolution.tnms.notification.service.impl;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import kr.co.TRSolution.tnms.common.security.SystemDataScope;
 
 import javax.annotation.Resource;
 
@@ -18,7 +24,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationVO> selectNotificationList(String userId) {
         requireUser(userId);
-        return notificationMapper.selectNotificationList(userId);
+        return notificationMapper.selectNotificationList(notificationParams(userId));
     }
 
     @Override
@@ -38,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(rollbackFor = Exception.class)
     public int markAllRead(String userId) {
         requireUser(userId);
-        List<NotificationVO> list = notificationMapper.selectNotificationList(userId);
+        List<NotificationVO> list = notificationMapper.selectNotificationList(notificationParams(userId));
         int count = 0;
         for (NotificationVO item : list) {
             if (!"Y".equals(item.getReadYn())) {
@@ -49,6 +55,21 @@ public class NotificationServiceImpl implements NotificationService {
             }
         }
         return count;
+    }
+
+    /** 알림에서도 로그인한 사용자의 허용 EMS만 조회합니다. */
+    private Map<String,Object> notificationParams(String userId) {
+        Map<String,Object> args = new HashMap<String,Object>();
+        args.put("userId",userId);
+        Set<String> allowed = SystemDataScope.current();
+        String[] codes = {"EMS_TX","VMS","PBX","EMS_PIDS","SCADA_SEC"};
+        int[] ids = {1,4,11,13,16};
+        List<Integer> target = new ArrayList<Integer>();
+        for (int i=0;i<codes.length;i++)
+            if (allowed == null || allowed.contains(codes[i])) target.add(Integer.valueOf(ids[i]));
+        if (target.isEmpty()) target.add(Integer.valueOf(-1));
+        args.put("allowedEmsIds",target);
+        return args;
     }
 
     private void requireUser(String userId) {

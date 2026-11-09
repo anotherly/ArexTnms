@@ -26,11 +26,11 @@ function faultTempAction(actions) {
 }
 
 function realtimeCanModify() {
-  return hasPermission('faults', 'mdfcnAuthrtYn') || (CURRENT_USER && CURRENT_USER.authrtCd === 'SYS_ADMIN');
+  return hasPermission('faults','mdfcnAuthrtYn'); // web_fault_process_info only
 }
 
 function realtimeCanControl() {
-  return hasPermission('faults', 'ctrlAuthrtYn') || realtimeCanModify() || (CURRENT_USER && CURRENT_USER.authrtCd === 'SYS_ADMIN');
+  return hasPermission('faults','mdfcnAuthrtYn'); // web workflow only
 }
 
 function selectedFaultRows() {
@@ -67,13 +67,13 @@ function realtimeScreen() {
     const judgment = faultJudgmentName(r.dsbltyJgmtCd);
     const temp = r.tempActionYn === 'Y' ? '입력완료' : '미입력';
     const manage = '<div class="fault-row-actions">' +
-      '<button class="btn sm" onclick="openEquipmentDetail(\'' + mgmtE(r.dsbltyNo) + '\')">장비</button>' +
+      (r.dataSource==='GATEWAY'?'':'<button class="btn sm" onclick="openEquipmentDetail(\'' + mgmtE(r.dsbltyNo) + '\')">장비</button>') +
       (canModify ? '<button class="btn sm" onclick="openFaultEdit(\'' + mgmtE(r.dsbltyNo) + '\')">수정</button>' : '') +
       '<button class="btn sm" onclick="openFaultDetail(\'' + mgmtE(r.dsbltyNo) + '\')">상세</button>' +
       '</div>';
 
     return '<tr>' +
-      '<td class="center"><input class="mgmt-checkbox faultCheck" type="checkbox" value="' + mgmtE(r.dsbltyNo) + '" onchange="updateRealtimeSelectionState()"></td>' +
+      '<td class="center"><input class="mgmt-checkbox faultCheck" type="checkbox" value="' + mgmtE(r.dsbltyNo) + '"></td>' +
       '<td>' + no + '</td>' +
       '<td>' + mgmtBadge(mgmtGradeName(r.dsbltyGrdCd, r.dsbltyGrdNm), mgmtGradeClass(r.dsbltyGrdCd)) + '</td>' +
       '<td><b>' + mgmtE(r.linkSysNm || '-') + '</b></td>' +
@@ -85,7 +85,7 @@ function realtimeScreen() {
       '<td>' + mgmtE(r.dsbltyTypeNm || '-') + '</td>' +
       '<td class="left fault-content-cell">' + mgmtE(r.dsbltyOcrnCn || '-') + '</td>' +
       '<td>' + mgmtDt(r.dsbltyOcrnDt) + '</td>' +
-      '<td><button class="mgmt-link" onclick="openJudgmentModalForOne(\'' + mgmtE(r.dsbltyNo) + '\')">' + mgmtE(judgment) + '</button></td>' +
+      '<td>' + mgmtE(judgment) + '</td>' +
       '<td>' + mgmtE(temp) + '</td>' +
       '<td>' + manage + '</td>' +
       '</tr>';
@@ -146,7 +146,7 @@ function checkedFaults() {
 }
 
 function toggleAllFaults(checked) {
-  document.querySelectorAll('.faultCheck').forEach(function (x) { x.checked = checked; });
+  document.querySelectorAll('.faultCheck:not(:disabled)').forEach(function (x) { x.checked = checked; });
   updateRealtimeSelectionState();
 }
 
@@ -264,6 +264,7 @@ function faultActionDetailHtml(r, temp) {
 }
 
 async function openFaultEdit(no) {
+  // Raw event fields are read-only; this modal saves a separate web workflow record.
   try {
     const d = await mgmtGet('/fault/detail.ajax', {dsbltyNo: no});
     const r = d.fault;
@@ -512,4 +513,11 @@ async function saveEquipmentEdit(dsbltyNo) {
   }
 }
 
-window.TNMS_PAGE_INIT = loadRealtime;
+window.TNMS_PAGE_INIT = async function(){
+  await loadRealtime();
+  if(!window.TNMS_FAULT_TIMER)window.TNMS_FAULT_TIMER=setInterval(function(){
+    const el=document.activeElement;
+    if(document.hidden||document.querySelector('.modal-overlay, .modal-backdrop, [role=dialog]')||(el&&el.matches('input,select,textarea')))return;
+    loadRealtime();
+  },10000);
+};

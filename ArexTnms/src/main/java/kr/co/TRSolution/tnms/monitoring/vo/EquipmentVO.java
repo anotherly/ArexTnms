@@ -9,6 +9,19 @@ public class EquipmentVO extends MonitoringBaseVO {
     private String eqpmntClsfCd;
     private String eqpmntClsfNm;
     private String emsId;
+    // 게이트웨이의 실 장비 식별키 (ems_id, device_id).
+    private String gatewayDeviceId;
+    private String gatewayManaged;
+    private String regId;
+    private String modId;
+    private String deviceMaker;
+    private String serverIp;
+    private Integer deviceCheck;
+    private Double diskUsgrt;
+    private String usageDt;
+    private String usageFreshYn;
+    private Integer pingAlive;
+    private String testYn;
     private String instlPlcNm;
     private String eqpmntIpAddr;
     private String macAddr;
@@ -43,7 +56,7 @@ public class EquipmentVO extends MonitoringBaseVO {
     private String cmpntNm;
     private Long mtbfHr;
 
-    // web_eqpmnt_perf_stts 현재 성능값. 컬럼을 장비 테이블에 중복 생성하지 않고 지표 테이블에서 조회합니다.
+    // 게이트웨이 공통 성능값은 com_device_usage와 최신 수집시각을 기준으로 조회합니다.
     private Double cpuUsgrt;
     private Double mmryUsgrt;
     private Integer ifUseNocs;
@@ -67,6 +80,30 @@ public class EquipmentVO extends MonitoringBaseVO {
     public void setEqpmntClsfCd(String eqpmntClsfCd) { this.eqpmntClsfCd = eqpmntClsfCd; }
     public String getEqpmntClsfNm() { return eqpmntClsfNm; }
     public void setEqpmntClsfNm(String eqpmntClsfNm) { this.eqpmntClsfNm = eqpmntClsfNm; }
+    public String getGatewayDeviceId() { return gatewayDeviceId; }
+    public void setGatewayDeviceId(String v) { this.gatewayDeviceId=v; }
+    public String getRegId() { return regId; }
+    public void setRegId(String v) { this.regId=v; }
+    public String getModId() { return modId; }
+    public void setModId(String v) { this.modId=v; }
+    public String getServerIp() { return serverIp; }
+    public void setServerIp(String v) { this.serverIp=v; }
+    public String getDeviceMaker() { return deviceMaker; }
+    public void setDeviceMaker(String v) { this.deviceMaker=v; }
+    public Integer getDeviceCheck() { return deviceCheck; }
+    public void setDeviceCheck(Integer v) { this.deviceCheck=v; }
+    public String getGatewayManaged() { return gatewayManaged; }
+    public void setGatewayManaged(String v) { this.gatewayManaged=v; }
+    public Double getDiskUsgrt() { return diskUsgrt; }
+    public void setDiskUsgrt(Double v) { this.diskUsgrt=v; }
+    public String getUsageFreshYn() { return usageFreshYn; }
+    public void setUsageFreshYn(String v) { this.usageFreshYn=v; }
+    public String getUsageDt() { return usageDt; }
+    public void setUsageDt(String v) { this.usageDt=v; }
+    public Integer getPingAlive() { return pingAlive; }
+    public void setPingAlive(Integer v) { this.pingAlive=v; }
+    public String getTestYn() { return testYn; }
+    public void setTestYn(String v) { this.testYn=v; }
     public String getEmsId() { return emsId; }
     public void setEmsId(String emsId) { this.emsId = emsId; }
     public String getInstlPlcNm() { return instlPlcNm; }

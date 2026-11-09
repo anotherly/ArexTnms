@@ -1,27 +1,14 @@
 package kr.co.TRSolution.tnms.fault.mapper;
-
 import java.util.List;
 import java.util.Map;
-
 import egovframework.rte.psl.dataaccess.mapper.Mapper;
-
+/** 모든 장애데이터는 raw_event_log / raw_event_action에서만 읽습니다. */
 @Mapper("faultMapper")
 public interface FaultMapper {
-    List<Map<String, Object>> selectLinkSystems();
-    List<Map<String, Object>> selectStations();
-    List<Map<String, Object>> selectFaultGradeCodes();
-    List<Map<String, Object>> selectProcessStatusCodes();
-    Map<String, Object> selectRealtimeSummary(Map<String, Object> params);
-    List<Map<String, Object>> selectRealtimeFaults(Map<String, Object> params);
-    List<Map<String, Object>> selectHistoryFaults(Map<String, Object> params);
-    Map<String, Object> selectHistorySummary(Map<String, Object> params);
-    Map<String, Object> selectFaultDetail(String dsbltyNo);
-    List<Map<String, Object>> selectFaultActions(String dsbltyNo);
-    int updateFault(Map<String, Object> params);
-    int updateFaultStatus(Map<String, Object> params);
-    int insertFaultAction(Map<String, Object> params);
-    List<Map<String, Object>> selectFaultTypes(Map<String, Object> params);
-    Map<String, Object> selectFaultType(Long dsbltyTypeSn);
+    List<Map<String,Object>> selectLinkSystems();
+    List<Map<String,Object>> selectStations();
+    List<Map<String,Object>> selectFaultTypes(Map<String,Object> params);
+    Map<String,Object> selectFaultType(Map<String,Object> params);
     List<Map<String, Object>> selectExceptionGroups();
     Map<String, Object> selectExceptionGroup(Long groupSn);
     List<Map<String, Object>> selectExceptionGroupMembers(Long groupSn);
@@ -42,4 +29,5 @@ public interface FaultMapper {
     int deleteExceptionScheduleGrades(Long scheduleSn);
     int insertExceptionScheduleGrade(Map<String, Object> params);
     int deleteExceptionSchedule(Long scheduleSn);
+
 }

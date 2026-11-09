@@ -16,25 +16,75 @@
         <result property="readDt" column="READ_DT"/>
     </resultMap>
 
+    <sql id="exceptionFilterNow">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=D.ems_id AND M.DEVICE_ID=D.device_id
+        AND NOW() &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR NOW() &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE D.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(NOW())+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(NOW())=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(NOW()) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(NOW()) &gt;= X.REPT_START_TM OR TIME(NOW()) &lt;= X.REPT_END_TM)))))
+        )
+    
+    </sql>
     <sql id="notificationUnion">
-        SELECT CONCAT('FAULT:', D.DSBLTY_NO) AS NOTIFICATION_ID,
-               'FAULT' AS CATEGORY_CD,
-               '고장' AS CATEGORY_NM,
-               CASE WHEN D.DSBLTY_GRD_CD IN ('EMERGENCY','CRITICAL','HIGH') THEN 'CRITICAL'
-                    WHEN D.DSBLTY_GRD_CD IN ('WARNING','CAUTION','MEDIUM') THEN 'CAUTION'
-                    ELSE D.DSBLTY_GRD_CD END AS SEVERITY_CD,
-               CONCAT(COALESCE(S.STN_NM, D.DSBLTY_OCRN_PLC_NM, '설비'), ' 장애 알림') AS TITLE,
-               D.DSBLTY_OCRN_CN AS MESSAGE,
-               CONCAT(COALESCE(L.LINK_SYS_NM, 'TNMS'), CASE WHEN E.EQPMNT_NM IS NULL THEN '' ELSE CONCAT(' · ', E.EQPMNT_NM) END) AS SOURCE_NAME,
-               D.DSBLTY_NO AS REF_KEY,
-               D.DSBLTY_OCRN_DT AS EVENT_DT_RAW,
+        SELECT CONCAT('FAULT:GW-A-',D.event_seq) AS NOTIFICATION_ID,
+               'FAULT' AS CATEGORY_CD, '고장' AS CATEGORY_NM,
+               CASE D.event_grade WHEN '1' THEN 'CRITICAL' WHEN '2' THEN 'CRITICAL'
+                   WHEN '3' THEN 'CAUTION' WHEN '4' THEN 'CAUTION' ELSE 'INFO' END AS SEVERITY_CD,
+               CONCAT(COALESCE(S.STN_NM,D.event_loc,D.device_id), ' 장애 알림') AS TITLE,
+               D.event_msg AS MESSAGE,
+               CONCAT(COALESCE(L.LINK_SYS_NM,'TNMS'),' · ',COALESCE(E.device_nm,D.device_id)) AS SOURCE_NAME,
+               CONCAT('GW-A-',D.event_seq) AS REF_KEY,
+               D.event_dt AS EVENT_DT_RAW,
                '/fault/realtime.do?screen=faults' AS TARGET_URL
-          FROM web_dsblty_info D
-          LEFT JOIN web_eqpmnt_info E ON E.EQPMNT_SN = D.EQPMNT_SN
-          LEFT JOIN com_stn_info S ON S.STN_CD = E.STN_CD
-          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD = E.LINK_SYS_CD
-         WHERE D.EXCP_APLY_YN = 'N'
-           AND D.DSBLTY_OCRN_DT &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          FROM raw_event_action D
+          LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
+          LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
+              WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
+              WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+         WHERE D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+           <include refid="exceptionFilterNow"/>
+           AND D.event_dt &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)
+           AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        UNION ALL
+        SELECT CONCAT('FAULT:WEB-P-',D.PERF_EVENT_SN) AS NOTIFICATION_ID,
+               'FAULT' AS CATEGORY_CD,'고장' AS CATEGORY_NM,
+               CASE WHEN D.EVENT_GRADE IN (1,2) THEN 'CRITICAL' WHEN D.EVENT_GRADE IN (3,4) THEN 'CAUTION' ELSE 'INFO' END AS SEVERITY_CD,
+               CONCAT(COALESCE(S.STN_NM,D.DEVICE_ID),' 성능 임계치 장애') AS TITLE,
+               CONCAT(CASE WHEN D.PERF_IDCT_CD='CPU_USGRT' THEN 'CPU' ELSE 'MEMORY' END,' 사용률 ',D.LAST_VALUE,'% 임계치 초과') AS MESSAGE,
+               CONCAT(COALESCE(L.LINK_SYS_NM,'TNMS'),' · ',COALESCE(E.device_nm,D.DEVICE_ID)) AS SOURCE_NAME,
+               CONCAT('WEB-P-',D.PERF_EVENT_SN) AS REF_KEY,D.EVENT_DT AS EVENT_DT_RAW,
+               '/fault/realtime.do?screen=faults' AS TARGET_URL
+          FROM web_perf_thrshld_event D
+          LEFT JOIN com_device_info E ON E.ems_id=D.EMS_ID AND E.device_id=D.DEVICE_ID
+          LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE D.EMS_ID
+              WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
+              WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END
+         WHERE D.EVENT_YN=1
+           <include refid="exceptionFilterNow"/>
+           AND D.EVENT_DT &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)
+           AND D.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
         UNION ALL
         SELECT CONCAT('ACCOUNT:', A.APLY_NO) AS NOTIFICATION_ID,
                'ACCOUNT' AS CATEGORY_CD,
@@ -73,7 +123,7 @@
                 OR J.CNTN_MENU_NM LIKE '%설정%')
     </sql>
 
-    <select id="selectNotificationList" parameterType="string" resultMap="notificationMap">
+    <select id="selectNotificationList" parameterType="map" resultMap="notificationMap">
         SELECT N.NOTIFICATION_ID, N.CATEGORY_CD, N.CATEGORY_NM, N.SEVERITY_CD,
                N.TITLE, N.MESSAGE, N.SOURCE_NAME, N.REF_KEY,
                DATE_FORMAT(N.EVENT_DT_RAW, '%Y-%m-%d %H:%i:%s') AS EVENT_DT,
@@ -84,7 +134,7 @@
                <include refid="notificationUnion"/>
           ) N
           LEFT JOIN web_user_ntcn_read_info R
-            ON R.USER_ID = #{_parameter}
+            ON R.USER_ID = #{userId}
            AND R.NTCN_ID = N.NOTIFICATION_ID
          ORDER BY N.EVENT_DT_RAW DESC, N.NOTIFICATION_ID DESC
          LIMIT 60

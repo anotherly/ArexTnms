@@ -22,7 +22,7 @@ function exceptionScreen(){
    <div class="exception-group-search"><input id="groupKeyword" class="input" placeholder="그룹명 검색" oninput="renderPage('exceptions',exceptionScreen())"><span>⌕</span></div>
    <div class="exception-group-list">${groups.length?groups.map(g=>`<button class="exception-group-row ${String(g.groupSn)===String(EXCP_GROUP)?'active':''}" onclick="selectExceptionGroup('${g.groupSn}')"><b>${mgmtE(g.groupNm)}</b><span>${mgmtNum(g.memberCount)}대</span></button>`).join(''):'<div class="mgmt-empty">등록된 예외그룹이 없습니다.</div>'}</div>
    <div class="exception-group-actions">${canReg?'<button class="btn primary" onclick="openGroupModal()">＋ 그룹 추가</button>':''}${canEdit&&selected?`<button class="btn" onclick="openGroupModal('${selected.groupSn}')">그룹 수정</button>`:''}${canDel&&selected?`<button class="btn danger-outline" onclick="openGroupDeleteModal('${selected.groupSn}')">그룹 삭제</button>`:''}</div>
-   <div class="exception-group-foot">※ 그룹 수와 장비 수는 DB 연동 후 표시합니다.</div>
+   <div class="exception-group-foot">※ 그룹과 장비 수는 웹 예외그룹 설정 DB 기준입니다.</div>
   </section>
   <section class="mgmt-card exception-schedule-card">
    <div class="exception-schedule-head"><div><h3>${selected?mgmtE(selected.groupNm):'그룹을 선택해 주세요.'}</h3>${selected?'<span class="exception-selected-pill">선택 그룹</span>':''}</div><small>총 ${schedules.length}건</small></div>
@@ -30,7 +30,7 @@ function exceptionScreen(){
    <div class="exception-list-title"><div><h4>예외 일정 목록</h4><small>선택 ${EXCP_SELECTED_SCHEDULES.size}건</small></div></div>
    <div class="mgmt-table-wrap"><table class="mgmt-table exception-table"><thead><tr><th><input class="mgmt-checkbox" type="checkbox" onchange="toggleExceptionAll(this.checked)"></th><th>NO.</th><th>상태</th><th>실행구분</th><th>예외일시</th><th>지속시간</th><th>설명</th><th>수정일</th><th>관리</th></tr></thead><tbody>${schedules.length?schedules.map((r,i)=>{const st=excpStatus(r),rm=excpRunMeta(r.reptCycleCn,r);return `<tr><td><input class="mgmt-checkbox excpSchChk" type="checkbox" value="${r.scheduleSn}" ${EXCP_SELECTED_SCHEDULES.has(String(r.scheduleSn))?'checked':''} onchange="toggleExceptionSchedule('${r.scheduleSn}',this.checked)"></td><td>${i+1}</td><td>${mgmtBadge(st.name,st.cls)}</td><td>${mgmtBadge(rm.typeNm,rm.type==='REPEAT'?'':'info')}</td><td>${excpDateTimeRange(r)}</td><td>${excpDuration(r)}</td><td class="left exception-desc-cell">${mgmtE(r.excpRsn||'-')}</td><td>${mgmtDt(r.mdfcnDt||r.regDt)}</td><td><div class="mgmt-actions">${canEdit?`<button class="btn sm" onclick="openScheduleModal('${r.scheduleSn}')">수정</button>`:''}<button class="btn sm" onclick="openScheduleDetail('${r.scheduleSn}')">상세</button></div></td></tr>`}).join(''):'<tr><td colspan="9" class="center">등록된 예외일정이 없습니다.</td></tr>'}</tbody></table></div>
    <div class="exception-list-actions">${canReg&&selected?'<button class="btn primary" onclick="openScheduleModal()">일정추가</button>':''}${canDel?'<button class="btn danger-outline" onclick="openScheduleDeleteModal()">삭제</button>':''}</div>
-   <div class="mgmt-note exception-note"><b>ⓘ 장애 예외는 선택한 장비 전체에 적용됩니다.</b><span>Gateway는 현재 적용 중인 예외 장비를 DB에서 조회하여 수신 장애의 EXCP_APLY_YN을 설정합니다.</span></div>
+   <div class="mgmt-note exception-note"><b>ⓘ 장애 예외는 선택한 장비 전체에 적용됩니다.</b><span>게이트웨이 원본은 유지되며 웹 장애 목록·알림에서만 예외기간의 대상 장애를 제외합니다.</span></div>
   </section>
  </div></div>`;
 }

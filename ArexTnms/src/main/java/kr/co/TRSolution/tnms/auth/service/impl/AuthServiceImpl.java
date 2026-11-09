@@ -189,7 +189,10 @@ public class AuthServiceImpl implements AuthService {
         if ("settings".equals(screen)) return "LIST".equals(action) || "REG".equals(action) || "MDFCN".equals(action);
         if ("logs".equals(screen) || "performance".equals(screen) || "faultTypes".equals(screen))
             return "LIST".equals(action) || "DTL".equals(action);
-        if ("cycle".equals(screen) || "threshold".equals(screen) ||
+        if ("cycle".equals(screen))
+            return "LIST".equals(action) || "DTL".equals(action) || "REG".equals(action) ||
+                   "MDFCN".equals(action) || "DEL".equals(action);
+        if ("threshold".equals(screen) ||
             "faults".equals(screen) || "faultHistory".equals(screen))
             return "LIST".equals(action) || "DTL".equals(action) || "MDFCN".equals(action);
         if ("exceptions".equals(screen))

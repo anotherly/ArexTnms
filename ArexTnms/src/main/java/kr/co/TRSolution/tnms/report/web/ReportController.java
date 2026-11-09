@@ -43,7 +43,7 @@ public class ReportController extends BaseController {
         Workbook wb = new XSSFWorkbook();
         try {
             Sheet sheet = wb.createSheet("장애현황");
-            String[] headers = {"NO","역명","설비명","장비명","IP","발생시간","이관/종료시간","총 장애시간(초)","등급","장애내용"};
+            String[] headers = {"NO","역명","설비명","장비명","IP","발생시간","장애해제시간","총 장애시간(초)","등급","장애내용"};
             Row hr = sheet.createRow(0);
             for (int i=0;i<headers.length;i++) hr.createCell(i).setCellValue(headers[i]);
             int r = 1;

@@ -13,5 +13,6 @@ public interface MonitoringService {
     List<EquipmentVO> selectStationSystemSummary(String stnCd);
     EquipmentVO selectEquipment(Long eqpmntSn);
     Long saveEquipment(EquipmentVO equipmentVO, String actorId);
+    void deleteEquipmentByKey(int emsId, String deviceId, String actorId);
     void deleteEquipment(Long eqpmntSn, String actorId);
 }

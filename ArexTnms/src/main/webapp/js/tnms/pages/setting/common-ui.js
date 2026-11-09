@@ -1,7 +1,10 @@
 (function(){
   let data={uiSettings:[],codeGroups:[],codes:[],severityCodes:[],faultGradeCodes:[],selectedGroupId:''};
   const settingOrder=['LIST_ROW_CNT','PSWD_CHG_NOTICE_DAY','DASHBOARD_REFRESH_SEC','ALRM_POPUP_GRD','ALRM_SOUND_GRD','DASHBOARD_55IN_USE_YN','DASHBOARD_OFFLINE_MIN'];
-  const severityCodes=['NORMAL','CAUTION','CRITICAL'];
+  const severityCodes=['CD_SYST_003','CD_SYST_002','CD_SYST_001'];
+  const statusIdToLegacy={CD_SYST_001:'CRITICAL',CD_SYST_002:'CAUTION',CD_SYST_003:'NORMAL',CD_SYST_004:'UNKNOWN'};
+  const legacyToStatusId={CRITICAL:'CD_SYST_001',CAUTION:'CD_SYST_002',NORMAL:'CD_SYST_003',UNKNOWN:'CD_SYST_004'};
+  function legacyStatus(id){return statusIdToLegacy[id]||id;}
   const defaultStationPriority=['CRITICAL','CAUTION','NORMAL'];
   const mappingSettingCodes=['DASHBOARD_CRITICAL_GRADES','DASHBOARD_CAUTION_GRADES','DASHBOARD_NORMAL_GRADES'];
   const sourceGrades=[['EMERGENCY','긴급'],['HIGH','높음'],['LOW','낮음'],['WARNING','경고'],['INFO','정보'],['CLEAR','해제'],['UNKNOWN','통신단절']];
@@ -14,7 +17,7 @@
     return values.length===defaultStationPriority.length&&new Set(values).size===defaultStationPriority.length?values:defaultStationPriority.slice();
   }
   function severityLabel(code){
-    const item=(data.severityCodes||[]).find(x=>x.comCd===code);
+    const item=(data.severityCodes||[]).find(x=>legacyStatus(x.comCd)===code);
     return item&&item.comCdNm ? item.comCdNm : code;
   }
   function syncPriorityFromDom(){
@@ -59,9 +62,9 @@
   function severityRows(){
     const defaults={NORMAL:'#45DF9A',CAUTION:'#FFCC66',CRITICAL:'#FF7389',UNKNOWN:'#8290A6'};
     const priority=stationPriorityCodes();
-    return (data.severityCodes||[]).filter(x=>severityCodes.includes(x.comCd)).sort((a,b)=>priority.indexOf(a.comCd)-priority.indexOf(b.comCd)).map(x=>{
-      const color=/^#[0-9a-f]{6}$/i.test(x.ext1Cn||'')?x.ext1Cn:defaults[x.comCd];
-      return `<tr data-severity-code="${escapeHtml(x.comCd)}"><td><input class="input severity-name" value="${escapeHtml(x.comCdNm)}"></td><td><code>${escapeHtml(x.comCd)}</code></td><td><input type="color" class="severity-color" value="${color}"><input class="input severity-hex" value="${color}" maxlength="7"></td><td>${priorityCell(x.comCd,priority)}</td></tr>`;
+    return (data.severityCodes||[]).filter(x=>severityCodes.includes(x.comCd)).sort((a,b)=>priority.indexOf(legacyStatus(a.comCd))-priority.indexOf(legacyStatus(b.comCd))).map(x=>{
+      const color=/^#[0-9a-f]{6}$/i.test(x.ext1Cn||'')?x.ext1Cn:defaults[legacyStatus(x.comCd)];
+      return `<tr data-severity-code="${escapeHtml(legacyStatus(x.comCd))}"><td><input class="input severity-name" value="${escapeHtml(x.comCdNm)}"></td><td><code>${escapeHtml(x.comCd)}</code></td><td><input type="color" class="severity-color" value="${color}"><input class="input severity-hex" value="${color}" maxlength="7"></td><td>${priorityCell(legacyStatus(x.comCd),priority)}</td></tr>`;
     }).join('');
   }
   function settingValue(code,fallback){const x=(data.uiSettings||[]).find(v=>v.uiStngCd===code);return x&&x.uiStngVl?x.uiStngVl:fallback;}
@@ -105,25 +108,25 @@
     await api('/setting/common-ui/ui.ajax',{method:'POST',headers:{'Content-Type':'application/json;charset=UTF-8'},body:JSON.stringify([{uiStngCd:'STATION_STATUS_PRIORITY',uiStngVl:values.join(',')}])});
   }
   async function saveSeveritySettings(){
-    const original={};(data.severityCodes||[]).forEach(x=>original[x.comCd]=x);
+    const original={};(data.severityCodes||[]).forEach(x=>original[legacyStatus(x.comCd)]=x);
     const rows=[...document.querySelectorAll('[data-severity-code]')];
     for(let index=0;index<rows.length;index++){
       const row=rows[index];
       const x=original[row.dataset.severityCode]||{};
       const hex=row.querySelector('.severity-hex').value.trim().toUpperCase();
       if(!/^#[0-9A-F]{6}$/.test(hex))throw new Error(`${row.dataset.severityCode} 색상은 #RRGGBB 형식으로 입력해 주세요.`);
-      await api('/setting/common-ui/code.ajax',{method:'POST',body:new URLSearchParams({_authAction:'MDFCN',comCdGroupId:'SYS_STTS',comCd:row.dataset.severityCode,comCdNm:row.querySelector('.severity-name').value.trim(),comCdExpln:x.comCdExpln||'',comCdSeq:String(index+1),comCdUseYn:'Y',ext1Cn:hex,ext2Cn:x.ext2Cn||''})});
+      await api('/setting/common-ui/code.ajax',{method:'POST',body:new URLSearchParams({_authAction:'MDFCN',comCdGroupId:'CD_SYST',comCd:legacyToStatusId[row.dataset.severityCode],comCdNm:row.querySelector('.severity-name').value.trim(),comCdExpln:x.comCdExpln||'',comCdSeq:String(index+1),comCdUseYn:'Y',ext1Cn:hex})});
     }
   }
   window.saveUiSection=async function(){try{await saveUiSettings();await bootstrapPermissions();showToast('운영 · UI 설정을 저장했습니다.');await window.loadSettings(data.selectedGroupId)}catch(e){showToast(e.message,true)}};
   window.saveCommonCodeSection=async function(){try{
     const original={};(data.codes||[]).forEach(x=>original[x.comCd]=x);
     const rows=[...document.querySelectorAll('[data-code-row]')];
-    for(const row of rows){const x=original[row.dataset.codeRow]||{};await api('/setting/common-ui/code.ajax',{method:'POST',body:new URLSearchParams({_authAction:'MDFCN',comCdGroupId:data.selectedGroupId,comCd:row.dataset.codeRow,comCdNm:row.querySelector('.code-name').value.trim(),comCdExpln:x.comCdExpln||'',comCdSeq:row.querySelector('.code-seq').value,comCdUseYn:row.querySelector('.code-use').value,ext1Cn:x.ext1Cn||'',ext2Cn:x.ext2Cn||''})})}
+    for(const row of rows){const x=original[row.dataset.codeRow]||{};await api('/setting/common-ui/code.ajax',{method:'POST',body:new URLSearchParams({_authAction:'MDFCN',comCdGroupId:data.selectedGroupId,comCd:row.dataset.codeRow,comCdNm:row.querySelector('.code-name').value.trim(),comCdExpln:x.comCdExpln||'',comCdSeq:row.querySelector('.code-seq').value,comCdUseYn:row.querySelector('.code-use').value,ext1Cn:x.ext1Cn||''})})}
     showToast('공통코드 관리 내용을 저장했습니다.');await window.loadSettings(data.selectedGroupId);
   }catch(e){showToast(e.message,true)}};
   window.saveGradeMappingSection=async function(){try{const groups={CRITICAL:[],CAUTION:[],NORMAL:[]};document.querySelectorAll('[data-source-grade]').forEach(row=>groups[row.querySelector('.grade-target').value].push(row.dataset.sourceGrade));const payload=[{uiStngCd:'DASHBOARD_CRITICAL_GRADES',uiStngVl:groups.CRITICAL.join(',')},{uiStngCd:'DASHBOARD_CAUTION_GRADES',uiStngVl:groups.CAUTION.join(',')},{uiStngCd:'DASHBOARD_NORMAL_GRADES',uiStngVl:groups.NORMAL.join(',')}];await api('/setting/common-ui/ui.ajax',{method:'POST',headers:{'Content-Type':'application/json;charset=UTF-8'},body:JSON.stringify(payload)});showToast('장애등급 그룹 매핑을 저장했습니다.');await window.loadSettings(data.selectedGroupId)}catch(e){showToast(e.message,true)}};
   window.saveSeveritySection=async function(){try{await saveSeveritySettings();await saveStationPriority();showToast('이벤트 등급·컬러와 역사 대표색 순위를 저장했습니다.');await window.loadSettings(data.selectedGroupId)}catch(e){showToast(e.message,true)}};
-  window.openCodeModal=function(code){const x=(data.codes||[]).find(v=>v.comCd===code)||{comCdGroupId:data.selectedGroupId,comCdSeq:1,comCdUseYn:'Y'};showModal(`<div class="modal-head"><h2>공통코드 ${code?'수정':'등록'}</h2><button class="modal-close" onclick="closeModal()">×</button></div><form id="codeForm"><input type="hidden" name="comCdGroupId" value="${escapeHtml(x.comCdGroupId)}"><input type="hidden" name="ext1Cn" value="${escapeHtml(x.ext1Cn||'')}"><input type="hidden" name="ext2Cn" value="${escapeHtml(x.ext2Cn||'')}"><div class="edit-form"><label>코드 *</label><div><input class="form-control" name="comCd" maxlength="30" value="${escapeHtml(x.comCd||'')}" ${code?'readonly':''} required></div><label>코드명 *</label><div><input class="form-control" name="comCdNm" maxlength="100" value="${escapeHtml(x.comCdNm||'')}" required></div><label>설명</label><div><input class="form-control" name="comCdExpln" maxlength="4000" value="${escapeHtml(x.comCdExpln||'')}"></div><label>순서</label><div><input class="form-control" name="comCdSeq" type="number" min="1" value="${x.comCdSeq||1}"></div><label>사용여부</label><div><select class="form-control" name="comCdUseYn"><option value="Y" ${x.comCdUseYn!=='N'?'selected':''}>사용</option><option value="N" ${x.comCdUseYn==='N'?'selected':''}>미사용</option></select></div></div><div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">취소</button><button class="btn primary">저장</button></div></form>`);document.getElementById('codeForm').addEventListener('submit',async function(e){e.preventDefault();try{const body=new URLSearchParams(new FormData(e.target));body.set('_authAction',code?'MDFCN':'REG');await api('/setting/common-ui/code.ajax',{method:'POST',body:body});closeModal();showToast('공통코드를 저장했습니다.');await window.loadSettings(data.selectedGroupId)}catch(err){showToast(err.message,true)}})};
+  window.openCodeModal=function(code){const x=(data.codes||[]).find(v=>v.comCd===code)||{comCdGroupId:data.selectedGroupId,comCdSeq:1,comCdUseYn:'Y'};showModal(`<div class="modal-head"><h2>공통코드 ${code?'수정':'등록'}</h2><button class="modal-close" onclick="closeModal()">×</button></div><form id="codeForm"><input type="hidden" name="comCdGroupId" value="${escapeHtml(x.comCdGroupId)}"><input type="hidden" name="ext1Cn" value="${escapeHtml(x.ext1Cn||'')}"><div class="edit-form"><label>코드 *</label><div><input class="form-control" name="comCd" maxlength="11" value="${escapeHtml(x.comCd||'')}" ${code?'readonly':''} required></div><label>코드명 *</label><div><input class="form-control" name="comCdNm" maxlength="100" value="${escapeHtml(x.comCdNm||'')}" required></div><label>설명</label><div><input class="form-control" name="comCdExpln" maxlength="4000" value="${escapeHtml(x.comCdExpln||'')}"></div><label>순서</label><div><input class="form-control" name="comCdSeq" type="number" min="1" value="${x.comCdSeq||1}"></div><label>사용여부</label><div><select class="form-control" name="comCdUseYn"><option value="Y" ${x.comCdUseYn!=='N'?'selected':''}>사용</option><option value="N" ${x.comCdUseYn==='N'?'selected':''}>미사용</option></select></div></div><div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">취소</button><button class="btn primary">저장</button></div></form>`);document.getElementById('codeForm').addEventListener('submit',async function(e){e.preventDefault();try{const body=new URLSearchParams(new FormData(e.target));body.set('_authAction',code?'MDFCN':'REG');await api('/setting/common-ui/code.ajax',{method:'POST',body:body});closeModal();showToast('공통코드를 저장했습니다.');await window.loadSettings(data.selectedGroupId)}catch(err){showToast(err.message,true)}})};
   window.TNMS_PAGE_INIT=window.loadSettings;
 }());

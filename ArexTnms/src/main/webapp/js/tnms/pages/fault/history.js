@@ -3,7 +3,7 @@ let HIST_PAGE = 1;
 let HIST_PAGE_SIZE = 10;
 let HIST_DETAIL_ACTIONS = [];
 
-function historyCanModify(){return hasPermission('faultHistory','mdfcnAuthrtYn') || (window.CURRENT_USER && CURRENT_USER.authrtCd==='SYS_ADMIN');}
+function historyCanModify(){return hasPermission('faultHistory','mdfcnAuthrtYn'); /* web-only actions; raw_event_log unchanged */}
 function historyJudgmentName(v){return v==='SERVICE'?'서비스장애':v==='STATUS'?'상태장애':v==='INFO'?'정보':'미판단';}
 function historyProcessOptions(rows,selected){return '<option value="">전체 처리상태</option>'+mgmtOptions(rows,'code','name',selected);}
 function historyActionName(v){return ({TEMP:'임시조치',COMPLETE:'완료조치',TRANSFER:'장애 이관',JUDGMENT:'장애판단',RECOVERY:'장애 복구'}[v]||v||'-');}
@@ -39,9 +39,9 @@ function historyScreen(){
  return `<div class="mgmt-page fault-history-page">
   <div class="mgmt-summary four">
    <div class="mgmt-stat"><div class="label">전체</div><strong>${mgmtNum(s.totalCount)}</strong><small>조회기간</small></div>
-   <div class="mgmt-stat warn"><div class="label">미조치</div><strong>${mgmtNum(s.unconfirmedCount)}</strong><small>미확인</small></div>
+   <div class="mgmt-stat warn"><div class="label">복구 미확인</div><strong>${mgmtNum(s.unconfirmedCount)}</strong><small>미확인</small></div>
    <div class="mgmt-stat"><div class="label">임시조치</div><strong>${mgmtNum(s.tempCount)}</strong><small>임시조치 등록</small></div>
-   <div class="mgmt-stat good"><div class="label">완료조치</div><strong>${mgmtNum(s.completedCount)}</strong><small>완료</small></div>
+   <div class="mgmt-stat good"><div class="label">복구 확인</div><strong>${mgmtNum(s.completedCount)}</strong><small>완료</small></div>
   </div>
   <section class="mgmt-card">
    <div class="mgmt-filter">

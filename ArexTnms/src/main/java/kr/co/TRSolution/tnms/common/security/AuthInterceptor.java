@@ -49,6 +49,10 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
+        // 수집주기 등록과 수정은 같은 API에서 mode로 구분하되 실제 작업은 서비스에서 별도 검증합니다.
+        if ("/performance/ping-cycle-save.ajax".equals(path)) {
+            requirement = new Requirement("cycle", "CREATE".equals(request.getParameter("mode")) ? "REG" : "MDFCN");
+        }
         if ("/setting/common-ui/code.ajax".equals(path)) {
             String requestedAction = request.getParameter("_authAction");
             requirement = new Requirement("settings", "REG".equals(requestedAction) ? "REG" : "MDFCN");
@@ -69,8 +73,16 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         if (requirement == null && path.startsWith("/facility/") && path.endsWith(".ajax")) {
             String linkSysCd = request.getParameter("linkSysCd");
             String equipmentNo = request.getParameter("eqpmntSn");
-            // 상세/수정/삭제는 브라우저에서 전달한 시스템코드가 아니라 DB의 실제 장비를 기준으로 권한 검증.
-            if (hasValue(equipmentNo)) {
+            String gatewayKey = request.getParameter("gatewayDeviceId");
+            if ("/facility/gateway-delete.ajax".equals(path) ||
+                "/facility/gateway-detail.ajax".equals(path)) {
+                try {int ems=Integer.parseInt(request.getParameter("emsId"));
+                  linkSysCd=ems==1?"EMS_TX":ems==4?"VMS":ems==11?"PBX":ems==13?"EMS_PIDS":ems==16?"SCADA_SEC":"INVALID";
+                } catch(Exception ex){linkSysCd="INVALID";}
+            }
+            // Gateway-detail/delete use the immutable EMS key instead of obsolete EQPMNT_SN.
+            // Legacy detail is no longer used in facility.js, and cannot be mapped from a row number.
+            if (hasValue(equipmentNo) && !"/facility/save.ajax".equals(path)) {
                 try {
                     EquipmentVO actual = monitoringService.selectEquipment(Long.valueOf(equipmentNo));
                     if (actual == null) throw new IllegalArgumentException("장비 없음");
@@ -81,8 +93,8 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
                     return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 장비의 데이터 접근 권한이 없습니다.");
                 }
             }
-            String action = "/facility/save.ajax".equals(path) ? (hasValue(equipmentNo) ? "MDFCN" : "REG")
-                    : "/facility/delete.ajax".equals(path) ? "DEL" : "/facility/detail.ajax".equals(path) ? "DTL" : "LIST";
+            String action = "/facility/save.ajax".equals(path) ? (hasValue(gatewayKey) ? "MDFCN" : "REG")
+                    : ("/facility/delete.ajax".equals(path) || "/facility/gateway-delete.ajax".equals(path)) ? "DEL" : ("/facility/detail.ajax".equals(path) || "/facility/gateway-detail.ajax".equals(path)) ? "DTL" : "LIST";
             if (hasValue(linkSysCd) && !allowedSystems.contains(linkSysCd))
                 return reject(request, response, HttpServletResponse.SC_FORBIDDEN, "해당 연계시스템의 데이터 조회 권한이 없습니다.");
             requirement = new Requirement(facilityScreenKey(linkSysCd), action);
@@ -128,6 +140,10 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         map.put("/performance/cycle-data.ajax", new Requirement("cycle", "LIST"));
         map.put("/performance/cycle-detail.ajax", new Requirement("cycle", "DTL"));
         map.put("/performance/cycle-save.ajax", new Requirement("cycle", "MDFCN"));
+        map.put("/performance/ping-cycle-data.ajax", new Requirement("cycle", "LIST"));
+        map.put("/performance/ping-cycle-detail.ajax", new Requirement("cycle", "DTL"));
+        map.put("/performance/ping-cycle-save.ajax", new Requirement("cycle", "MDFCN"));
+        map.put("/performance/ping-cycle-delete.ajax", new Requirement("cycle", "DEL"));
         map.put("/performance/threshold-data.ajax", new Requirement("threshold", "LIST"));
         map.put("/performance/threshold-detail.ajax", new Requirement("threshold", "DTL"));
         map.put("/performance/threshold-save.ajax", new Requirement("threshold", "MDFCN"));

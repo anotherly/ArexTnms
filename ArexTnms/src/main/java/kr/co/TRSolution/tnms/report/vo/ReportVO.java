@@ -4,6 +4,10 @@ import kr.co.TRSolution.tnms.common.BaseVO;
 
 public class ReportVO extends BaseVO {
     private static final long serialVersionUID = 1L;
+    /** 서버가 계산한 조회 허용 EMS 식별자: 요청 파라미터를 신뢰하지 않음. */
+    private java.util.List<Integer> allowedEmsIds;
+    public java.util.List<Integer> getAllowedEmsIds() { return allowedEmsIds; }
+    public void setAllowedEmsIds(java.util.List<Integer> v) { allowedEmsIds = v; }
     private String startDate;
     private String endDate;
     private String selectedDate;

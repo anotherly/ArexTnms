@@ -1,0 +1,25 @@
+-- 선택 실행: 11/05 기존 '수집주기 관리' 화면의 10개 '설정값'을 com_ping_info로 복사.
+-- 장비/장애/성능 가데이터를 복사하는 것이 아니라 수집주기 설정만 복사합니다.
+-- 이미 com_ping_info에 등록된 (EMS_ID, DATA_SE_CD)는 절대 덮어쓰지 않습니다.
+-- 기존 웹 설정값이 실제 게이트웨이 동작과 일치하는지는 확인 후 실행하세요.
+USE arex_tnms;
+
+INSERT IGNORE INTO com_ping_info
+ (EMS_ID, DATA_SE_CD, PERF_CLCT_USE_YN, PING_MNTR_USE_YN,
+  CLCT_CYCLE_SEC, STTS_MNTR_CYCLE_SEC, TIMEOUT_SEC, RTRY_NOCS,
+  TIMEOUT_POLL_SEC, USE_YN, EXCN_TM, CYCLE_CRTR_CN, REG_ID)
+SELECT
+  CASE C.LINK_SYS_CD
+    WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
+    WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 END AS EMS_ID,
+  C.DATA_SE_CD,
+  C.PERF_CLCT_USE_YN, C.PING_MNTR_USE_YN,
+  C.CLCT_CYCLE_SEC, C.STTS_MNTR_CYCLE_SEC, C.TIMEOUT_SEC, C.RTRY_NOCS,
+  C.TIMEOUT_POLL_SEC, C.USE_YN, C.EXCN_TM, C.CYCLE_CRTR_CN, 'migration'
+FROM web_clct_cycle_info C
+WHERE C.LINK_SYS_CD IN ('EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS')
+  AND C.DATA_SE_CD IN ('P','C');
+
+SELECT EMS_ID, DATA_SE_CD, USE_YN, CLCT_CYCLE_SEC, EXCN_TM, CYCLE_CRTR_CN
+FROM com_ping_info
+ORDER BY FIELD(EMS_ID,1,13,16,11,4), FIELD(DATA_SE_CD,'C','P');

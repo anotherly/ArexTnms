@@ -1,0 +1,20 @@
+-- OPTIONAL: recover the four threshold profiles visible in the supplied November 6 screenshot.
+-- Configure/confirm with user before using in real monitoring. Do not execute if real profiles already exist.
+-- Evaluator processes the lowest THRSHLD_SN when same indicator+system has multiple enabled profiles.
+USE arex_tnms;
+INSERT INTO web_thrshld_info (THRSHLD_PROFILE_NM,LINK_SYS_CD,PERF_IDCT_CD,
+ INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CONTN_NOCS,USE_YN,RGTR_ID)
+ SELECT '장비 CPU 임계치',NULL,'CPU_USGRT',50,60,70,80,90,5,'Y','SYSTEM'
+ WHERE NOT EXISTS (SELECT 1 FROM web_thrshld_info WHERE THRSHLD_PROFILE_NM='장비 CPU 임계치');
+INSERT INTO web_thrshld_info (THRSHLD_PROFILE_NM,LINK_SYS_CD,PERF_IDCT_CD,
+ INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CONTN_NOCS,USE_YN,RGTR_ID)
+ SELECT 'CPU 사용률 임계치',NULL,'CPU_USGRT',50,60,70,80,90,3,'Y','SYSTEM'
+ WHERE NOT EXISTS (SELECT 1 FROM web_thrshld_info WHERE THRSHLD_PROFILE_NM='CPU 사용률 임계치');
+INSERT INTO web_thrshld_info (THRSHLD_PROFILE_NM,LINK_SYS_CD,PERF_IDCT_CD,
+ INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CONTN_NOCS,USE_YN,RGTR_ID)
+ SELECT '장비 MEMORY 임계치',NULL,'MMRY_USGRT',40,50,60,70,80,3,'Y','SYSTEM'
+ WHERE NOT EXISTS (SELECT 1 FROM web_thrshld_info WHERE THRSHLD_PROFILE_NM='장비 MEMORY 임계치');
+INSERT INTO web_thrshld_info (THRSHLD_PROFILE_NM,LINK_SYS_CD,PERF_IDCT_CD,
+ INFO_VL,WARNING_VL,LOW_VL,HIGH_VL,EMERGENCY_VL,CONTN_NOCS,USE_YN,RGTR_ID)
+ SELECT '메모리 사용률 임계치',NULL,'MMRY_USGRT',50,60,70,80,90,3,'Y','SYSTEM'
+ WHERE NOT EXISTS (SELECT 1 FROM web_thrshld_info WHERE THRSHLD_PROFILE_NM='메모리 사용률 임계치');

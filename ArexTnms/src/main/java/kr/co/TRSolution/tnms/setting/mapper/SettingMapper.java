@@ -16,5 +16,6 @@ public interface SettingMapper {
     List<CommonCodeVO> selectCommonCodeList(String groupId);
     int countCommonCode(CommonCodeVO vo);
     int insertCommonCode(CommonCodeVO vo);
+    int upsertCodeColor(CommonCodeVO vo);
     int updateCommonCode(CommonCodeVO vo);
 }

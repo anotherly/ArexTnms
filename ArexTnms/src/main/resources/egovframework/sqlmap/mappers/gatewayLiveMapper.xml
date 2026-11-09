@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.gateway.mapper.GatewayLiveMapper">
+  <!-- 모든 SQL은 서버에서 검증한 allowedEmsIds 목록을 필수로 사용합니다. -->
+  <sql id="scope">AND D.ems_id IN
+    <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </sql>
+  <sql id="baseDevices">
+    SELECT D.*, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN,
+           L.LINK_SYS_NM, L.PROTCL_CD
+      FROM vw_tnms_gateway_device_live D
+      LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
+     WHERE 1=1 <include refid="scope"/>
+  </sql>
+  <sql id="deviceFilters">
+    <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
+    <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
+    <if test="keyword != null and keyword != ''">
+      AND (D.device_nm LIKE CONCAT('%',#{keyword},'%') OR D.device_id LIKE CONCAT('%',#{keyword},'%') OR D.device_ip LIKE CONCAT('%',#{keyword},'%'))
+    </if>
+  </sql>
+  <sql id="equipmentProjection">
+     D.ems_id AS EMS_ID, D.device_id AS SOU_EQPMNT_ID,
+     D.device_id AS GATEWAY_DEVICE_ID, 'Y' AS GATEWAY_MANAGED,
+     D.device_id AS EQPMNT_MNG_NO, D.device_nm AS EQPMNT_NM,
+     D.device_type AS EQPMNT_SE_CD, D.device_type AS EQPMNT_CLSF_NM,
+     D.link_sys_cd AS LINK_SYS_CD, L.LINK_SYS_NM AS LINK_SYS_NM,
+     D.stn_cd AS STN_CD, S.STN_NM AS STN_NM,
+     D.device_station AS INSTL_PLC_NM, D.device_ip AS EQPMNT_IP_ADDR,
+     D.device_model AS EQPMNT_MDL_NM, D.device_maker AS DEVICE_MAKER, D.server_ip AS SERVER_IP, D.device_check AS DEVICE_CHECK, D.device_desc AS EQPMNT_EXPLN,
+     CASE WHEN D.ping_alive=1 AND D.stts_cd NOT IN ('UNKNOWN','OFFLINE') THEN 'Y' ELSE 'N' END AS CNTN_YN,
+     D.stts_cd AS STTS_CD, D.stts_expln AS STTS_EXPLN,
+     D.ping_dt AS LAST_RSPNS_DT, D.ping_dt AS CLCT_DT,
+     D.cpu_usage AS CPU_USGRT, D.memory_usage AS MMRY_USGRT,
+     D.disk_usage AS DISK_USGRT, D.usage_dt AS USAGE_DT,
+     D.usage_fresh_yn AS USAGE_FRESH_YN,
+     D.ping_alive AS PING_ALIVE,
+     D.test_yn AS TEST_YN, 'Y' AS USE_YN
+  </sql>
+  <sql id="countExpressions">
+      COUNT(D.device_id) AS TOTAL_NOCS,
+      COALESCE(SUM(D.stts_cd='NORMAL'),0) AS NORMAL_NOCS,
+      COALESCE(SUM(D.stts_cd='CAUTION'),0) AS CAUTION_NOCS,
+      COALESCE(SUM(D.stts_cd='CRITICAL'),0) AS CRITICAL_NOCS,
+      COALESCE(SUM(D.stts_cd='OFFLINE'),0) AS OFFLINE_NOCS,
+      COALESCE(SUM(D.stts_cd='UNKNOWN'),0) AS UNKNOWN_NOCS
+  </sql>
+  <sql id="overallStatus">
+      CASE WHEN COALESCE(SUM(D.stts_cd='CRITICAL'),0)&gt;0 THEN 'CRITICAL'
+           WHEN COALESCE(SUM(D.stts_cd='CAUTION'),0)&gt;0 THEN 'CAUTION'
+           WHEN COALESCE(SUM(D.stts_cd='OFFLINE'),0)&gt;0 THEN 'OFFLINE'
+           WHEN COALESCE(SUM(D.stts_cd='UNKNOWN'),0)&gt;0 THEN 'UNKNOWN'
+           WHEN COUNT(D.device_id)&gt;0 THEN 'NORMAL' ELSE 'UNKNOWN' END AS STTS_CD
+  </sql>
+  <select id="selectSystemSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
+    SELECT L.LINK_SYS_CD, L.LINK_SYS_NM, <include refid="countExpressions"/>, <include refid="overallStatus"/>, MAX(D.ping_dt) AS CLCT_DT
+    FROM web_link_sys_info L
+    LEFT JOIN vw_tnms_gateway_device_live D ON D.link_sys_cd=L.LINK_SYS_CD
+         AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN ('EMS_TX','VMS','PBX','EMS_PIDS','SCADA_SEC')
+    <if test="allowedCodes != null">AND L.LINK_SYS_CD IN <foreach collection="allowedCodes" item="code" open="(" separator="," close=")">#{code}</foreach></if>
+    GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
+    ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+  </select>
+  <select id="selectStationSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.stationMap">
+    SELECT S.STN_CD,S.STN_NM,S.STN_SEQ,S.MNLS_STN_YN, <include refid="countExpressions"/>, <include refid="overallStatus"/>,
+           MAX(D.ping_dt) AS LAST_CLCT_DT
+    FROM com_stn_info S
+    LEFT JOIN vw_tnms_gateway_device_live D ON D.stn_cd=S.STN_CD
+         AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+         <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
+    WHERE S.USE_YN='Y' GROUP BY S.STN_CD,S.STN_NM,S.STN_SEQ,S.MNLS_STN_YN ORDER BY S.STN_SEQ
+  </select>
+  <select id="selectStationSystemSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
+    SELECT L.LINK_SYS_CD,L.LINK_SYS_NM, <include refid="countExpressions"/>, <include refid="overallStatus"/>, MAX(D.ping_dt) AS CLCT_DT
+    FROM web_link_sys_info L
+    LEFT JOIN vw_tnms_gateway_device_live D ON D.link_sys_cd=L.LINK_SYS_CD AND D.stn_cd=#{stnCd}
+         AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN ('EMS_TX','VMS','PBX','EMS_PIDS','SCADA_SEC')
+      <if test="allowedCodes != null">AND L.LINK_SYS_CD IN <foreach collection="allowedCodes" item="code" open="(" separator="," close=")">#{code}</foreach></if>
+    GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
+    ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+  </select>
+  <select id="selectEquipmentList" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
+    SELECT ROW_NUMBER() OVER (ORDER BY D.ems_id,D.device_id) AS EQPMNT_SN,
+           <include refid="equipmentProjection"/>
+    FROM vw_tnms_gateway_device_live D
+    LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
+    WHERE 1=1 <include refid="scope"/> <include refid="deviceFilters"/>
+    ORDER BY COALESCE(S.STN_SEQ,999),D.device_nm,D.device_id
+  </select>
+  <select id="selectEquipmentSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
+    SELECT <include refid="countExpressions"/>, ROUND(AVG(CASE WHEN D.usage_fresh_yn='Y' THEN D.cpu_usage END),1) AS CPU_USGRT,
+      ROUND(AVG(CASE WHEN D.usage_fresh_yn='Y' THEN D.memory_usage END),1) AS MMRY_USGRT, ROUND(AVG(CASE WHEN D.usage_fresh_yn='Y' THEN D.disk_usage END),1) AS DISK_USGRT
+    FROM vw_tnms_gateway_device_live D
+    WHERE 1=1 <include refid="scope"/> <include refid="deviceFilters"/>
+  </select>
+  <select id="selectEquipmentByKey" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
+    SELECT 1 AS EQPMNT_SN, <include refid="equipmentProjection"/>
+    FROM vw_tnms_gateway_device_live D
+    LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
+    WHERE D.ems_id=#{emsId} AND D.device_id=#{deviceId} <include refid="scope"/>
+  </select>
+  <select id="selectPerformanceEquipmentList" parameterType="map" resultType="map">
+    SELECT SHA2(CONCAT(D.ems_id,':',D.device_id),256) AS eqpmntSn,
+           D.ems_id AS emsId,D.device_id AS gatewayDeviceId,
+           D.device_id AS eqpmntMngNo,D.device_nm AS eqpmntNm,
+           D.link_sys_cd AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,
+           D.stn_cd AS stnCd,S.STN_NM AS stnNm,D.device_ip AS ipAddr,D.device_type AS eqpmntSeCd,
+           L.PROTCL_CD AS protclCd,D.cpu_usage AS cpuUsgrt,D.memory_usage AS mmryUsgrt,
+           D.disk_usage AS diskUsgrt,D.usage_dt AS lastClctDt,D.stts_cd AS sttsCd,
+           D.ping_dt AS lastPingDt,D.usage_fresh_yn AS usageFreshYn,D.test_yn AS testYn
+    FROM vw_tnms_gateway_device_live D
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
+    LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
+    WHERE 1=1 <include refid="scope"/> <include refid="deviceFilters"/>
+    <if test="eqpmntSn != null and eqpmntSn != ''">AND SHA2(CONCAT(D.ems_id,':',D.device_id),256)=#{eqpmntSn}</if>
+    ORDER BY D.usage_dt DESC,COALESCE(S.STN_SEQ,999),D.device_nm LIMIT 500
+  </select>
+  <select id="selectPerformanceTrend" parameterType="map" resultType="map">
+    SELECT DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H:00') AS timeLabel,
+           ROUND(AVG(R.cpu_usage),2) AS cpuVl,ROUND(AVG(R.memory_usage),2) AS mmryVl,ROUND(AVG(R.disk_usage),2) AS diskVl
+    FROM raw_usage_log R
+    JOIN com_device_info D ON D.ems_id=R.ems_id AND D.device_id=R.device_id AND D.use_yn='Y'
+    WHERE 1=1 <include refid="scope"/>
+       <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(CASE #{linkSysCd}
+          WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)</if>
+       <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
+       <if test="startDt != null and startDt != ''">AND R.reg_dt &gt;= #{startDt}</if>
+       <if test="endDt != null and endDt != ''">AND R.reg_dt &lt;= #{endDt}</if>
+       <if test="startDt == null or startDt == ''">AND R.reg_dt &gt;= DATE_SUB(NOW(),INTERVAL 24 HOUR)</if>
+       <if test="deviceId != null and deviceId != ''">AND D.device_id=#{deviceId}</if>
+       <if test="eqpmntSn != null and eqpmntSn != ''">AND SHA2(CONCAT(D.ems_id,':',D.device_id),256)=#{eqpmntSn}</if>
+       <if test="emsId != null">AND D.ems_id=#{emsId}</if>
+    GROUP BY DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H:00') ORDER BY MIN(R.reg_dt) LIMIT 240
+  </select>
+  <select id="selectPerformanceTop5" parameterType="map" resultType="map">
+    SELECT D.ems_id AS emsId,D.device_id AS gatewayDeviceId,
+           D.device_nm AS eqpmntNm,D.device_id AS eqpmntMngNo,
+           CASE WHEN #{topIndicator}='MMRY_USGRT' THEN D.memory_usage WHEN #{topIndicator}='DISK_USGRT' THEN D.disk_usage ELSE D.cpu_usage END AS value,
+           '%' AS unitNm,
+           CASE WHEN D.usage_fresh_yn='Y' THEN 'NORMAL' ELSE 'UNKNOWN' END AS sttsCd,
+           D.usage_dt AS clctDt,D.usage_fresh_yn AS usageFreshYn
+    FROM vw_tnms_gateway_device_live D WHERE D.usage_fresh_yn='Y'
+       <include refid="scope"/><include refid="deviceFilters"/>
+    ORDER BY value DESC LIMIT 5
+  </select>
+  <select id="selectIndicatorStates" parameterType="map" resultType="map">
+    SELECT K.perfIdctCd,K.perfIdctNm,'%' AS unitNm,
+      MAX(CASE WHEN D.usage_fresh_yn='Y' THEN D.usage_dt END) AS lastClctDt,
+      CASE WHEN COALESCE(SUM(D.usage_fresh_yn='Y'),0) &gt; 0 THEN 'NORMAL'
+           ELSE 'UNKNOWN' END AS sttsCd
+    FROM (SELECT 'CPU_USGRT' AS perfIdctCd,'CPU' AS perfIdctNm
+          UNION ALL SELECT 'MMRY_USGRT','MEMORY' UNION ALL SELECT 'DISK_USGRT','DISK') K
+    LEFT JOIN vw_tnms_gateway_device_live D ON D.ems_id IN
+       <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+       <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
+       <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
+    GROUP BY K.perfIdctCd,K.perfIdctNm
+  </select>
+  <sql id="faultFilters">
+    <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(CASE #{linkSysCd}
+       WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)</if>
+    <if test="stnCd != null and stnCd != ''">AND E.stn_cd=#{stnCd}</if>
+    <if test="grade != null and grade != ''">AND (G.COM_CD=#{grade} OR G.GW_CD=#{grade} OR
+        CASE D.event_grade WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH'
+        WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' ELSE 'CLEAR' END=#{grade})</if>
+    <if test="keyword != null and keyword != ''">
+      AND (E.device_nm LIKE CONCAT('%',#{keyword},'%') OR D.device_id LIKE CONCAT('%',#{keyword},'%')
+           OR D.event_msg LIKE CONCAT('%',#{keyword},'%'))</if>
+  </sql>
+  <sql id="faultSelect">
+    CONCAT('GW-A-',D.event_seq) AS dsbltyNo,D.event_seq AS eventSeq,
+    D.ems_id AS emsId,D.device_id AS souEqpmntId, E.device_nm AS eqpmntNm,
+    D.device_id AS eqpmntMngNo,E.device_ip AS ipAddr,E.device_type AS eqpmntSeCd,
+    E.device_station AS instlPlcNm,D.event_loc AS dsbltyOcrnPlcNm,
+    D.event_type AS dsbltyTypeNm,D.event_msg AS dsbltyOcrnCn,
+    D.event_grade AS gatewayGrade,D.event_dt AS dsbltyOcrnDt,
+    D.event_yn AS eventYn,
+    CASE D.event_grade WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH'
+      WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO'
+      ELSE 'CLEAR' END AS dsbltyGrdCd,
+    COALESCE(G.COM_CD_NM,D.event_grade) AS dsbltyGrdNm,
+    CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
+      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END AS linkSysCd,
+    L.LINK_SYS_NM AS linkSysNm,E.stn_cd AS stnCd,S.STN_NM AS stnNm,
+    'UNCONFIRMED' AS prcsSttsCd,'게이트웨이 수집' AS prcsSttsNm,
+    'GATEWAY' AS dataSource,'N' AS tempActionYn,
+    TIMESTAMPDIFF(SECOND,D.event_dt,NOW()) AS elapsedSec
+  </sql>
+  <sql id="faultJoins">
+    LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
+    LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
+      WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
+      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+    LEFT JOIN com_cd_info G ON G.COM_CD_GROUP_ID='CD_FALT' AND G.GW_SRC_COL='event_grade'
+      AND G.GW_CD=D.event_grade
+  </sql>
+  <sql id="webExceptionNow">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=D.ems_id AND M.DEVICE_ID=D.device_id
+        AND NOW() &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR NOW() &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE D.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(NOW())+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(NOW())=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(NOW()) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(NOW()) &gt;= X.REPT_START_TM OR TIME(NOW()) &lt;= X.REPT_END_TM)))))
+        )
+    
+  </sql>
+  <sql id="webExceptionAtEvent">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=D.ems_id AND M.DEVICE_ID=D.device_id
+        AND D.event_dt &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR D.event_dt &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE D.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(D.event_dt)+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(D.event_dt)=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(D.event_dt) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(D.event_dt) &gt;= X.REPT_START_TM OR TIME(D.event_dt) &lt;= X.REPT_END_TM)))))
+        )
+    
+  </sql>
+  <select id="selectRealtimeFaultSummary" parameterType="map" resultType="map">
+    SELECT COUNT(*) AS totalCount,
+      COALESCE(SUM(D.event_grade='1'),0) AS emergencyCount,
+      COALESCE(SUM(D.event_grade='2'),0) AS highCount,
+      COALESCE(SUM(D.event_grade='3'),0) AS lowCount,
+      COALESCE(SUM(D.event_grade='4'),0) AS warningCount,
+      COALESCE(SUM(D.event_grade='5'),0) AS infoCount
+    FROM raw_event_action D <include refid="faultJoins"/>
+    WHERE D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+      <include refid="webExceptionNow"/>
+      AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      <include refid="faultFilters"/>
+  </select>
+  <select id="selectRealtimeFaults" parameterType="map" resultType="map">
+    SELECT <include refid="faultSelect"/>
+    FROM raw_event_action D <include refid="faultJoins"/>
+    WHERE D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+      <include refid="webExceptionNow"/>
+      AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      <include refid="faultFilters"/>
+    ORDER BY D.event_dt DESC,D.event_seq DESC LIMIT 500
+  </select>
+  <select id="selectFaultHistory" parameterType="map" resultType="map">
+    SELECT <include refid="faultSelect"/>,
+           D.event_edt AS dsbltyEndDt
+    FROM raw_event_log D <include refid="faultJoins"/>
+    WHERE 1=1 <include refid="webExceptionAtEvent"/> AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      <if test="startDt != null and startDt != ''">AND D.event_dt &gt;= CONCAT(#{startDt},' 00:00:00')</if>
+      <if test="endDt != null and endDt != ''">AND D.event_dt &lt; DATE_ADD(CONCAT(#{endDt},' 00:00:00'),INTERVAL 1 DAY)</if>
+      <include refid="faultFilters"/>
+    ORDER BY D.event_dt DESC,D.event_seq DESC LIMIT 1000
+  </select>
+  <select id="selectFaultDetail" parameterType="map" resultType="map">
+    SELECT <include refid="faultSelect"/>
+    FROM raw_event_action D <include refid="faultJoins"/>
+    WHERE D.event_seq=#{eventSeq}
+      AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+  <select id="selectFaultAction" parameterType="map" resultType="map">
+    SELECT D.event_seq AS actnSn,D.action_dt AS actnDt,
+     D.event_symptom AS symptom,D.event_cause AS reason,D.action_text AS actnCn,
+     D.action_plan AS plan,D.action_handler AS actorName,'GATEWAY' AS actnSeCd
+    FROM raw_event_action D WHERE D.event_seq=#{eventSeq} AND D.action_dt IS NOT NULL
+      AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+  <select id="selectFaultGrades" parameterType="map" resultType="map">
+    SELECT CASE C.GW_CD WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH'
+      WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' ELSE 'CLEAR' END AS code,
+      C.COM_CD_NM AS name, C.GW_CD AS gwCd
+    FROM com_cd_info C
+    WHERE C.COM_CD_GROUP_ID='CD_FALT' AND C.GW_SRC_COL='event_grade'
+       AND C.COM_CD_USE_YN='Y' AND C.GW_CD IN ('1','2','3','4','5')
+    ORDER BY CAST(C.GW_CD AS UNSIGNED)
+  </select>
+  <select id="selectFaultLogDetail" parameterType="map" resultType="map">
+    SELECT <include refid="faultSelect"/>,
+           D.event_edt AS dsbltyEndDt
+    FROM raw_event_log D <include refid="faultJoins"/>
+    WHERE D.event_seq=#{eventSeq}
+      AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
+  <select id="selectGatewayEquipmentRawData" parameterType="map" resultType="map">
+    SELECT
+      <choose>
+        <when test="dataType == 'HOUR'">DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H:00:00') AS clctDt, '1시간 통계' AS dataTypeNm,</when>
+        <when test="dataType == 'DAY'">DATE(R.reg_dt) AS clctDt, '1일 통계' AS dataTypeNm,</when>
+        <otherwise>R.reg_dt AS clctDt, 'Raw Data' AS dataTypeNm,</otherwise>
+      </choose>
+      D.ems_id AS emsId, D.device_id AS gatewayDeviceId,
+      CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX' WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END AS linkSysCd,
+      L.LINK_SYS_NM AS linkSysNm, S.STN_NM AS stnNm,D.device_nm AS eqpmntNm,D.device_id AS eqpmntMngNo,
+      ROUND(AVG(R.cpu_usage),2) AS cpuUsgrt, ROUND(AVG(R.memory_usage),2) AS mmryUsgrt,
+      ROUND(AVG(R.disk_usage),2) AS diskUsgrt
+      FROM raw_usage_log R
+      JOIN com_device_info D ON D.ems_id=R.ems_id AND D.device_id=R.device_id AND D.use_yn='Y'
+      LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE D.ems_id
+        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX' WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END
+      WHERE D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=CASE #{linkSysCd}
+          WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END</if>
+      <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
+      <if test="startDt != null and startDt != ''">AND R.reg_dt &gt;= #{startDt}</if>
+      <if test="endDt != null and endDt != ''">AND R.reg_dt &lt;= #{endDt}</if>
+      <if test="keyword != null and keyword != ''">AND (D.device_nm LIKE CONCAT('%',#{keyword},'%') OR D.device_id LIKE CONCAT('%',#{keyword},'%') OR D.device_ip LIKE CONCAT('%',#{keyword},'%'))</if>
+      GROUP BY
+        <choose>
+          <when test="dataType == 'HOUR'">DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H:00:00'),</when>
+          <when test="dataType == 'DAY'">DATE(R.reg_dt),</when>
+          <otherwise>R.usage_seq, R.reg_dt,</otherwise>
+        </choose>
+        D.ems_id,D.device_id,D.device_nm,L.LINK_SYS_NM,S.STN_NM
+      ORDER BY clctDt DESC LIMIT 500
+  </select>
+</mapper>

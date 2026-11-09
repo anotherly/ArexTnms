@@ -26,6 +26,6 @@ request.setAttribute("pageDescription", "시스템별 성능수집과 PING 상�
 </div>
 <jsp:include page="/WEB-INF/jsp/common/common-scripts.jsp" />
 <script src="<%=request.getContextPath()%>/js/tnms/pages/management-common.js?v=20261010.3"></script>
-<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/cycle.js?v=20261010.3"></script>
+<script src="<%=request.getContextPath()%>/js/tnms/pages/performance/cycle.js?v=20261106.cycle-crud-schema-r2"></script>
 </body>
 </html>

@@ -37,8 +37,8 @@ public class SettingServiceImpl implements SettingService {
         result.put("codeGroups", groups);
         result.put("selectedGroupId", selected);
         result.put("codes", selected == null ? java.util.Collections.emptyList() : settingMapper.selectCommonCodeList(selected));
-        result.put("severityCodes", settingMapper.selectCommonCodeList("SYS_STTS"));
-        result.put("faultGradeCodes", settingMapper.selectCommonCodeList("DSBLTY_GRD"));
+        result.put("severityCodes", settingMapper.selectCommonCodeList("CD_SYST"));
+        result.put("faultGradeCodes", settingMapper.selectCommonCodeList("CD_FALT"));
         return result;
     }
 
@@ -82,6 +82,10 @@ public class SettingServiceImpl implements SettingService {
     @Transactional(rollbackFor = Exception.class)
     public void saveCommonCode(CommonCodeVO vo, String actorId) {
         if (vo == null || blank(vo.getComCdGroupId()) || blank(vo.getComCd()) || blank(vo.getComCdNm())) throw new IllegalArgumentException("코드 그룹, 코드, 코드명을 입력해 주세요.");
+        // Shared gateway identifiers are fixed at CD_XXXX and CD_XXXX_NNN.
+        if (!vo.getComCdGroupId().matches("CD_[A-Z0-9]{4}") ||
+            !vo.getComCd().matches(java.util.regex.Pattern.quote(vo.getComCdGroupId()) + "_[0-9]{3}"))
+            throw new IllegalArgumentException("공통코드는 CD_XXXX / CD_XXXX_NNN 형식이어야 합니다.");
         if (vo.getComCdSeq() == null) vo.setComCdSeq(Integer.valueOf(1));
         if (blank(vo.getComCdUseYn())) vo.setComCdUseYn("Y");
         if (settingMapper.countCommonCode(vo) == 0) {
@@ -90,6 +94,9 @@ public class SettingServiceImpl implements SettingService {
         } else {
             vo.setMdfrId(actorId);
             settingMapper.updateCommonCode(vo);
+        }
+        if (vo.getExt1Cn()!=null && vo.getExt1Cn().matches("#[0-9a-fA-F]{6}")) {
+            settingMapper.upsertCodeColor(vo);
         }
     }
 
