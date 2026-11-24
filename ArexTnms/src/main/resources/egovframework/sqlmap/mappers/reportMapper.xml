@@ -25,9 +25,7 @@
   <sql id="baseJoins">
     LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
     LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
-    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
-      WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE NULL END)
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
   </sql>
   <sql id="excludeWebExceptionAtEvent">
     AND NOT EXISTS (
@@ -60,8 +58,7 @@
     <include refid="excludeWebExceptionAtEvent"/>
     AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
     <if test="linkSysCd != null and linkSysCd != ''">
-      AND D.ems_id = (CASE #{linkSysCd} WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4
-        WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+      AND D.ems_id = ((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
     </if>
   </sql>
   <sql id="rangeWhere">
@@ -129,17 +126,14 @@
            COALESCE(SUM(D.event_grade='4'),0) AS warningNocs,
            COALESCE(SUM(D.event_grade='5'),0) AS infoNocs
     FROM web_link_sys_info L
-    LEFT JOIN <include refid="faultSource"/> ON D.ems_id=(CASE L.LINK_SYS_CD
-      WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
-      WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+    LEFT JOIN <include refid="faultSource"/> ON D.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
       <include refid="selectedJoinCondition"/>
-    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN ('EMS_TX','VMS','PBX','EMS_PIDS','SCADA_SEC')
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN (SELECT link_sys_cd FROM vw_tnms_system_map)
       <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
-      AND (CASE L.LINK_SYS_CD WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4
-        WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+      AND (SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
       IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
     GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
-    ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
   </select>
   <select id="selectFaultStationSummary" parameterType="reportVO" resultType="map">
     SELECT COALESCE(S.STN_CD,'UNMATCHED') AS stnCd,

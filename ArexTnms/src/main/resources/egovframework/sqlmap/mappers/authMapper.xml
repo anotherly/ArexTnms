@@ -95,8 +95,8 @@
                COALESCE(R.READ_AUTHRT_YN, 'N') AS READ_AUTHRT_YN
           FROM web_link_sys_info S
           LEFT JOIN web_authrt_sys_rel R ON R.LINK_SYS_CD = S.LINK_SYS_CD AND R.AUTHRT_CD = #{_parameter}
-         WHERE S.LINK_SYS_CD IN ('EMS_TX','SCADA_SEC','VMS','PBX','EMS_PIDS')
-         ORDER BY FIELD(S.LINK_SYS_CD, 'EMS_TX','SCADA_SEC','VMS','PBX','EMS_PIDS')
+         WHERE S.LINK_SYS_CD IN (SELECT link_sys_cd FROM vw_tnms_system_map)
+         ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=S.LINK_SYS_CD)
     </select>
     <delete id="deleteSystemAuths" parameterType="string">
         DELETE FROM web_authrt_sys_rel WHERE AUTHRT_CD = #{_parameter}

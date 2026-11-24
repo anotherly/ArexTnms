@@ -13,8 +13,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 /** 서버측 요청별 5개 연계시스템 조회 범위. 브라우저 파라미터로 범위를 늘릴 수 없습니다. */
 public final class SystemDataScope {
     public static final String REQUEST_ATTRIBUTE = "TNMS_ALLOWED_SYSTEM_CODES";
-    private static final Set<String> CODES = Collections.unmodifiableSet(new HashSet<String>(
-        Arrays.asList("EMS_TX", "SCADA_SEC", "VMS", "PBX", "EMS_PIDS")));
+    public static final String ALL_SYSTEM_CODES = "TNMS_ALL_SYSTEM_CODES";
     private SystemDataScope() { }
 
     @SuppressWarnings("unchecked")
@@ -26,14 +25,18 @@ public final class SystemDataScope {
         if (value == null) return null; // 인증되지 않은 엔드포인트에서는 별도 인증 필터가 담당
         Set<String> selected = new HashSet<String>();
         if (value instanceof Collection) for (Object code : (Collection<?>) value) {
-            if (code instanceof String && CODES.contains(code)) selected.add((String) code);
+            if (code instanceof String && ((String)code).matches("[A-Z][A-Z0-9_]{1,19}")) selected.add((String) code);
         }
         return selected;
     }
 
+    @SuppressWarnings("unchecked")
     public static boolean isLimited() {
-        Set<String> allowed = current();
-        return allowed != null && allowed.size() != CODES.size();
+        Set<String> allowed=current();
+        RequestAttributes attrs=RequestContextHolder.getRequestAttributes();
+        if(allowed==null || !(attrs instanceof ServletRequestAttributes)) return false;
+        Object all=((ServletRequestAttributes)attrs).getRequest().getAttribute(ALL_SYSTEM_CODES);
+        return !(all instanceof Collection) || !allowed.containsAll((Collection<String>)all);
     }
 
     public static void requireSystem(String systemCode) {

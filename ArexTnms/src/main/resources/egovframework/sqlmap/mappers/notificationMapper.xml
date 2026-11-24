@@ -59,9 +59,7 @@
           FROM raw_event_action D
           LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
           LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
-          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
-              WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-              WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
          WHERE D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
            <include refid="exceptionFilterNow"/>
            AND D.event_dt &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)
@@ -78,9 +76,7 @@
           FROM web_perf_thrshld_event D
           LEFT JOIN com_device_info E ON E.ems_id=D.EMS_ID AND E.device_id=D.DEVICE_ID
           LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
-          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE D.EMS_ID
-              WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-              WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.EMS_ID)
          WHERE D.EVENT_YN=1
            <include refid="exceptionFilterNow"/>
            AND D.EVENT_DT &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)

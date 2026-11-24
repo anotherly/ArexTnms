@@ -29,7 +29,6 @@ import org.apache.ibatis.reflection.SystemMetaObject;
 public class SystemScopeSqlInterceptor implements Interceptor {
     private static final Pattern TABLE = Pattern.compile(
         "(?i)\\b(FROM|JOIN)\\s+`?(web_link_sys_info)`?(?![A-Za-z0-9_])");
-    private static final Set<String> CODES = new java.util.HashSet<String>(Arrays.asList("EMS_TX", "SCADA_SEC", "VMS", "PBX", "EMS_PIDS"));
     private static final Map<String,String> RULES = rules();
     private static final Pattern NEXT_WORD = Pattern.compile("^\\s+([A-Za-z_][A-Za-z0-9_]*)");
     private static final Set<String> SQL_KEYWORDS = new java.util.HashSet<String>(Arrays.asList(
@@ -45,7 +44,7 @@ public class SystemScopeSqlInterceptor implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Set<String> allowed = SystemDataScope.current();
-        if (allowed != null && allowed.size() < CODES.size()) {
+        if (SystemDataScope.isLimited()) {
             MetaObject meta = SystemMetaObject.forObject(invocation.getTarget());
             MappedStatement mapped = (MappedStatement) meta.getValue("delegate.mappedStatement");
             String id = mapped == null ? "" : mapped.getId();
@@ -64,8 +63,8 @@ public class SystemScopeSqlInterceptor implements Interceptor {
 
     static String filterSql(String sql, Set<String> allowed) {
         StringBuilder in = new StringBuilder();
-        for (String code : Arrays.asList("EMS_TX","SCADA_SEC","VMS","PBX","EMS_PIDS")) {
-            if (!allowed.contains(code)) continue;
+        for (String code : new java.util.TreeSet<String>(allowed)) {
+            if (!code.matches("[A-Z][A-Z0-9_]{1,19}")) continue;
             if (in.length() > 0) in.append(',');
             in.append('\'').append(code).append('\'');
         }

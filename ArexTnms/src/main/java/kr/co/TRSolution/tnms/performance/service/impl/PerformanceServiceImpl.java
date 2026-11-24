@@ -23,16 +23,31 @@ public class PerformanceServiceImpl implements PerformanceService {
 
     @Override
     public Map<String, Object> selectOverview(Map<String, Object> params) {
-        Map<String, Object> result = common();
+        Map<String, Object> result = new HashMap<String,Object>();
         if (params.get("eqpmntSn") != null && !blank(params.get("eqpmntSn"))) {
             String key=String.valueOf(params.get("eqpmntSn"));
             if (!key.matches("[0-9a-fA-F]{64}")) throw new IllegalArgumentException("장비 식별자가 유효하지 않습니다.");
         }
-        result.put("indicatorStates", gatewayLiveService.indicatorStates(params));
-        result.put("equipments", gatewayLiveService.performance(params));
-        result.put("trend", gatewayLiveService.trend(params));
-        if (blank(params.get("topIndicator"))) params.put("topIndicator", "CPU_USGRT");
-        result.put("top5", gatewayLiveService.top5(params));
+        if (!"Y".equals(String.valueOf(params.get("pageOnly")))) {
+            result.putAll(common());
+            result.put("indicatorStates", gatewayLiveService.indicatorStates(params));
+        }
+        // 일반 화면만 SQL LIMIT/OFFSET. 상세/엑셀은 장비 식별 필터 또는 전체 조회 유지.
+        if (params.get("page") != null) {
+            int page=positiveInt(params.get("page"),1,1000000);
+            int size=positiveInt(params.get("pageSize"),10,100);
+            params.put("pageSize",size);
+            params.put("offset",(page-1)*size);
+            result.put("equipmentTotal",gatewayLiveService.performanceCount(params));
+        }
+        List<Map<String,Object>> equipmentRows=gatewayLiveService.performance(params);
+        result.put("equipments",equipmentRows);
+        if(params.get("page")==null) result.put("equipmentTotal",equipmentRows.size());
+        if (!"Y".equals(String.valueOf(params.get("pageOnly")))) {
+            result.put("trend", gatewayLiveService.trend(params));
+            if (blank(params.get("topIndicator"))) params.put("topIndicator", "CPU_USGRT");
+            result.put("top5", gatewayLiveService.top5(params));
+        }
         return result;
     }
 
@@ -113,6 +128,11 @@ public class PerformanceServiceImpl implements PerformanceService {
         return result;
     }
 
+    private int positiveInt(Object value,int defaultValue,int max) {
+        try {int x=Integer.parseInt(String.valueOf(value));if(x>=1 && x<=max)return x;}
+        catch(Exception ignored){}
+        return defaultValue;
+    }
     private boolean blank(Object v) { return v == null || String.valueOf(v).trim().length() == 0; }
     private String value(Object v) { return v == null ? null : String.valueOf(v).trim(); }
     private Long longValue(Object v) { try { return blank(v) ? null : Long.valueOf(String.valueOf(v)); } catch (Exception e) { return null; } }

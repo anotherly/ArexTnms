@@ -16,6 +16,7 @@ import kr.co.TRSolution.tnms.performance.mapper.PingCycleMapper;
 public class PingCycleService {
     @Resource(name="pingCycleMapper") private PingCycleMapper mapper;
     @Resource(name="gatewayLiveService") private GatewayLiveService gatewayLiveService;
+    @Resource(name="systemCodeRegistry") private kr.co.TRSolution.tnms.gateway.service.SystemCodeRegistry codes;
 
     public Map<String,Object> selectData(Map<String,String> request) {
         Map<String,Object> scope = new HashMap<String,Object>();
@@ -76,15 +77,8 @@ public class PingCycleService {
 
     private Map<String,Object> key(Integer emsId, String dataSeCd) {
         if (emsId == null) throw new IllegalArgumentException("시스템을 선택해 주세요.");
-        String system;
-        switch (emsId.intValue()) {
-            case 1: system="EMS_TX"; break;
-            case 4: system="VMS"; break;
-            case 11: system="PBX"; break;
-            case 13: system="EMS_PIDS"; break;
-            case 16: system="SCADA_SEC"; break;
-            default: throw new IllegalArgumentException("관리대상이 아닌 EMS 시스템입니다.");
-        }
+        String system=codes.codeForEms(emsId.intValue());
+        if(system==null) throw new IllegalArgumentException("관리대상이 아닌 EMS 시스템입니다.");
         SystemDataScope.requireSystem(system);
         if (!("P".equals(dataSeCd) || "C".equals(dataSeCd) || "F".equals(dataSeCd) || "S".equals(dataSeCd)))
             throw new IllegalArgumentException("데이터 구분은 P, C, F, S만 허용합니다.");

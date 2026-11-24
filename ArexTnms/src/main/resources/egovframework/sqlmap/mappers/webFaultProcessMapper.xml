@@ -74,8 +74,7 @@
       WHEN 4 THEN 'WARNING' WHEN 5 THEN 'INFO' ELSE 'CLEAR' END AS dsbltyGrdCd,
     CASE P.EVENT_GRADE WHEN 1 THEN '긴급' WHEN 2 THEN '높음' WHEN 3 THEN '낮음'
       WHEN 4 THEN '경고' WHEN 5 THEN '정보' ELSE '해제' END AS dsbltyGrdNm,
-    CASE P.EMS_ID WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END AS linkSysCd,
+    (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=P.EMS_ID) AS linkSysCd,
     L.LINK_SYS_NM AS linkSysNm,E.stn_cd AS stnCd,S.STN_NM AS stnNm,
     'UNCONFIRMED' AS prcsSttsCd,'미확인' AS prcsSttsNm,
     'WEB_THRESHOLD' AS dataSource, 'N' AS tempActionYn,
@@ -85,15 +84,12 @@
     JOIN web_thrshld_info T ON T.THRSHLD_SN=P.THRSHLD_SN
     LEFT JOIN com_device_info E ON E.ems_id=P.EMS_ID AND E.device_id=P.DEVICE_ID
     LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
-    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE P.EMS_ID
-      WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=P.EMS_ID)
  </sql>
  <sql id="thresholdFilter">
     AND P.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
     <if test="linkSysCd != null and linkSysCd != ''">
-    AND P.EMS_ID=(CASE #{linkSysCd} WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
-      WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+    AND P.EMS_ID=((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
     </if>
     <if test="stnCd != null and stnCd != ''">AND E.stn_cd=#{stnCd}</if>
     <if test="startDt != null and startDt != ''">AND P.EVENT_DT &gt;= CONCAT(#{startDt},' 00:00:00')</if>

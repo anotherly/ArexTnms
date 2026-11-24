@@ -5,14 +5,6 @@
   <sql id="scope">AND D.ems_id IN
     <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
   </sql>
-  <sql id="baseDevices">
-    SELECT D.*, S.STN_NM, S.STN_SEQ, S.MNLS_STN_YN,
-           L.LINK_SYS_NM, L.PROTCL_CD
-      FROM vw_tnms_gateway_device_live D
-      LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
-     WHERE 1=1 <include refid="scope"/>
-  </sql>
   <sql id="deviceFilters">
     <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
     <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
@@ -56,18 +48,18 @@
   <select id="selectSystemSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
     SELECT L.LINK_SYS_CD, L.LINK_SYS_NM, <include refid="countExpressions"/>, <include refid="overallStatus"/>, MAX(D.ping_dt) AS CLCT_DT
     FROM web_link_sys_info L
-    LEFT JOIN vw_tnms_gateway_device_live D ON D.link_sys_cd=L.LINK_SYS_CD
+    LEFT JOIN vw_tnms_device_status D ON D.link_sys_cd=L.LINK_SYS_CD
          AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
-    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN ('EMS_TX','VMS','PBX','EMS_PIDS','SCADA_SEC')
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN (SELECT link_sys_cd FROM vw_tnms_system_map)
     <if test="allowedCodes != null">AND L.LINK_SYS_CD IN <foreach collection="allowedCodes" item="code" open="(" separator="," close=")">#{code}</foreach></if>
     GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
-    ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
   </select>
   <select id="selectStationSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.stationMap">
     SELECT S.STN_CD,S.STN_NM,S.STN_SEQ,S.MNLS_STN_YN, <include refid="countExpressions"/>, <include refid="overallStatus"/>,
            MAX(D.ping_dt) AS LAST_CLCT_DT
     FROM com_stn_info S
-    LEFT JOIN vw_tnms_gateway_device_live D ON D.stn_cd=S.STN_CD
+    LEFT JOIN vw_tnms_device_status D ON D.stn_cd=S.STN_CD
          AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
          <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
     WHERE S.USE_YN='Y' GROUP BY S.STN_CD,S.STN_NM,S.STN_SEQ,S.MNLS_STN_YN ORDER BY S.STN_SEQ
@@ -75,12 +67,12 @@
   <select id="selectStationSystemSummary" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
     SELECT L.LINK_SYS_CD,L.LINK_SYS_NM, <include refid="countExpressions"/>, <include refid="overallStatus"/>, MAX(D.ping_dt) AS CLCT_DT
     FROM web_link_sys_info L
-    LEFT JOIN vw_tnms_gateway_device_live D ON D.link_sys_cd=L.LINK_SYS_CD AND D.stn_cd=#{stnCd}
+    LEFT JOIN vw_tnms_device_status D ON D.link_sys_cd=L.LINK_SYS_CD AND D.stn_cd=#{stnCd}
          AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
-    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN ('EMS_TX','VMS','PBX','EMS_PIDS','SCADA_SEC')
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN (SELECT link_sys_cd FROM vw_tnms_system_map)
       <if test="allowedCodes != null">AND L.LINK_SYS_CD IN <foreach collection="allowedCodes" item="code" open="(" separator="," close=")">#{code}</foreach></if>
     GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
-    ORDER BY FIELD(L.LINK_SYS_CD,'VMS','PBX','SCADA_SEC','EMS_PIDS','EMS_TX')
+    ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
   </select>
   <select id="selectEquipmentList" parameterType="map" resultMap="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper.equipmentMap">
     SELECT ROW_NUMBER() OVER (ORDER BY D.ems_id,D.device_id) AS EQPMNT_SN,
@@ -104,6 +96,12 @@
     LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
     WHERE D.ems_id=#{emsId} AND D.device_id=#{deviceId} <include refid="scope"/>
   </select>
+  <select id="selectPerformanceEquipmentCount" parameterType="map" resultType="int">
+    SELECT COUNT(*)
+      FROM vw_tnms_device_base D
+     WHERE 1=1 <include refid="scope"/> <include refid="deviceFilters"/>
+       <if test="eqpmntSn != null and eqpmntSn != ''">AND SHA2(CONCAT(D.ems_id,':',D.device_id),256)=#{eqpmntSn}</if>
+  </select>
   <select id="selectPerformanceEquipmentList" parameterType="map" resultType="map">
     SELECT SHA2(CONCAT(D.ems_id,':',D.device_id),256) AS eqpmntSn,
            D.ems_id AS emsId,D.device_id AS gatewayDeviceId,
@@ -113,12 +111,13 @@
            L.PROTCL_CD AS protclCd,D.cpu_usage AS cpuUsgrt,D.memory_usage AS mmryUsgrt,
            D.disk_usage AS diskUsgrt,D.usage_dt AS lastClctDt,D.stts_cd AS sttsCd,
            D.ping_dt AS lastPingDt,D.usage_fresh_yn AS usageFreshYn,D.test_yn AS testYn
-    FROM vw_tnms_gateway_device_live D
+    FROM vw_tnms_device_performance D
     LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=D.link_sys_cd
     LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
     WHERE 1=1 <include refid="scope"/> <include refid="deviceFilters"/>
     <if test="eqpmntSn != null and eqpmntSn != ''">AND SHA2(CONCAT(D.ems_id,':',D.device_id),256)=#{eqpmntSn}</if>
-    ORDER BY D.usage_dt DESC,COALESCE(S.STN_SEQ,999),D.device_nm LIMIT 500
+    ORDER BY D.usage_dt DESC,COALESCE(S.STN_SEQ,999),D.device_nm,D.ems_id,D.device_id
+    <if test="offset != null and pageSize != null">LIMIT #{pageSize} OFFSET #{offset}</if>
   </select>
   <select id="selectPerformanceTrend" parameterType="map" resultType="map">
     SELECT DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H:00') AS timeLabel,
@@ -126,8 +125,7 @@
     FROM raw_usage_log R
     JOIN com_device_info D ON D.ems_id=R.ems_id AND D.device_id=R.device_id AND D.use_yn='Y'
     WHERE 1=1 <include refid="scope"/>
-       <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(CASE #{linkSysCd}
-          WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)</if>
+       <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))</if>
        <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
        <if test="startDt != null and startDt != ''">AND R.reg_dt &gt;= #{startDt}</if>
        <if test="endDt != null and endDt != ''">AND R.reg_dt &lt;= #{endDt}</if>
@@ -144,7 +142,7 @@
            '%' AS unitNm,
            CASE WHEN D.usage_fresh_yn='Y' THEN 'NORMAL' ELSE 'UNKNOWN' END AS sttsCd,
            D.usage_dt AS clctDt,D.usage_fresh_yn AS usageFreshYn
-    FROM vw_tnms_gateway_device_live D WHERE D.usage_fresh_yn='Y'
+    FROM vw_tnms_device_performance D WHERE D.usage_fresh_yn='Y'
        <include refid="scope"/><include refid="deviceFilters"/>
     ORDER BY value DESC LIMIT 5
   </select>
@@ -155,15 +153,14 @@
            ELSE 'UNKNOWN' END AS sttsCd
     FROM (SELECT 'CPU_USGRT' AS perfIdctCd,'CPU' AS perfIdctNm
           UNION ALL SELECT 'MMRY_USGRT','MEMORY' UNION ALL SELECT 'DISK_USGRT','DISK') K
-    LEFT JOIN vw_tnms_gateway_device_live D ON D.ems_id IN
+    LEFT JOIN vw_tnms_device_performance D ON D.ems_id IN
        <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
        <if test="linkSysCd != null and linkSysCd != ''">AND D.link_sys_cd=#{linkSysCd}</if>
        <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
     GROUP BY K.perfIdctCd,K.perfIdctNm
   </select>
   <sql id="faultFilters">
-    <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(CASE #{linkSysCd}
-       WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)</if>
+    <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))</if>
     <if test="stnCd != null and stnCd != ''">AND E.stn_cd=#{stnCd}</if>
     <if test="grade != null and grade != ''">AND (G.COM_CD=#{grade} OR G.GW_CD=#{grade} OR
         CASE D.event_grade WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH'
@@ -184,8 +181,7 @@
       WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO'
       ELSE 'CLEAR' END AS dsbltyGrdCd,
     COALESCE(G.COM_CD_NM,D.event_grade) AS dsbltyGrdNm,
-    CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END AS linkSysCd,
+    (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id) AS linkSysCd,
     L.LINK_SYS_NM AS linkSysNm,E.stn_cd AS stnCd,S.STN_NM AS stnNm,
     'UNCONFIRMED' AS prcsSttsCd,'게이트웨이 수집' AS prcsSttsNm,
     'GATEWAY' AS dataSource,'N' AS tempActionYn,
@@ -194,9 +190,7 @@
   <sql id="faultJoins">
     LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
     LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
-    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
-      WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-      WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
     LEFT JOIN com_cd_info G ON G.COM_CD_GROUP_ID='CD_FALT' AND G.GW_SRC_COL='event_grade'
       AND G.GW_CD=D.event_grade
   </sql>
@@ -327,18 +321,16 @@
         <otherwise>R.reg_dt AS clctDt, 'Raw Data' AS dataTypeNm,</otherwise>
       </choose>
       D.ems_id AS emsId, D.device_id AS gatewayDeviceId,
-      CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX' WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END AS linkSysCd,
+      (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id) AS linkSysCd,
       L.LINK_SYS_NM AS linkSysNm, S.STN_NM AS stnNm,D.device_nm AS eqpmntNm,D.device_id AS eqpmntMngNo,
       ROUND(AVG(R.cpu_usage),2) AS cpuUsgrt, ROUND(AVG(R.memory_usage),2) AS mmryUsgrt,
       ROUND(AVG(R.disk_usage),2) AS diskUsgrt
       FROM raw_usage_log R
       JOIN com_device_info D ON D.ems_id=R.ems_id AND D.device_id=R.device_id AND D.use_yn='Y'
       LEFT JOIN com_stn_info S ON S.STN_CD=D.stn_cd
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE D.ems_id
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX' WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id)
       WHERE D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
-      <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=CASE #{linkSysCd}
-          WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END</if>
+      <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd})</if>
       <if test="stnCd != null and stnCd != ''">AND D.stn_cd=#{stnCd}</if>
       <if test="startDt != null and startDt != ''">AND R.reg_dt &gt;= #{startDt}</if>
       <if test="endDt != null and endDt != ''">AND R.reg_dt &lt;= #{endDt}</if>

@@ -15,6 +15,7 @@ public interface GatewayLiveMapper {
     List<EquipmentVO> selectEquipmentList(Map<String, Object> params);
     EquipmentVO selectEquipmentSummary(Map<String, Object> params);
     EquipmentVO selectEquipmentByKey(Map<String, Object> params);
+    int selectPerformanceEquipmentCount(Map<String, Object> params);
     List<Map<String, Object>> selectPerformanceEquipmentList(Map<String, Object> params);
     List<Map<String, Object>> selectPerformanceTrend(Map<String, Object> params);
     List<Map<String, Object>> selectPerformanceTop5(Map<String, Object> params);

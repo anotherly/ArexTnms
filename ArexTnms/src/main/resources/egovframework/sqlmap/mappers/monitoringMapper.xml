@@ -111,8 +111,7 @@
            E.device_type AS eqpmNm
       FROM com_device_info E
      WHERE E.use_yn='Y' AND E.device_type IS NOT NULL AND E.device_type != ''
-       AND E.ems_id=(CASE #{_parameter} WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4
-          WHEN 'PBX' THEN 11 WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+       AND E.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{_parameter})
      ORDER BY E.device_type
   </select>
   <!-- com_device_info is the single equipment source. Never write ping_alive/ping_dt (gateway-owned). -->

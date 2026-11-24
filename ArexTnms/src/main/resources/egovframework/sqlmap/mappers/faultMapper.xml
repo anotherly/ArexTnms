@@ -4,7 +4,7 @@
   <select id="selectLinkSystems" resultType="map">
     SELECT LINK_SYS_CD AS linkSysCd, LINK_SYS_NM AS linkSysNm
       FROM web_link_sys_info WHERE USE_YN='Y'
-     ORDER BY FIELD(LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), LINK_SYS_NM
+     ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=web_link_sys_info.LINK_SYS_CD), LINK_SYS_NM
   </select>
   <select id="selectStations" resultType="map">
     SELECT STN_CD AS stnCd, STN_NM AS stnNm FROM com_stn_info WHERE USE_YN='Y' ORDER BY STN_SEQ
@@ -13,8 +13,7 @@
   <select id="selectFaultTypes" parameterType="map" resultType="map">
     SELECT MIN(D.event_seq) AS dsbltyTypeSn, D.event_type AS evntCd,
            D.event_type AS dsbltyTypeNm,
-           CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-                WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END AS linkSysCd,
+           (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id) AS linkSysCd,
            L.LINK_SYS_NM AS linkSysNm,
            CASE MIN(CAST(D.event_grade AS UNSIGNED)) WHEN 1 THEN 'EMERGENCY'
                 WHEN 2 THEN 'HIGH' WHEN 3 THEN 'LOW' WHEN 4 THEN 'WARNING'
@@ -24,13 +23,9 @@
            'N' AS autoEndYn, 'N' AS smsUseYn, 'Y' AS autoRegYn, 'Y' AS useYn,
            MAX(D.reg_dt) AS mdfcnDt
       FROM raw_event_log D
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-        WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END)
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
      WHERE D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
-       <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=(CASE #{linkSysCd}
-          WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
-          WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)</if>
+       <if test="linkSysCd != null and linkSysCd != ''">AND D.ems_id=((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))</if>
        <if test="grade != null and grade != ''">AND D.event_grade=(CASE #{grade}
           WHEN 'EMERGENCY' THEN '1' WHEN 'HIGH' THEN '2' WHEN 'LOW' THEN '3'
           WHEN 'WARNING' THEN '4' WHEN 'INFO' THEN '5' ELSE #{grade} END)</if>
@@ -46,12 +41,10 @@
            CASE D.event_grade WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH'
              WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END AS bscGrdCd,
            D.event_grade AS bscGrdNm,
-           CASE D.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-              WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END AS linkSysCd,
+           (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id) AS linkSysCd,
            L.LINK_SYS_NM AS linkSysNm
       FROM raw_event_log D
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE D.ems_id WHEN 1 THEN 'EMS_TX'
-          WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX' WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END)
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
      WHERE D.event_seq=#{eventSeq} AND D.ems_id IN
        <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
   </select>
@@ -73,9 +66,7 @@
            E.device_ip AS ipAddr
       FROM web_dsblty_excp_group_eqpmnt_rel R
       LEFT JOIN com_device_info E ON E.ems_id=R.EMS_ID AND E.device_id=R.DEVICE_ID
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE R.EMS_ID
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-        WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=R.EMS_ID)
       LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
      WHERE R.EXCP_GROUP_SN=#{_parameter}
      ORDER BY COALESCE(S.STN_SEQ,999),L.LINK_SYS_NM,eqpmntNm
@@ -83,19 +74,14 @@
   <select id="selectExceptionEquipmentCandidates" parameterType="map" resultType="map">
     SELECT CONCAT(E.ems_id,':',E.device_id) AS eqpmntSn,E.ems_id AS emsId,
            E.device_id AS gatewayDeviceId,E.device_nm AS eqpmntNm,E.device_id AS eqpmntMngNo,
-           CASE E.ems_id WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-            WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END AS linkSysCd,
+           (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=E.ems_id) AS linkSysCd,
            L.LINK_SYS_NM AS linkSysNm,E.stn_cd AS stnCd,S.STN_NM AS stnNm,E.device_ip AS ipAddr,
            CASE E.ping_alive WHEN 1 THEN 'NORMAL' WHEN -1 THEN 'OFFLINE' ELSE 'UNKNOWN' END AS sttsCd
       FROM com_device_info E
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=CASE E.ems_id
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-        WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' END
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=E.ems_id)
       LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
      WHERE E.use_yn='Y'
-       <if test="linkSysCd != null and linkSysCd != ''">AND E.ems_id=CASE #{linkSysCd}
-         WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
-         WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END</if>
+       <if test="linkSysCd != null and linkSysCd != ''">AND E.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd})</if>
        <if test="stnCd != null and stnCd != ''">AND E.stn_cd=#{stnCd}</if>
        <if test="keyword != null and keyword != ''">AND (E.device_nm LIKE CONCAT('%',#{keyword},'%') OR E.device_id LIKE CONCAT('%',#{keyword},'%'))</if>
      ORDER BY COALESCE(S.STN_SEQ,999),E.ems_id,E.device_nm LIMIT 1000

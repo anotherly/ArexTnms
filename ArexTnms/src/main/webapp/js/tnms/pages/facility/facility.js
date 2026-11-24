@@ -495,7 +495,9 @@
     if(!global.TNMS_FACILITY_TIMER)global.TNMS_FACILITY_TIMER=global.setInterval(function(){
       const el=document.activeElement;
       if(document.hidden || document.querySelector('.modal-overlay, .modal-backdrop, [role=dialog]') || (el && el.matches('input,select,textarea')))return;
-      global.loadFacility();
-    },10000);
+      if(global.TNMS_FACILITY_REFRESHING)return;
+      global.TNMS_FACILITY_REFRESHING=true;
+      Promise.resolve(global.loadFacility()).finally(function(){global.TNMS_FACILITY_REFRESHING=false;});
+    },60000);
   };
 })(window);

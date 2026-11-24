@@ -1,7 +1,6 @@
 package kr.co.TRSolution.tnms.gateway.service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,30 +19,24 @@ import kr.co.TRSolution.tnms.monitoring.vo.StationStatusVO;
  */
 @Service("gatewayLiveService")
 public class GatewayLiveService {
-    private static final String[] SYS_CODES = {"EMS_TX","VMS","PBX","EMS_PIDS","SCADA_SEC"};
-    private static final int[] EMS_IDS = {1,4,11,13,16};
     @Resource(name="gatewayLiveMapper") private GatewayLiveMapper mapper;
+    @Resource(name="systemCodeRegistry") private SystemCodeRegistry codes;
 
     public Map<String,Object> scope(Map<String,?> request) {
         Map<String,Object> args=new HashMap<String,Object>();
         if(request!=null)args.putAll(request);
         Set<String> allowed=SystemDataScope.current();
-        List<Integer> ids=new ArrayList<Integer>();
-        List<String> codes=new ArrayList<String>();
-        for(int i=0;i<SYS_CODES.length;i++) {
-            if(allowed==null || allowed.contains(SYS_CODES[i])) {
-                ids.add(Integer.valueOf(EMS_IDS[i])); codes.add(SYS_CODES[i]);
-            }
-        }
-        // Never emit IN () -- no permissions map to an impossible EMS id.
-        if(ids.isEmpty()) ids.add(Integer.valueOf(-1));
-        if(codes.isEmpty()) codes.add("__DENIED__");
-        args.put("allowedEmsIds",ids); args.put("allowedCodes",codes);
+        Map<Integer,String> mapping=codes.emsToCodes();
+        List<Integer> ids=codes.allowedEmsIds(allowed);
+        List<String> selectedCodes=new ArrayList<String>();
+        for(String value:mapping.values()) if(allowed==null || allowed.contains(value)) selectedCodes.add(value);
+        if(selectedCodes.isEmpty()) selectedCodes.add("__DENIED__");
+        args.put("allowedEmsIds",ids);
+        args.put("allowedCodes",selectedCodes);
         Object code=args.get("linkSysCd");
         if(code!=null && String.valueOf(code).trim().length()>0) {
             String selected=String.valueOf(code).trim();
-            if(!Arrays.asList(SYS_CODES).contains(selected))
-                throw new IllegalArgumentException("알 수 없는 설비 시스템입니다.");
+            if(!mapping.containsValue(selected)) throw new IllegalArgumentException("등록되지 않은 연계시스템입니다.");
             SystemDataScope.requireSystem(selected);
         }
         return args;
@@ -84,10 +77,8 @@ public class GatewayLiveService {
         if(device==null) throw new IllegalArgumentException("게이트웨이 장비를 찾을 수 없습니다.");
         return device;
     }
-    private String systemCode(int id) {
-        for(int i=0;i<EMS_IDS.length;i++)if(EMS_IDS[i]==id)return SYS_CODES[i];
-        return null;
-    }
+    private String systemCode(int id) { return codes.codeForEms(id); }
+    public int performanceCount(Map<String,Object> params) { return mapper.selectPerformanceEquipmentCount(scope(params)); }
     public List<Map<String,Object>> performance(Map<String,Object> params) { return mapper.selectPerformanceEquipmentList(scope(params)); }
     public List<Map<String,Object>> trend(Map<String,Object> params) { return mapper.selectPerformanceTrend(scope(params)); }
     public List<Map<String,Object>> top5(Map<String,Object> params) { return mapper.selectPerformanceTop5(scope(params)); }

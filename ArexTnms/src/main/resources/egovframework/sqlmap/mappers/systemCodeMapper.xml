@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.gateway.mapper.SystemCodeMapper">
+  <select id="selectSystemMappings" resultType="map">
+    SELECT ems_id AS emsId, link_sys_cd AS linkSysCd, device_com_cd AS deviceComCd
+    FROM vw_tnms_system_map ORDER BY sort_seq
+  </select>
+</mapper>

@@ -27,6 +27,7 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
 
     @Resource(name = "monitoringService")
     private MonitoringService monitoringService;
+    @Resource(name="systemCodeRegistry") private kr.co.TRSolution.tnms.gateway.service.SystemCodeRegistry systemCodes;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -46,6 +47,7 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
         session.setAttribute("menuAuthMap", permissionMap);
         List<String> allowedSystems = authService.selectAllowedSystemCodes(loginUser.getAuthrtCd());
         request.setAttribute(SystemDataScope.REQUEST_ATTRIBUTE, allowedSystems);
+        request.setAttribute(SystemDataScope.ALL_SYSTEM_CODES, systemCodes.allCodes());
 
         String path = request.getRequestURI().substring(request.getContextPath().length());
         Requirement requirement = REQUIREMENTS.get(path);
@@ -77,7 +79,8 @@ public class AuthInterceptor extends HandlerInterceptorAdapter {
             if ("/facility/gateway-delete.ajax".equals(path) ||
                 "/facility/gateway-detail.ajax".equals(path)) {
                 try {int ems=Integer.parseInt(request.getParameter("emsId"));
-                  linkSysCd=ems==1?"EMS_TX":ems==4?"VMS":ems==11?"PBX":ems==13?"EMS_PIDS":ems==16?"SCADA_SEC":"INVALID";
+                  linkSysCd=systemCodes.codeForEms(ems);
+                  if(linkSysCd==null)linkSysCd="INVALID";
                 } catch(Exception ex){linkSysCd="INVALID";}
             }
             // Gateway-detail/delete use the immutable EMS key instead of obsolete EQPMNT_SN.

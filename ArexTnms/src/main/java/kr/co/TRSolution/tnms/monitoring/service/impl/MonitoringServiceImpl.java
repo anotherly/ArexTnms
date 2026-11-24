@@ -29,6 +29,7 @@ public class MonitoringServiceImpl implements MonitoringService {
     private static final List<String> DEFAULT_STATUS_PRIORITY = Arrays.asList("CRITICAL", "CAUTION", "NORMAL");
     @Resource(name = "monitoringMapper") private MonitoringMapper monitoringMapper;
     @Resource(name = "gatewayLiveService") private GatewayLiveService gatewayLiveService;
+    @Resource(name = "systemCodeRegistry") private kr.co.TRSolution.tnms.gateway.service.SystemCodeRegistry systemCodes;
     @Resource(name = "settingMapper") private SettingMapper settingMapper;
 
     @Override
@@ -140,16 +141,11 @@ public class MonitoringServiceImpl implements MonitoringService {
         Map<String,Object> q=new HashMap<String,Object>();q.put("emsId",ems);q.put("deviceId",key);
         if (monitoringMapper.deleteGatewayDevice(q)!=1) throw new IllegalArgumentException("장비가 없거나 이미 삭제되었습니다.");
     }
-    private int emsId(String code) {
-        if ("EMS_TX".equals(code))return 1;if ("VMS".equals(code))return 4;
-        if ("PBX".equals(code))return 11;if ("EMS_PIDS".equals(code))return 13;
-        if ("SCADA_SEC".equals(code))return 16;
-        throw new IllegalArgumentException("허용되지 않은 연계시스템입니다.");
-    }
-    private String systemCode(int id){
-        if(id==1)return "EMS_TX";if(id==4)return "VMS";if(id==11)return "PBX";
-        if(id==13)return "EMS_PIDS";if(id==16)return "SCADA_SEC";
-        throw new IllegalArgumentException("허용되지 않은 EMS ID입니다.");
+    private int emsId(String code) { return systemCodes.emsForCode(code); }
+    private String systemCode(int id) {
+        String code=systemCodes.codeForEms(id);
+        if(code==null) throw new IllegalArgumentException("허용되지 않은 EMS ID입니다.");
+        return code;
     }
 
     private void validateSystem(String linkSysCd) {

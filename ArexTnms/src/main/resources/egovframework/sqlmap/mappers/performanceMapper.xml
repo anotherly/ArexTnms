@@ -5,7 +5,7 @@
 <select id="selectLinkSystems" resultType="map">
         SELECT LINK_SYS_CD AS linkSysCd, LINK_SYS_NM AS linkSysNm, PROTCL_CD AS protclCd
           FROM web_link_sys_info WHERE USE_YN='Y'
-         ORDER BY FIELD(LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), LINK_SYS_NM
+         ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=web_link_sys_info.LINK_SYS_CD), LINK_SYS_NM
     </select>
     <select id="selectStations" resultType="map">
         SELECT STN_CD AS stnCd, STN_NM AS stnNm FROM com_stn_info WHERE USE_YN='Y' ORDER BY STN_SEQ
@@ -23,30 +23,28 @@
                NULL AS clctCycleSec, NULL AS sttsMntrCycleSec,
                NULL AS timeoutSec, NULL AS rtryNocs, NULL AS timeoutPollSec,
                NULL AS totalJgmtSec,
-               CASE T.dataSeCd WHEN 'P' THEN U.lastDt ELSE P.lastDt END AS lastExcnDt,
+               CASE T.dataSeCd WHEN 'P' THEN UL.lastDt ELSE PL.lastDt END AS lastExcnDt,
                NULL AS nextExcnDt,
-               CASE WHEN (CASE T.dataSeCd WHEN 'P' THEN U.lastDt ELSE P.lastDt END)
+               CASE WHEN (CASE T.dataSeCd WHEN 'P' THEN UL.lastDt ELSE PL.lastDt END)
                   &gt;= DATE_SUB(NOW(),INTERVAL 5 MINUTE) THEN 'Y' ELSE 'N' END AS useYn,
                CASE WHEN T.dataSeCd='P' THEN 'raw_usage_log 수신 기준' ELSE 'raw_ping_log 수신 기준' END AS cycleCrtrCn,
                COALESCE(D.deviceCount,0) AS targetEqpmntCount,
                CASE WHEN T.dataSeCd='P' THEN COALESCE(U.recentCount,0) ELSE COALESCE(P.recentCount,0) END AS recentCount
           FROM com_ems_info M
-          JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE M.ems_id
-             WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-             WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+          JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=M.ems_id))
           CROSS JOIN (SELECT 'P' AS dataSeCd UNION ALL SELECT 'C') T
           LEFT JOIN (SELECT ems_id,COUNT(*) AS deviceCount FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) D ON D.ems_id=M.ems_id
-          LEFT JOIN (SELECT ems_id, MAX(reg_dt) AS lastDt,
-                     SUM(reg_dt &gt;= DATE_SUB(NOW(),INTERVAL 5 MINUTE)) AS recentCount
-                       FROM raw_ping_log GROUP BY ems_id) P ON P.ems_id=M.ems_id
-          LEFT JOIN (SELECT ems_id, MAX(reg_dt) AS lastDt,
-                     SUM(reg_dt &gt;= DATE_SUB(NOW(),INTERVAL 5 MINUTE)) AS recentCount
-                       FROM raw_usage_log GROUP BY ems_id) U ON U.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,MAX(ping_dt) AS lastDt FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) PL ON PL.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,MAX(reg_dt) AS lastDt FROM com_device_usage GROUP BY ems_id) UL ON UL.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,COUNT(*) AS recentCount FROM raw_ping_log
+                     WHERE reg_dt &gt;= NOW() - INTERVAL 5 MINUTE GROUP BY ems_id) P ON P.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,COUNT(*) AS recentCount FROM raw_usage_log
+                     WHERE reg_dt &gt;= NOW() - INTERVAL 5 MINUTE GROUP BY ems_id) U ON U.ems_id=M.ems_id
          WHERE M.use_yn='Y' AND M.ems_id IN
              <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
            <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
            <if test="dataSeCd != null and dataSeCd != ''">AND T.dataSeCd=#{dataSeCd}</if>
-         ORDER BY FIELD(L.LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), T.dataSeCd
+         ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), T.dataSeCd
     </select>
     <select id="selectCollectionHeatmap" parameterType="map" resultType="map">
       SELECT L.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
@@ -58,37 +56,30 @@
              UNION ALL
              SELECT ems_id,reg_dt FROM raw_usage_log WHERE reg_dt &gt;= CURDATE()
         ) R
-        JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE R.ems_id
-          WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-          WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+        JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=R.ems_id))
        WHERE R.ems_id IN
          <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
          <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
        GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM,DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H')
-       ORDER BY FIELD(L.LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), MIN(R.reg_dt)
+       ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), MIN(R.reg_dt)
     </select>
     <!-- 웹 전용 임계치 설정 web_thrshld_info / 수집값은 com_device_usage, raw_usage_log 읽기 전용 -->
     <!-- 실제 수신 원본: raw_receive_log. 프레임에 EMS ID가 없으면 시스템별 권한 판정 불가능하므로 제외 -->
     <select id="selectInterfaceRawData" parameterType="map" resultType="map">
       SELECT R.recv_seq AS linkRawSn, R.recv_dt AS clctDt,
-             CASE CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
-               WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-               WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE NULL END AS linkSysCd,
+             (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)) AS linkSysCd,
              L.LINK_SYS_NM AS linkSysNm, R.recv_type AS msgTypeNm,
              '수신' AS trsmDrctNm, NULL AS souIpAddr, NULL AS souPortNo,
              R.recv_type AS dataSeCd, 'RECEIVED' AS clctSttsCd, NULL AS errCn
       FROM raw_receive_log R
-      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-        WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE NULL END)
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)))
       WHERE CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
         IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
       <if test="startDt != null and startDt != ''">AND R.recv_dt &gt;= #{startDt}</if>
       <if test="endDt != null and endDt != ''">AND R.recv_dt &lt;= #{endDt}</if>
       <if test="linkSysCd != null and linkSysCd != ''">
         AND CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
-        = (CASE #{linkSysCd} WHEN 'EMS_TX' THEN 1 WHEN 'VMS' THEN 4 WHEN 'PBX' THEN 11
-             WHEN 'EMS_PIDS' THEN 13 WHEN 'SCADA_SEC' THEN 16 ELSE -1 END)
+        = ((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
       </if>
       <if test="keyword != null and keyword != ''">AND (R.recv_type LIKE CONCAT('%',#{keyword},'%') OR R.recv_content LIKE CONCAT('%',#{keyword},'%'))</if>
       ORDER BY R.recv_dt DESC,R.recv_seq DESC LIMIT 500

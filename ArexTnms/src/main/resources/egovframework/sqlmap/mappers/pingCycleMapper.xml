@@ -3,9 +3,7 @@
 <mapper namespace="kr.co.TRSolution.tnms.performance.mapper.PingCycleMapper">
     <!-- com_ems_info(원천 EMS 목록) + 웹의 기존 시스템 화면 표시명/프로토콜 메타데이터 -->
     <sql id="systemLink">
-      JOIN web_link_sys_info L ON L.LINK_SYS_CD=(CASE M.ems_id
-        WHEN 1 THEN 'EMS_TX' WHEN 4 THEN 'VMS' WHEN 11 THEN 'PBX'
-        WHEN 13 THEN 'EMS_PIDS' WHEN 16 THEN 'SCADA_SEC' ELSE '' END)
+      JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=M.ems_id))
     </sql>
     <select id="selectSystems" parameterType="map" resultType="map">
       SELECT M.ems_id AS emsId, L.LINK_SYS_CD AS linkSysCd,
@@ -35,7 +33,7 @@
       JOIN com_ems_info M ON M.ems_id=C.EMS_ID
       <include refid="systemLink"/>
       LEFT JOIN (SELECT ems_id,COUNT(*) AS deviceCount FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) D ON D.ems_id=C.EMS_ID
-      LEFT JOIN (SELECT ems_id,MAX(reg_dt) AS lastDt FROM raw_usage_log GROUP BY ems_id) U ON U.ems_id=C.EMS_ID
+      LEFT JOIN (SELECT ems_id,MAX(reg_dt) AS lastDt FROM com_device_usage GROUP BY ems_id) U ON U.ems_id=C.EMS_ID
     </sql>
     <select id="selectCycles" parameterType="map" resultType="map">
       <include refid="configRows"/>
@@ -65,7 +63,7 @@
       WHERE R.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
         <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
       GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM,DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H')
-      ORDER BY FIELD(L.LINK_SYS_CD,'EMS_TX','EMS_PIDS','SCADA_SEC','PBX','VMS'), MIN(R.reg_dt)
+      ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), MIN(R.reg_dt)
     </select>
 
     <insert id="insertCycle" parameterType="map">

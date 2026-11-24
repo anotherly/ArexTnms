@@ -20,6 +20,7 @@ import kr.co.TRSolution.tnms.notification.vo.NotificationVO;
 @Service("notificationService")
 public class NotificationServiceImpl implements NotificationService {
     @Resource(name = "notificationMapper") private NotificationMapper notificationMapper;
+    @Resource(name="systemCodeRegistry") private kr.co.TRSolution.tnms.gateway.service.SystemCodeRegistry codes;
 
     @Override
     public List<NotificationVO> selectNotificationList(String userId) {
@@ -62,13 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
         Map<String,Object> args = new HashMap<String,Object>();
         args.put("userId",userId);
         Set<String> allowed = SystemDataScope.current();
-        String[] codes = {"EMS_TX","VMS","PBX","EMS_PIDS","SCADA_SEC"};
-        int[] ids = {1,4,11,13,16};
-        List<Integer> target = new ArrayList<Integer>();
-        for (int i=0;i<codes.length;i++)
-            if (allowed == null || allowed.contains(codes[i])) target.add(Integer.valueOf(ids[i]));
-        if (target.isEmpty()) target.add(Integer.valueOf(-1));
-        args.put("allowedEmsIds",target);
+        args.put("allowedEmsIds",codes.allowedEmsIds(allowed));
         return args;
     }
 

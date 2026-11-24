@@ -24,11 +24,11 @@ import kr.co.TRSolution.tnms.auth.vo.SystemAuthVO;
 @Service("authService")
 public class AuthServiceImpl implements AuthService {
     private static final String SYSTEM_ADMIN_AUTHRT_CD = "SYS_ADMIN";
-    private static final Set<String> SYSTEM_CODES = new HashSet<String>(Arrays.asList("EMS_TX", "SCADA_SEC", "VMS", "PBX", "EMS_PIDS"));
     private static final Pattern AUTHRT_CD = Pattern.compile("^[A-Z][A-Z0-9_]{2,29}$");
 
     @Resource(name = "authMapper")
     private AuthMapper authMapper;
+    @Resource(name="systemCodeRegistry") private kr.co.TRSolution.tnms.gateway.service.SystemCodeRegistry codes;
 
     @Override
     public List<AuthVO> selectAuthList() { return authMapper.selectAuthList(); }
@@ -114,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
             authMapper.deleteSystemAuths(code);
             Set<String> seen = new HashSet<String>();
             for (SystemAuthVO item : systemAuthList) {
-                if (item == null || !SYSTEM_CODES.contains(item.getLinkSysCd()) || !seen.add(item.getLinkSysCd()))
+                if (item == null || !codes.allCodes().contains(item.getLinkSysCd()) || !seen.add(item.getLinkSysCd()))
                     throw new IllegalArgumentException("올바르지 않은 연계시스템 권한입니다.");
                 if ("Y".equals(item.getReadAuthrtYn())) {
                     Map<String, Object> params = new HashMap<String, Object>();
@@ -128,10 +128,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public List<String> selectAllowedSystemCodes(String authrtCd) {
-        if (SYSTEM_ADMIN_AUTHRT_CD.equals(normalizeCode(authrtCd))) return new ArrayList<String>(SYSTEM_CODES);
+        if (SYSTEM_ADMIN_AUTHRT_CD.equals(normalizeCode(authrtCd))) return new ArrayList<String>(codes.allCodes());
         List<String> allowed = new ArrayList<String>();
         for (SystemAuthVO item : authMapper.selectSystemAuthList(normalizeCode(authrtCd))) {
-            if (SYSTEM_CODES.contains(item.getLinkSysCd()) && "Y".equals(item.getReadAuthrtYn())) allowed.add(item.getLinkSysCd());
+            if (codes.allCodes().contains(item.getLinkSysCd()) && "Y".equals(item.getReadAuthrtYn())) allowed.add(item.getLinkSysCd());
         }
         return allowed;
     }
