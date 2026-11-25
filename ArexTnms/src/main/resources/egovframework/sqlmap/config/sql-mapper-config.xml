@@ -10,5 +10,10 @@
         <typeAlias alias="authVO" type="kr.co.TRSolution.tnms.auth.vo.AuthVO"/>
         <typeAlias alias="menuAuthVO" type="kr.co.TRSolution.tnms.auth.vo.MenuAuthVO"/>
         <typeAlias alias="auditVO" type="kr.co.TRSolution.tnms.audit.vo.AuditVO"/>
+        <typeAlias alias="equipmentVO" type="kr.co.TRSolution.tnms.monitoring.vo.EquipmentVO"/>
+        <typeAlias alias="stationStatusVO" type="kr.co.TRSolution.tnms.monitoring.vo.StationStatusVO"/>
+        <typeAlias alias="uiSettingVO" type="kr.co.TRSolution.tnms.setting.vo.UiSettingVO"/>
+        <typeAlias alias="commonCodeVO" type="kr.co.TRSolution.tnms.setting.vo.CommonCodeVO"/>
+        <typeAlias alias="reportVO" type="kr.co.TRSolution.tnms.report.vo.ReportVO"/>
     </typeAliases>
 </configuration>

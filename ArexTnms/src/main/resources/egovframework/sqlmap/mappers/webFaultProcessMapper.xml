@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.fault.mapper.WebFaultProcessMapper">
+  <sql id="webThresholdExceptionNow">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=P.ems_id AND M.DEVICE_ID=P.device_id
+        AND NOW() &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR NOW() &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE P.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(NOW())+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(NOW())=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(NOW()) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(NOW()) &gt;= X.REPT_START_TM OR TIME(NOW()) &lt;= X.REPT_END_TM)))))
+        )
+    
+  </sql>
+  <sql id="webThresholdExceptionAtEvent">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=P.ems_id AND M.DEVICE_ID=P.device_id
+        AND P.event_dt &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR P.event_dt &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE P.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(P.event_dt)+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(P.event_dt)=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(P.event_dt) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(P.event_dt) &gt;= X.REPT_START_TM OR TIME(P.event_dt) &lt;= X.REPT_END_TM)))))
+        )
+    
+  </sql>
+ <sql id="thresholdSelect">
+    CONCAT('WEB-P-',P.PERF_EVENT_SN) AS dsbltyNo, P.PERF_EVENT_SN AS eventSeq,
+    P.EMS_ID AS emsId, P.DEVICE_ID AS souEqpmntId,
+    COALESCE(E.device_nm,P.DEVICE_ID) AS eqpmntNm,P.DEVICE_ID AS eqpmntMngNo,
+    E.device_ip AS ipAddr,E.device_type AS eqpmntSeCd,
+    E.device_station AS instlPlcNm,E.device_station AS dsbltyOcrnPlcNm,
+    CONCAT(T.THRSHLD_PROFILE_NM,' / ',CASE WHEN P.PERF_IDCT_CD='CPU_USGRT' THEN 'CPU' ELSE 'MEMORY' END) AS dsbltyTypeNm,
+    CONCAT(CASE WHEN P.PERF_IDCT_CD='CPU_USGRT' THEN 'CPU' ELSE 'MEMORY' END,
+           ' 사용률 ',P.LAST_VALUE,'% 임계치 초과') AS dsbltyOcrnCn,
+    CAST(P.EVENT_GRADE AS CHAR) AS gatewayGrade, P.EVENT_DT AS dsbltyOcrnDt,
+    P.EVENT_YN AS eventYn, P.EVENT_EDT AS dsbltyEndDt,
+    CASE P.EVENT_GRADE WHEN 1 THEN 'EMERGENCY' WHEN 2 THEN 'HIGH' WHEN 3 THEN 'LOW'
+      WHEN 4 THEN 'WARNING' WHEN 5 THEN 'INFO' ELSE 'CLEAR' END AS dsbltyGrdCd,
+    CASE P.EVENT_GRADE WHEN 1 THEN '긴급' WHEN 2 THEN '높음' WHEN 3 THEN '낮음'
+      WHEN 4 THEN '경고' WHEN 5 THEN '정보' ELSE '해제' END AS dsbltyGrdNm,
+    (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=P.EMS_ID) AS linkSysCd,
+    L.LINK_SYS_NM AS linkSysNm,E.stn_cd AS stnCd,S.STN_NM AS stnNm,
+    'UNCONFIRMED' AS prcsSttsCd,'미확인' AS prcsSttsNm,
+    'WEB_THRESHOLD' AS dataSource, 'N' AS tempActionYn,
+    TIMESTAMPDIFF(SECOND,P.EVENT_DT,NOW()) AS elapsedSec
+ </sql>
+ <sql id="thresholdJoin">
+    JOIN web_thrshld_info T ON T.THRSHLD_SN=P.THRSHLD_SN
+    LEFT JOIN com_device_info E ON E.ems_id=P.EMS_ID AND E.device_id=P.DEVICE_ID
+    LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=P.EMS_ID)
+ </sql>
+ <sql id="thresholdFilter">
+    AND P.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    <if test="linkSysCd != null and linkSysCd != ''">
+    AND P.EMS_ID=((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
+    </if>
+    <if test="stnCd != null and stnCd != ''">AND E.stn_cd=#{stnCd}</if>
+    <if test="startDt != null and startDt != ''">AND P.EVENT_DT &gt;= CONCAT(#{startDt},' 00:00:00')</if>
+    <if test="endDt != null and endDt != ''">AND P.EVENT_DT &lt; DATE_ADD(#{endDt},INTERVAL 1 DAY)</if>
+    <if test="keyword != null and keyword != ''">
+      AND (E.device_nm LIKE CONCAT('%',#{keyword},'%') OR P.DEVICE_ID LIKE CONCAT('%',#{keyword},'%'))
+    </if>
+ </sql>
+ <select id="selectWebThresholdFaults" parameterType="map" resultType="map">
+    SELECT <include refid="thresholdSelect"/>
+    FROM web_perf_thrshld_event P <include refid="thresholdJoin"/>
+    WHERE P.EVENT_YN=1 <include refid="webThresholdExceptionNow"/> <include refid="thresholdFilter"/>
+    ORDER BY P.EVENT_DT DESC LIMIT 500
+ </select>
+ <select id="selectWebThresholdHistory" parameterType="map" resultType="map">
+    SELECT <include refid="thresholdSelect"/>
+    FROM web_perf_thrshld_event P <include refid="thresholdJoin"/>
+    WHERE 1=1 <include refid="webThresholdExceptionAtEvent"/> <include refid="thresholdFilter"/>
+    ORDER BY P.EVENT_DT DESC LIMIT 500
+ </select>
+ <select id="selectWebThresholdDetail" parameterType="map" resultType="map">
+    SELECT <include refid="thresholdSelect"/>
+    FROM web_perf_thrshld_event P <include refid="thresholdJoin"/>
+    WHERE P.PERF_EVENT_SN=#{eventSeq}
+      AND P.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+ </select>
+ <select id="selectState" parameterType="string" resultType="map">
+    SELECT FAULT_KEY AS faultKey,DSBLTY_JGMT_CD AS dsbltyJgmtCd,
+      PRCS_STTS_CD AS prcsSttsCd,DSBLTY_TYPE_NM AS dsbltyTypeNm,
+      DSBLTY_OCRN_CN AS dsbltyOcrnCn,DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,
+      IDNTY_USER_ID AS idntyUserId,MGMT_MEMO_CN AS mgmtMemoCn,TEMP_ACTION_YN AS tempActionYn,COMPLETE_YN AS completeYn
+    FROM web_fault_process_info WHERE FAULT_KEY=#{_parameter}
+ </select>
+ <select id="selectStates" parameterType="map" resultType="map">
+   SELECT FAULT_KEY AS faultKey,DSBLTY_JGMT_CD AS dsbltyJgmtCd,
+      PRCS_STTS_CD AS prcsSttsCd,DSBLTY_TYPE_NM AS dsbltyTypeNm,
+      DSBLTY_OCRN_CN AS dsbltyOcrnCn,DSBLTY_OCRN_PLC_NM AS dsbltyOcrnPlcNm,
+      TEMP_ACTION_YN AS tempActionYn,COMPLETE_YN AS completeYn
+    FROM web_fault_process_info WHERE FAULT_KEY IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+ </select>
+ <insert id="ensureState" parameterType="string">
+   INSERT IGNORE INTO web_fault_process_info(FAULT_KEY) VALUES(#{_parameter})
+ </insert>
+ <update id="updateState" parameterType="map">
+   UPDATE web_fault_process_info
+    <set>
+      <if test="dsbltyJgmtCd != null">DSBLTY_JGMT_CD=#{dsbltyJgmtCd},</if>
+      <if test="prcsSttsCd != null">PRCS_STTS_CD=#{prcsSttsCd},</if>
+      <if test="dsbltyTypeNm != null">DSBLTY_TYPE_NM=#{dsbltyTypeNm},</if>
+      <if test="dsbltyOcrnCn != null">DSBLTY_OCRN_CN=#{dsbltyOcrnCn},</if>
+      <if test="dsbltyOcrnPlcNm != null">DSBLTY_OCRN_PLC_NM=#{dsbltyOcrnPlcNm},</if>
+      <if test="idntyUserId != null">IDNTY_USER_ID=#{idntyUserId},</if>
+      <if test="mgmtMemoCn != null">MGMT_MEMO_CN=#{mgmtMemoCn},</if>
+      <if test="tempActionYn != null">TEMP_ACTION_YN=#{tempActionYn},</if>
+      <if test="completeYn != null">COMPLETE_YN=#{completeYn},</if>
+      MDFCN_DT=NOW()
+    </set>
+    WHERE FAULT_KEY=#{faultKey}
+ </update>
+ <insert id="insertAction" parameterType="map">
+   INSERT INTO web_fault_process_action
+     (FAULT_KEY,ACTN_SE_CD,ACTN_CN,SYMPTOM,REASON,RESULT_CN,PLAN,ACTOR_ID,ACTOR_NAME,ACTN_DT)
+   VALUES (#{faultKey},#{actnSeCd},#{actnCn},#{symptom},#{reason},#{result},#{plan},#{actorId},#{actorName},NOW())
+ </insert>
+ <select id="selectActions" parameterType="string" resultType="map">
+   SELECT ACTION_SN AS actnSn,ACTN_SE_CD AS actnSeCd,ACTN_CN AS actnCn,
+     SYMPTOM AS symptom,REASON AS reason,RESULT_CN AS result,PLAN AS plan,
+     ACTOR_ID AS actorId,ACTOR_NAME AS actorName,ACTN_DT AS actnDt
+     FROM web_fault_process_action WHERE FAULT_KEY=#{_parameter} ORDER BY ACTN_DT,ACTION_SN
+ </select>
+</mapper>

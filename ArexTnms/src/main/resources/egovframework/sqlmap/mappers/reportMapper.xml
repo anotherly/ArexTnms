@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.report.mapper.ReportMapper">
+  <!-- 2026-11-04: 수집 원천 장애 raw_event_log 조회. 웹 시연용 web_dsblty_info 집계 금지. -->
+  <!-- raw_event_log.event_dt=실제 장애발생시각, reg_dt=게이트웨이 등록시각. 발생일 기준 보고서. -->
+  <!-- 장애 발생 event_yn=1만 집계; 해제 메시지를 새 장애로 중복 계산하지 않음. -->
+  <sql id="gradeCase">
+    CASE D.event_grade
+      WHEN '1' THEN 'EMERGENCY' WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW'
+      WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' ELSE 'CLEAR' END
+  </sql>
+  <!-- Both gateway failures and web-only CPU/MEMORY threshold events. Original raw_* unchanged. -->
+  <sql id="faultSource">
+     (SELECT 'GW-H' AS source_kind,event_seq,event_grade,event_yn,event_dt,event_edt,event_msg,ems_id,device_id
+        FROM raw_event_log
+      UNION ALL
+      SELECT 'WEB-P' AS source_kind,PERF_EVENT_SN AS event_seq,
+             CAST(EVENT_GRADE AS CHAR) AS event_grade,1 AS event_yn,
+             EVENT_DT AS event_dt,EVENT_EDT AS event_edt,
+             CONCAT(CASE WHEN PERF_IDCT_CD='CPU_USGRT' THEN 'CPU' ELSE 'MEMORY' END,
+                    ' 사용률 ',LAST_VALUE,'% 임계치 초과') AS event_msg,
+             EMS_ID AS ems_id,DEVICE_ID AS device_id
+        FROM web_perf_thrshld_event) D
+  </sql>
+  <sql id="baseJoins">
+    LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
+    LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+    LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
+  </sql>
+  <sql id="excludeWebExceptionAtEvent">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=D.ems_id AND M.DEVICE_ID=D.device_id
+      AND D.event_dt &gt;= X.BGNG_DT
+      AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR D.event_dt &lt;= X.END_DT)
+      AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+       OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+           AND R.DSBLTY_GRD_CD=CASE D.event_grade WHEN '1' THEN 'EMERGENCY'
+              WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+      AND (X.REPT_CYCLE_CN='ONCE'
+        OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+         AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+           OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%' AND
+             FIND_IN_SET(ELT(WEEKDAY(D.event_dt)+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+           OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+              AND DAYOFMONTH(D.event_dt)=DAYOFMONTH(X.BGNG_DT)))
+          AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+            OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(D.event_dt) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+            OR (X.REPT_START_TM &gt; X.REPT_END_TM AND (TIME(D.event_dt) &gt;= X.REPT_START_TM
+                 OR TIME(D.event_dt) &lt;= X.REPT_END_TM)))))
+    )
+  </sql>
+  <sql id="sourceScope">
+    AND D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+    <include refid="excludeWebExceptionAtEvent"/>
+    AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    <if test="linkSysCd != null and linkSysCd != ''">
+      AND D.ems_id = ((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
+    </if>
+  </sql>
+  <sql id="rangeWhere">
+    WHERE D.event_dt &gt;= CONCAT(#{startDate},' 00:00:00')
+      AND D.event_dt &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+    <include refid="sourceScope"/>
+  </sql>
+  <sql id="selectedWhere">
+    WHERE 1=1 <include refid="sourceScope"/>
+    <choose>
+      <when test="selectedDate != null and selectedDate != ''">
+        AND D.event_dt &gt;= CONCAT(#{selectedDate},' 00:00:00')
+        AND D.event_dt &lt; DATE_ADD(#{selectedDate},INTERVAL 1 DAY)
+      </when>
+      <otherwise>
+        AND D.event_dt &gt;= CONCAT(#{startDate},' 00:00:00')
+        AND D.event_dt &lt; DATE_ADD(#{endDate},INTERVAL 1 DAY)
+      </otherwise>
+    </choose>
+  </sql>
+  <sql id="selectedJoinCondition">
+    AND D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+    <include refid="excludeWebExceptionAtEvent"/>
+    AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    <choose>
+      <when test="selectedDate != null and selectedDate != ''">
+        AND D.event_dt &gt;= CONCAT(#{selectedDate},' 00:00:00')
+        AND D.event_dt &lt; DATE_ADD(#{selectedDate},INTERVAL 1 DAY)
+      </when>
+      <otherwise>
+        AND D.event_dt &gt;= CONCAT(#{startDate},' 00:00:00')
+        AND D.event_dt &lt; DATE_ADD(#{endDate},INTERVAL 1 DAY)
+      </otherwise>
+    </choose>
+  </sql>
+  <select id="selectFaultSummary" parameterType="reportVO" resultType="reportVO">
+    SELECT COUNT(*) AS TOTAL_NOCS,
+           COALESCE(SUM(D.event_grade IN ('1','2')),0) AS CRITICAL_NOCS,
+           0 AS SERVICE_NOCS,
+           COALESCE(SUM(D.event_edt IS NOT NULL),0) AS COMPLETE_NOCS,
+           COALESCE(ROUND(AVG(CASE WHEN D.event_edt IS NOT NULL
+             THEN TIMESTAMPDIFF(SECOND,D.event_dt,D.event_edt) END)),0) AS AVG_RECOVERY_SEC,
+           CASE WHEN COUNT(*)=0 THEN 0 ELSE ROUND(100*SUM(D.event_edt IS NOT NULL)/COUNT(*),1) END AS COMPLETE_RATE
+    FROM <include refid="faultSource"/> <include refid="baseJoins"/>
+    <include refid="rangeWhere"/>
+  </select>
+  <select id="selectDailyFaultSummary" parameterType="reportVO" resultType="map">
+    SELECT DATE_FORMAT(D.event_dt,'%Y-%m-%d') AS reportDate,
+           COUNT(*) AS totalNocs,
+           SUM(D.event_grade='1') AS emergencyNocs,
+           SUM(D.event_grade='2') AS highNocs,
+           SUM(D.event_grade='3') AS lowNocs,
+           SUM(D.event_grade='4') AS warningNocs,
+           SUM(D.event_grade='5') AS infoNocs
+    FROM <include refid="faultSource"/> <include refid="baseJoins"/>
+    <include refid="rangeWhere"/>
+    GROUP BY DATE_FORMAT(D.event_dt,'%Y-%m-%d') ORDER BY reportDate
+  </select>
+  <select id="selectFaultSystemSummary" parameterType="reportVO" resultType="map">
+    SELECT L.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
+           COUNT(D.event_seq) AS totalNocs,
+           COALESCE(SUM(D.event_grade='1'),0) AS emergencyNocs,
+           COALESCE(SUM(D.event_grade='2'),0) AS highNocs,
+           COALESCE(SUM(D.event_grade='3'),0) AS lowNocs,
+           COALESCE(SUM(D.event_grade='4'),0) AS warningNocs,
+           COALESCE(SUM(D.event_grade='5'),0) AS infoNocs
+    FROM web_link_sys_info L
+    LEFT JOIN <include refid="faultSource"/> ON D.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
+      <include refid="selectedJoinCondition"/>
+    WHERE L.USE_YN='Y' AND L.LINK_SYS_CD IN (SELECT link_sys_cd FROM vw_tnms_system_map)
+      <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+      AND (SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
+      IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM
+    ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD)
+  </select>
+  <select id="selectFaultStationSummary" parameterType="reportVO" resultType="map">
+    SELECT COALESCE(S.STN_CD,'UNMATCHED') AS stnCd,
+           COALESCE(S.STN_NM,'역사 미매핑') AS stnNm,
+           COUNT(*) AS totalNocs,
+           SUM(D.event_grade='1') AS emergencyNocs,
+           SUM(D.event_grade='2') AS highNocs,
+           SUM(D.event_grade='3') AS lowNocs,
+           SUM(D.event_grade='4') AS warningNocs,
+           SUM(D.event_grade='5') AS infoNocs
+    FROM <include refid="faultSource"/> <include refid="baseJoins"/>
+    <include refid="selectedWhere"/>
+    GROUP BY S.STN_CD,S.STN_NM,S.STN_SEQ
+    ORDER BY CASE WHEN S.STN_SEQ IS NULL THEN 999 ELSE S.STN_SEQ END
+  </select>
+  <select id="selectFaultDetailList" parameterType="reportVO" resultType="map">
+    SELECT CONCAT(D.source_kind,'-',D.event_seq) AS dsbltyNo,
+           COALESCE(S.STN_NM,'역사 미매핑') AS stnNm,
+           COALESCE(L.LINK_SYS_NM,CONCAT('EMS ',D.ems_id)) AS linkSysNm,
+           COALESCE(E.device_nm,D.device_id) AS eqpmntNm,
+           E.device_ip AS ipAddr,
+           DATE_FORMAT(D.event_dt,'%Y-%m-%d %H:%i:%s') AS ocrnDt,
+           DATE_FORMAT(D.event_edt,'%Y-%m-%d %H:%i:%s') AS transferEndDt,
+           CASE WHEN D.event_edt IS NOT NULL AND D.event_edt &gt;= D.event_dt
+                THEN TIMESTAMPDIFF(SECOND,D.event_dt,D.event_edt)
+                ELSE NULL END AS durationSec,
+           <include refid="gradeCase"/> AS gradeCd,
+           D.event_msg AS faultCn
+    FROM <include refid="faultSource"/> <include refid="baseJoins"/>
+    <include refid="selectedWhere"/>
+    ORDER BY D.event_dt DESC,D.event_seq DESC LIMIT 500
+  </select>
+</mapper>

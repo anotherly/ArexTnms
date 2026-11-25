@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.notification.mapper.NotificationMapper">
+    <resultMap id="notificationMap" type="kr.co.TRSolution.tnms.notification.vo.NotificationVO">
+        <id property="notificationId" column="NOTIFICATION_ID"/>
+        <result property="categoryCd" column="CATEGORY_CD"/>
+        <result property="categoryNm" column="CATEGORY_NM"/>
+        <result property="severityCd" column="SEVERITY_CD"/>
+        <result property="title" column="TITLE"/>
+        <result property="message" column="MESSAGE"/>
+        <result property="sourceName" column="SOURCE_NAME"/>
+        <result property="refKey" column="REF_KEY"/>
+        <result property="eventDt" column="EVENT_DT"/>
+        <result property="targetUrl" column="TARGET_URL"/>
+        <result property="readYn" column="READ_YN"/>
+        <result property="readDt" column="READ_DT"/>
+    </resultMap>
+
+    <sql id="exceptionFilterNow">
+    AND NOT EXISTS (
+      SELECT 1 FROM web_dsblty_excp_group_eqpmnt_rel M
+      JOIN web_dsblty_excp_group_info G ON G.EXCP_GROUP_SN=M.EXCP_GROUP_SN AND G.USE_YN='Y'
+      JOIN web_dsblty_excp_schdl_info X ON X.EXCP_GROUP_SN=G.EXCP_GROUP_SN AND X.USE_YN='Y'
+      WHERE M.EMS_ID=D.ems_id AND M.DEVICE_ID=D.device_id
+        AND NOW() &gt;= X.BGNG_DT
+        AND (X.NO_END_YN='Y' OR X.END_DT IS NULL OR NOW() &lt;= X.END_DT)
+        AND (NOT EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN)
+             OR EXISTS (SELECT 1 FROM web_dsblty_excp_schdl_grd_rel R
+                  WHERE R.EXCP_SCHDL_SN=X.EXCP_SCHDL_SN
+                    AND R.DSBLTY_GRD_CD=CASE D.event_grade WHEN '1' THEN 'EMERGENCY'
+                    WHEN '2' THEN 'HIGH' WHEN '3' THEN 'LOW' WHEN '4' THEN 'WARNING' WHEN '5' THEN 'INFO' END))
+        AND (
+          X.REPT_CYCLE_CN='ONCE'
+          OR (X.REPT_CYCLE_CN LIKE 'REPEAT|%'
+            AND (X.REPT_CYCLE_CN LIKE 'REPEAT|DAILY|%'
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|WEEKLY|%'
+                    AND FIND_IN_SET(ELT(WEEKDAY(NOW())+1,'MON','TUE','WED','THU','FRI','SAT','SUN'),
+                     SUBSTRING_INDEX(X.REPT_CYCLE_CN,'|',-1)) &gt; 0)
+                 OR (X.REPT_CYCLE_CN LIKE 'REPEAT|MONTHLY|%'
+                    AND DAYOFMONTH(NOW())=DAYOFMONTH(X.BGNG_DT)))
+            AND (X.REPT_START_TM IS NULL OR X.REPT_END_TM IS NULL
+                 OR (X.REPT_START_TM &lt;= X.REPT_END_TM AND TIME(NOW()) BETWEEN X.REPT_START_TM AND X.REPT_END_TM)
+                 OR (X.REPT_START_TM &gt; X.REPT_END_TM
+                      AND (TIME(NOW()) &gt;= X.REPT_START_TM OR TIME(NOW()) &lt;= X.REPT_END_TM)))))
+        )
+    
+    </sql>
+    <sql id="notificationUnion">
+        SELECT CONCAT('FAULT:GW-A-',D.event_seq) AS NOTIFICATION_ID,
+               'FAULT' AS CATEGORY_CD, '고장' AS CATEGORY_NM,
+               CASE D.event_grade WHEN '1' THEN 'CRITICAL' WHEN '2' THEN 'CRITICAL'
+                   WHEN '3' THEN 'CAUTION' WHEN '4' THEN 'CAUTION' ELSE 'INFO' END AS SEVERITY_CD,
+               CONCAT(COALESCE(S.STN_NM,D.event_loc,D.device_id), ' 장애 알림') AS TITLE,
+               D.event_msg AS MESSAGE,
+               CONCAT(COALESCE(L.LINK_SYS_NM,'TNMS'),' · ',COALESCE(E.device_nm,D.device_id)) AS SOURCE_NAME,
+               CONCAT('GW-A-',D.event_seq) AS REF_KEY,
+               D.event_dt AS EVENT_DT_RAW,
+               '/fault/realtime.do?screen=faults' AS TARGET_URL
+          FROM raw_event_action D
+          LEFT JOIN com_device_info E ON E.ems_id=D.ems_id AND E.device_id=D.device_id
+          LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.ems_id))
+         WHERE D.event_yn=1 AND D.event_grade IN ('1','2','3','4','5')
+           <include refid="exceptionFilterNow"/>
+           AND D.event_dt &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)
+           AND D.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        UNION ALL
+        SELECT CONCAT('FAULT:WEB-P-',D.PERF_EVENT_SN) AS NOTIFICATION_ID,
+               'FAULT' AS CATEGORY_CD,'고장' AS CATEGORY_NM,
+               CASE WHEN D.EVENT_GRADE IN (1,2) THEN 'CRITICAL' WHEN D.EVENT_GRADE IN (3,4) THEN 'CAUTION' ELSE 'INFO' END AS SEVERITY_CD,
+               CONCAT(COALESCE(S.STN_NM,D.DEVICE_ID),' 성능 임계치 장애') AS TITLE,
+               CONCAT(CASE WHEN D.PERF_IDCT_CD='CPU_USGRT' THEN 'CPU' ELSE 'MEMORY' END,' 사용률 ',D.LAST_VALUE,'% 임계치 초과') AS MESSAGE,
+               CONCAT(COALESCE(L.LINK_SYS_NM,'TNMS'),' · ',COALESCE(E.device_nm,D.DEVICE_ID)) AS SOURCE_NAME,
+               CONCAT('WEB-P-',D.PERF_EVENT_SN) AS REF_KEY,D.EVENT_DT AS EVENT_DT_RAW,
+               '/fault/realtime.do?screen=faults' AS TARGET_URL
+          FROM web_perf_thrshld_event D
+          LEFT JOIN com_device_info E ON E.ems_id=D.EMS_ID AND E.device_id=D.DEVICE_ID
+          LEFT JOIN com_stn_info S ON S.STN_CD=E.stn_cd
+          LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=(SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=D.EMS_ID)
+         WHERE D.EVENT_YN=1
+           <include refid="exceptionFilterNow"/>
+           AND D.EVENT_DT &gt;= DATE_SUB(NOW(),INTERVAL 30 DAY)
+           AND D.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        UNION ALL
+        SELECT CONCAT('ACCOUNT:', A.APLY_NO) AS NOTIFICATION_ID,
+               'ACCOUNT' AS CATEGORY_CD,
+               '계정신청' AS CATEGORY_NM,
+               CASE WHEN A.APLY_STTS_CD = 'REJECTED' THEN 'CAUTION' ELSE 'NORMAL' END AS SEVERITY_CD,
+               CASE A.APLY_STTS_CD WHEN 'WAITING' THEN '신규 계정 신청'
+                    WHEN 'APPROVED' THEN '계정 신청 승인 완료'
+                    WHEN 'REJECTED' THEN '계정 신청 반려' ELSE '계정 신청 상태 변경' END AS TITLE,
+               CONCAT(A.USER_NM, ' (', A.USER_ID, ') · ', COALESCE(A.OGDP_BZENTY_NM, '-'), CASE WHEN A.DEPT_NM IS NULL THEN '' ELSE CONCAT(' / ', A.DEPT_NM) END) AS MESSAGE,
+               COALESCE(A.OGDP_BZENTY_NM, '계정관리') AS SOURCE_NAME,
+               A.APLY_NO AS REF_KEY,
+               COALESCE(A.APRV_DT, A.APLY_DT) AS EVENT_DT_RAW,
+               '/user/list.do?screen=users' AS TARGET_URL
+          FROM web_user_acnt_aply_info A
+         WHERE A.APLY_DT &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        UNION ALL
+        SELECT CONCAT('OP:', J.JOB_LOG_SN) AS NOTIFICATION_ID,
+               CASE WHEN J.CNTN_MENU_NM LIKE '%권한%' OR J.CNTN_MENU_NM LIKE '%공통코드%' OR J.CNTN_MENU_NM LIKE '%설정%'
+                    THEN 'SETTING' ELSE 'OPERATION' END AS CATEGORY_CD,
+               CASE WHEN J.CNTN_MENU_NM LIKE '%권한%' OR J.CNTN_MENU_NM LIKE '%공통코드%' OR J.CNTN_MENU_NM LIKE '%설정%'
+                    THEN '설정' ELSE '운영관리' END AS CATEGORY_NM,
+               CASE WHEN J.JOB_RSLT_CD = 'SUCCESS' THEN 'NORMAL' ELSE 'CRITICAL' END AS SEVERITY_CD,
+               CASE WHEN J.JOB_RSLT_CD = 'SUCCESS' THEN CONCAT(COALESCE(J.CNTN_MENU_NM, '운영관리'), ' 작업 완료')
+                    ELSE CONCAT(COALESCE(J.CNTN_MENU_NM, '운영관리'), ' 작업 실패') END AS TITLE,
+               COALESCE(J.LOG_CN, J.TRGT_KEY_VL, '작업 이력이 등록되었습니다.') AS MESSAGE,
+               CONCAT(COALESCE(J.USER_ID, 'SYSTEM'), ' · ', COALESCE(J.USER_IP_ADDR, '-')) AS SOURCE_NAME,
+               CAST(J.JOB_LOG_SN AS CHAR) AS REF_KEY,
+               J.LOG_CRT_DT AS EVENT_DT_RAW,
+               '/audit/job-log.do?screen=logs' AS TARGET_URL
+          FROM web_job_log J
+         WHERE J.LOG_CRT_DT &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
+           AND (J.JOB_RSLT_CD &lt;&gt; 'SUCCESS'
+                OR J.CNTN_MENU_NM LIKE '%권한%'
+                OR J.CNTN_MENU_NM LIKE '%계정%'
+                OR J.CNTN_MENU_NM LIKE '%공통코드%'
+                OR J.CNTN_MENU_NM LIKE '%설정%')
+    </sql>
+
+    <select id="selectNotificationList" parameterType="map" resultMap="notificationMap">
+        SELECT N.NOTIFICATION_ID, N.CATEGORY_CD, N.CATEGORY_NM, N.SEVERITY_CD,
+               N.TITLE, N.MESSAGE, N.SOURCE_NAME, N.REF_KEY,
+               DATE_FORMAT(N.EVENT_DT_RAW, '%Y-%m-%d %H:%i:%s') AS EVENT_DT,
+               N.TARGET_URL,
+               CASE WHEN R.USER_ID IS NULL THEN 'N' ELSE 'Y' END AS READ_YN,
+               DATE_FORMAT(R.READ_DT, '%Y-%m-%d %H:%i:%s') AS READ_DT
+          FROM (
+               <include refid="notificationUnion"/>
+          ) N
+          LEFT JOIN web_user_ntcn_read_info R
+            ON R.USER_ID = #{userId}
+           AND R.NTCN_ID = N.NOTIFICATION_ID
+         ORDER BY N.EVENT_DT_RAW DESC, N.NOTIFICATION_ID DESC
+         LIMIT 60
+    </select>
+
+    <insert id="upsertNotificationRead" parameterType="kr.co.TRSolution.tnms.notification.vo.NotificationVO">
+        INSERT INTO web_user_ntcn_read_info (USER_ID, NTCN_ID, READ_DT)
+        VALUES (#{userId}, #{notificationId}, NOW())
+        ON DUPLICATE KEY UPDATE READ_DT = VALUES(READ_DT)
+    </insert>
+</mapper>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.performance.mapper.PingCycleMapper">
+    <!-- com_ems_info(원천 EMS 목록) + 웹의 기존 시스템 화면 표시명/프로토콜 메타데이터 -->
+    <sql id="systemLink">
+      JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=M.ems_id))
+    </sql>
+    <select id="selectSystems" parameterType="map" resultType="map">
+      SELECT M.ems_id AS emsId, L.LINK_SYS_CD AS linkSysCd,
+             L.LINK_SYS_NM AS linkSysNm, L.PROTCL_CD AS protclCd
+      FROM com_ems_info M
+      <include refid="systemLink"/>
+      WHERE M.use_yn='Y' AND L.USE_YN='Y'
+        AND M.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      ORDER BY FIELD(M.ems_id,1,13,16,11,4)
+    </select>
+
+    <sql id="configRows">
+      SELECT C.EMS_ID AS emsId, C.DATA_SE_CD AS dataSeCd,
+             CASE C.DATA_SE_CD WHEN 'P' THEN '성능·상태' WHEN 'C' THEN '구성'
+                   WHEN 'F' THEN '장애·상태' WHEN 'S' THEN '보안' END AS dataSeNm,
+             L.LINK_SYS_CD AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,
+             L.PROTCL_CD AS performanceProtocol, 'ICMP' AS pingProtocol,
+             C.PERF_CLCT_USE_YN AS perfClctUseYn,C.PING_MNTR_USE_YN AS pingMntrUseYn,
+             C.CLCT_CYCLE_SEC AS clctCycleSec,C.STTS_MNTR_CYCLE_SEC AS sttsMntrCycleSec,
+             C.TIMEOUT_SEC AS timeoutSec,C.RTRY_NOCS AS rtryNocs,C.TIMEOUT_POLL_SEC AS timeoutPollSec,
+             C.USE_YN AS useYn, DATE_FORMAT(C.EXCN_TM,'%H:%i') AS excnTm, C.CYCLE_CRTR_CN AS cycleCrtrCn,
+             (C.STTS_MNTR_CYCLE_SEC + C.TIMEOUT_SEC*C.RTRY_NOCS) AS totalJgmtSec,
+             CASE WHEN C.DATA_SE_CD='P' THEN U.lastDt ELSE NULL END AS lastExcnDt,
+             NULL AS nextExcnDt,
+             COALESCE(D.deviceCount,0) AS targetEqpmntCount
+      FROM com_ping_info C
+      JOIN com_ems_info M ON M.ems_id=C.EMS_ID
+      <include refid="systemLink"/>
+      LEFT JOIN (SELECT ems_id,COUNT(*) AS deviceCount FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) D ON D.ems_id=C.EMS_ID
+      LEFT JOIN (SELECT ems_id,MAX(reg_dt) AS lastDt FROM com_device_usage GROUP BY ems_id) U ON U.ems_id=C.EMS_ID
+    </sql>
+    <select id="selectCycles" parameterType="map" resultType="map">
+      <include refid="configRows"/>
+      WHERE M.use_yn='Y' AND L.USE_YN='Y'
+        AND C.EMS_ID IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+        <if test="dataSeCd != null and dataSeCd != ''">AND C.DATA_SE_CD=#{dataSeCd}</if>
+      ORDER BY FIELD(C.EMS_ID,1,13,16,11,4),FIELD(C.DATA_SE_CD,'C','P','F','S')
+    </select>
+    <select id="selectCycle" parameterType="map" resultType="map">
+      <include refid="configRows"/>
+      WHERE C.EMS_ID=#{emsId} AND C.DATA_SE_CD=#{dataSeCd}
+    </select>
+
+    <!-- 실제 수신 기록. 성공/실패 판정이 아니라 수신 이력 유무만 반환. -->
+    <select id="selectHeatmap" parameterType="map" resultType="map">
+      SELECT L.LINK_SYS_CD AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,
+             DATE_FORMAT(R.reg_dt,'%H') AS hourLabel,COUNT(*) AS executionCount,
+             'RECEIVED' AS execSttsCd
+      FROM (
+         SELECT ems_id,reg_dt FROM raw_ping_log WHERE reg_dt &gt;= CURDATE() AND reg_dt &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+         UNION ALL
+         SELECT ems_id,reg_dt FROM raw_usage_log WHERE reg_dt &gt;= CURDATE() AND reg_dt &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+      ) R
+      JOIN com_ems_info M ON M.ems_id=R.ems_id
+      <include refid="systemLink"/>
+      WHERE R.ems_id IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+      GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM,DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H')
+      ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), MIN(R.reg_dt)
+    </select>
+
+    <insert id="insertCycle" parameterType="map">
+      INSERT INTO com_ping_info
+       (EMS_ID,DATA_SE_CD,PERF_CLCT_USE_YN,PING_MNTR_USE_YN,CLCT_CYCLE_SEC,
+        STTS_MNTR_CYCLE_SEC,TIMEOUT_SEC,RTRY_NOCS,TIMEOUT_POLL_SEC,USE_YN,EXCN_TM,CYCLE_CRTR_CN,REG_ID)
+      VALUES
+       (#{emsId},#{dataSeCd},#{perfClctUseYn},#{pingMntrUseYn},#{clctCycleSec},
+        #{sttsMntrCycleSec},#{timeoutSec},#{rtryNocs},#{timeoutPollSec},#{useYn},#{excnTm},#{cycleCrtrCn},#{actorId})
+    </insert>
+    <update id="updateCycle" parameterType="map">
+      UPDATE com_ping_info SET PERF_CLCT_USE_YN=#{perfClctUseYn},PING_MNTR_USE_YN=#{pingMntrUseYn},
+        CLCT_CYCLE_SEC=#{clctCycleSec},STTS_MNTR_CYCLE_SEC=#{sttsMntrCycleSec},
+        TIMEOUT_SEC=#{timeoutSec},RTRY_NOCS=#{rtryNocs},TIMEOUT_POLL_SEC=#{timeoutPollSec},
+        USE_YN=#{useYn},EXCN_TM=#{excnTm},CYCLE_CRTR_CN=#{cycleCrtrCn},
+        MOD_DT=NOW(),MOD_ID=#{actorId}
+      WHERE EMS_ID=#{emsId} AND DATA_SE_CD=#{dataSeCd}
+    </update>
+    <delete id="deleteCycle" parameterType="map">
+      DELETE FROM com_ping_info WHERE EMS_ID=#{emsId} AND DATA_SE_CD=#{dataSeCd}
+    </delete>
+</mapper>

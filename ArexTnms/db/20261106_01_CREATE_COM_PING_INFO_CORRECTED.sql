@@ -1,0 +1,34 @@
+-- TNMS 수집주기관리: 신규 설정 테이블만 생성. raw_*, 기존 com_* 및 게이트웨이 트리거 변경 없음.
+-- 실행 대상 DB: arex_tnms / MariaDB 11.8
+-- 별도 중간 장비 참조 테이블, 시연용 이벤트/프로시저 생성 없음.
+USE arex_tnms;
+
+CREATE TABLE IF NOT EXISTS com_ping_info (
+  EMS_ID INT NOT NULL COMMENT '공통EMS ID (com_ems_info.ems_id)',
+  DATA_SE_CD CHAR(1) NOT NULL COMMENT '데이터구분: P=성능·상태 C=구성 F=장애·상태 S=보안',
+  PERF_CLCT_USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '수집사용여부',
+  PING_MNTR_USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT 'PING 감시사용여부',
+  CLCT_CYCLE_SEC INT UNSIGNED NOT NULL DEFAULT 300 COMMENT '데이터 수집주기(초)',
+  STTS_MNTR_CYCLE_SEC INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'PING 폴링주기(초)',
+  TIMEOUT_SEC INT UNSIGNED NOT NULL DEFAULT 10 COMMENT 'PING 타임아웃(초)',
+  RTRY_NOCS INT UNSIGNED NOT NULL DEFAULT 3 COMMENT '재시도횟수',
+  TIMEOUT_POLL_SEC INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '타임아웃 시 재확인 간격(초)',
+  USE_YN CHAR(1) NOT NULL DEFAULT 'Y' COMMENT '해당 시스템/데이터 구분 설정 사용 여부',
+  EXCN_TM TIME DEFAULT NULL COMMENT '일일 구성 수집 실행시각. 구성(C) 24시간 주기에서 사용',
+  CYCLE_CRTR_CN VARCHAR(1000) DEFAULT NULL COMMENT '주기 설정 근거 및 비고',
+  REG_DT DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록시각',
+  REG_ID VARCHAR(20) DEFAULT NULL COMMENT '등록자',
+  MOD_DT DATETIME DEFAULT NULL COMMENT '수정시각',
+  MOD_ID VARCHAR(20) DEFAULT NULL COMMENT '수정자',
+  PRIMARY KEY (EMS_ID,DATA_SE_CD),
+  CONSTRAINT FK_COM_PING_EMS FOREIGN KEY (EMS_ID) REFERENCES com_ems_info (ems_id),
+  CONSTRAINT CK_COM_PING_TYPE CHECK (DATA_SE_CD IN ('P','C','F','S')),
+  CONSTRAINT CK_COM_PING_USE CHECK (USE_YN IN ('Y','N') AND PERF_CLCT_USE_YN IN ('Y','N') AND PING_MNTR_USE_YN IN ('Y','N') ),
+  CONSTRAINT CK_COM_PING_RANGE CHECK (CLCT_CYCLE_SEC >= 60 AND STTS_MNTR_CYCLE_SEC BETWEEN 1 AND 30 AND TIMEOUT_SEC >= 1 AND RTRY_NOCS >= 1 AND TIMEOUT_POLL_SEC >= 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='게이트웨이-웹 공유 수집주기 및 PING 폴링 설정';
+
+-- 게이트웨이 담당자와 com_ping_info를 공용 설정 테이블로 사용하기로 합의함.
+-- 최초 생성 시에만 사용. 이미 생성된 테이블에는 02 ALTER SQL을 별도로 실행해야 함.
+-- 이번 SQL은 기존 web_clct_cycle_info 더미 데이터를 자동 복제하지 않습니다.
+SELECT COUNT(*) AS config_rows FROM com_ping_info;

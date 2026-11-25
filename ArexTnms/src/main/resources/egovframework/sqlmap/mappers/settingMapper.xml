@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.setting.mapper.SettingMapper">
+    <select id="selectUiSettingList" resultType="uiSettingVO">
+        SELECT UI_STNG_CD, UI_STNG_NM, UI_STNG_VL, UI_STNG_EXPLN, USE_YN, REG_DT, MDFCN_DT
+          FROM web_ui_stng_info WHERE USE_YN = 'Y' ORDER BY UI_STNG_CD
+    </select>
+    <select id="selectUiSetting" parameterType="string" resultType="uiSettingVO">
+        SELECT UI_STNG_CD, UI_STNG_NM, UI_STNG_VL, UI_STNG_EXPLN, USE_YN, REG_DT, MDFCN_DT
+          FROM web_ui_stng_info
+         WHERE UI_STNG_CD = #{_parameter} AND USE_YN = 'Y'
+    </select>
+    <update id="updateUiSetting" parameterType="uiSettingVO">
+        UPDATE web_ui_stng_info SET UI_STNG_VL = #{uiStngVl}, MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+         WHERE UI_STNG_CD = #{uiStngCd} AND USE_YN = 'Y'
+    </update>
+    <update id="updatePasswordExpiryBySetting">
+        UPDATE web_user_info
+           SET PSWD_EXPRY_YMD = DATE(TIMESTAMPADD(
+               MONTH,
+               CAST((SELECT UI_STNG_VL FROM web_ui_stng_info
+                      WHERE UI_STNG_CD = 'PSWD_CHG_NOTICE_DAY' AND USE_YN = 'Y') AS UNSIGNED),
+               COALESCE(PSWD_CHG_DT, REG_DT)))
+         WHERE USE_YN != 'N'
+    </update>
+    <select id="selectCodeGroupList" resultType="commonCodeVO">
+        SELECT G.COM_CD_GROUP_ID, G.COM_CD_GROUP_NM, G.COM_CD_GROUP_EXPLN, G.USE_YN,
+               COUNT(C.COM_CD) AS CODE_NOCS
+          FROM com_cd_group_info G
+          LEFT JOIN com_cd_info C ON C.COM_CD_GROUP_ID = G.COM_CD_GROUP_ID AND C.COM_CD_USE_YN = 'Y'
+         WHERE G.USE_YN = 'Y'
+         GROUP BY G.COM_CD_GROUP_ID, G.COM_CD_GROUP_NM, G.COM_CD_GROUP_EXPLN, G.USE_YN
+         ORDER BY G.COM_CD_GROUP_NM
+    </select>
+    <select id="selectCommonCodeList" parameterType="string" resultType="commonCodeVO">
+        SELECT C.COM_CD_GROUP_ID, C.COM_CD, C.COM_CD_NM, C.COM_CD_EXPLN, C.COM_CD_SEQ,
+               C.COM_CD_USE_YN, C.GW_CD, C.GW_SRC_COL, C.REG_DT, C.MDFCN_DT,
+               W.COLOR_HEX AS EXT1_CN
+          FROM com_cd_info C
+          LEFT JOIN web_cd_color_info W ON W.COM_CD_GROUP_ID=C.COM_CD_GROUP_ID AND W.COM_CD=C.COM_CD
+          WHERE C.COM_CD_GROUP_ID = #{_parameter}
+         ORDER BY C.COM_CD_SEQ, C.COM_CD
+    </select>
+    <select id="countCommonCode" parameterType="commonCodeVO" resultType="int">
+        SELECT COUNT(*) FROM com_cd_info WHERE COM_CD_GROUP_ID = #{comCdGroupId} AND COM_CD = #{comCd}
+    </select>
+    <insert id="insertCommonCode" parameterType="commonCodeVO">
+        INSERT INTO com_cd_info
+        (COM_CD_GROUP_ID, COM_CD, COM_CD_NM, COM_CD_EXPLN, COM_CD_SEQ, COM_CD_USE_YN, RGTR_ID)
+        VALUES (#{comCdGroupId}, #{comCd}, #{comCdNm}, #{comCdExpln}, #{comCdSeq}, #{comCdUseYn}, #{rgtrId})
+    </insert>
+    <insert id="upsertCodeColor" parameterType="commonCodeVO">
+        INSERT INTO web_cd_color_info (COM_CD_GROUP_ID,COM_CD,COLOR_HEX)
+        VALUES (#{comCdGroupId},#{comCd},#{ext1Cn})
+        ON DUPLICATE KEY UPDATE COLOR_HEX=VALUES(COLOR_HEX)
+    </insert>
+    <update id="updateCommonCode" parameterType="commonCodeVO">
+        UPDATE com_cd_info SET COM_CD_NM = #{comCdNm}, COM_CD_EXPLN = #{comCdExpln},
+               COM_CD_SEQ = #{comCdSeq}, COM_CD_USE_YN = #{comCdUseYn},
+               MDFCN_DT = NOW(), MDFR_ID = #{mdfrId}
+         WHERE COM_CD_GROUP_ID = #{comCdGroupId} AND COM_CD = #{comCd}
+    </update>
+</mapper>

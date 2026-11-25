@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.performance.mapper.PerformanceMapper">
+
+<select id="selectLinkSystems" resultType="map">
+        SELECT LINK_SYS_CD AS linkSysCd, LINK_SYS_NM AS linkSysNm, PROTCL_CD AS protclCd
+          FROM web_link_sys_info WHERE USE_YN='Y'
+         ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=web_link_sys_info.LINK_SYS_CD), LINK_SYS_NM
+    </select>
+    <select id="selectStations" resultType="map">
+        SELECT STN_CD AS stnCd, STN_NM AS stnNm FROM com_stn_info WHERE USE_YN='Y' ORDER BY STN_SEQ
+    </select>
+
+    <!-- Gateway 실제 수신 현황: 수집주기를 조정하는 화면이 아닙니다. -->
+    <select id="selectCollectionCycles" parameterType="map" resultType="map">
+        SELECT M.ems_id*10 + CASE T.dataSeCd WHEN 'P' THEN 1 ELSE 2 END AS clctCycleSn,
+               L.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
+               T.dataSeCd AS dataSeCd,
+               CASE T.dataSeCd WHEN 'P' THEN '성능 수신' ELSE 'PING 수신' END AS dataSeNm,
+               CASE WHEN T.dataSeCd='P' THEN 'Gateway / Usage' ELSE 'Gateway / ICMP' END AS performanceProtocol,
+               'ICMP' AS pingProtocol,
+               NULL AS perfClctUseYn, NULL AS pingMntrUseYn,
+               NULL AS clctCycleSec, NULL AS sttsMntrCycleSec,
+               NULL AS timeoutSec, NULL AS rtryNocs, NULL AS timeoutPollSec,
+               NULL AS totalJgmtSec,
+               CASE T.dataSeCd WHEN 'P' THEN UL.lastDt ELSE PL.lastDt END AS lastExcnDt,
+               NULL AS nextExcnDt,
+               CASE WHEN (CASE T.dataSeCd WHEN 'P' THEN UL.lastDt ELSE PL.lastDt END)
+                  &gt;= DATE_SUB(NOW(),INTERVAL 5 MINUTE) THEN 'Y' ELSE 'N' END AS useYn,
+               CASE WHEN T.dataSeCd='P' THEN 'raw_usage_log 수신 기준' ELSE 'raw_ping_log 수신 기준' END AS cycleCrtrCn,
+               COALESCE(D.deviceCount,0) AS targetEqpmntCount,
+               CASE WHEN T.dataSeCd='P' THEN COALESCE(U.recentCount,0) ELSE COALESCE(P.recentCount,0) END AS recentCount
+          FROM com_ems_info M
+          JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=M.ems_id))
+          CROSS JOIN (SELECT 'P' AS dataSeCd UNION ALL SELECT 'C') T
+          LEFT JOIN (SELECT ems_id,COUNT(*) AS deviceCount FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) D ON D.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,MAX(ping_dt) AS lastDt FROM com_device_info WHERE use_yn='Y' GROUP BY ems_id) PL ON PL.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,MAX(reg_dt) AS lastDt FROM com_device_usage GROUP BY ems_id) UL ON UL.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,COUNT(*) AS recentCount FROM raw_ping_log
+                     WHERE reg_dt &gt;= NOW() - INTERVAL 5 MINUTE GROUP BY ems_id) P ON P.ems_id=M.ems_id
+          LEFT JOIN (SELECT ems_id,COUNT(*) AS recentCount FROM raw_usage_log
+                     WHERE reg_dt &gt;= NOW() - INTERVAL 5 MINUTE GROUP BY ems_id) U ON U.ems_id=M.ems_id
+         WHERE M.use_yn='Y' AND M.ems_id IN
+             <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+           <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+           <if test="dataSeCd != null and dataSeCd != ''">AND T.dataSeCd=#{dataSeCd}</if>
+         ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), T.dataSeCd
+    </select>
+    <select id="selectCollectionHeatmap" parameterType="map" resultType="map">
+      SELECT L.LINK_SYS_CD AS linkSysCd, L.LINK_SYS_NM AS linkSysNm,
+             DATE_FORMAT(R.reg_dt,'%H') AS hourLabel,
+             COUNT(*) AS executionCount,COUNT(*) AS successNocs,0 AS failNocs,
+             'NORMAL' AS execSttsCd
+        FROM (
+             SELECT ems_id,reg_dt FROM raw_ping_log WHERE reg_dt &gt;= CURDATE()
+             UNION ALL
+             SELECT ems_id,reg_dt FROM raw_usage_log WHERE reg_dt &gt;= CURDATE()
+        ) R
+        JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=R.ems_id))
+       WHERE R.ems_id IN
+         <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+         <if test="linkSysCd != null and linkSysCd != ''">AND L.LINK_SYS_CD=#{linkSysCd}</if>
+       GROUP BY L.LINK_SYS_CD,L.LINK_SYS_NM,DATE_FORMAT(R.reg_dt,'%Y-%m-%d %H')
+       ORDER BY (SELECT sort_seq FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=L.LINK_SYS_CD), MIN(R.reg_dt)
+    </select>
+    <!-- 웹 전용 임계치 설정 web_thrshld_info / 수집값은 com_device_usage, raw_usage_log 읽기 전용 -->
+    <!-- 실제 수신 원본: raw_receive_log. 프레임에 EMS ID가 없으면 시스템별 권한 판정 불가능하므로 제외 -->
+    <select id="selectInterfaceRawData" parameterType="map" resultType="map">
+      SELECT R.recv_seq AS linkRawSn, R.recv_dt AS clctDt,
+             (SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)) AS linkSysCd,
+             L.LINK_SYS_NM AS linkSysNm, R.recv_type AS msgTypeNm,
+             '수신' AS trsmDrctNm, NULL AS souIpAddr, NULL AS souPortNo,
+             R.recv_type AS dataSeCd, 'RECEIVED' AS clctSttsCd, NULL AS errCn
+      FROM raw_receive_log R
+      LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=((SELECT SM.link_sys_cd FROM vw_tnms_system_map SM WHERE SM.ems_id=CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)))
+      WHERE CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
+        IN <foreach collection="allowedEmsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      <if test="startDt != null and startDt != ''">AND R.recv_dt &gt;= #{startDt}</if>
+      <if test="endDt != null and endDt != ''">AND R.recv_dt &lt;= #{endDt}</if>
+      <if test="linkSysCd != null and linkSysCd != ''">
+        AND CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(R.recv_content,'&lt;#&gt;',2),'&lt;#&gt;',-1) AS UNSIGNED)
+        = ((SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{linkSysCd}))
+      </if>
+      <if test="keyword != null and keyword != ''">AND (R.recv_type LIKE CONCAT('%',#{keyword},'%') OR R.recv_content LIKE CONCAT('%',#{keyword},'%'))</if>
+      ORDER BY R.recv_dt DESC,R.recv_seq DESC LIMIT 500
+    </select>
+    <select id="selectRawRetentionSummary" resultType="map">
+       SELECT (SELECT COUNT(*) FROM raw_usage_log) AS rawCount,
+              (SELECT COUNT(*) FROM raw_receive_log) AS interfaceCount,
+              (SELECT MAX(reg_dt) FROM raw_usage_log) AS latestRawDt,
+              (SELECT MAX(recv_dt) FROM raw_receive_log) AS latestReceiveDt,
+              NULL AS defaultCycleSec
+    </select>
+
+ <!-- Web-owned threshold profiles; performance source remains com_device_usage/raw_usage_log. -->
+ <sql id="thresholdColumns">
+   T.THRSHLD_SN AS thrshldSn,T.THRSHLD_PROFILE_NM AS profileNm,
+   T.LINK_SYS_CD AS linkSysCd,L.LINK_SYS_NM AS linkSysNm,
+   K.perfIdctCd AS perfIdctCd,K.perfIdctNm AS perfIdctNm,'%' AS unitNm,
+   T.INFO_VL AS infoVl,T.WARNING_VL AS warningVl,T.LOW_VL AS lowVl,
+   T.HIGH_VL AS highVl,T.EMERGENCY_VL AS emergencyVl,
+   COALESCE(T.CONTN_NOCS,3) AS contnNocs,COALESCE(T.USE_YN,'Y') AS useYn
+ </sql>
+ <sql id="indicators">
+   (SELECT 'CPU_USGRT' AS perfIdctCd,'CPU 사용률' AS perfIdctNm
+    UNION ALL SELECT 'MMRY_USGRT','MEMORY 사용률') K
+ </sql>
+ <select id="selectThresholds" parameterType="map" resultType="map">
+   SELECT <include refid="thresholdColumns"/>
+   FROM <include refid="indicators"/>
+   JOIN web_thrshld_info T ON T.PERF_IDCT_CD=K.perfIdctCd
+   LEFT JOIN web_link_sys_info L ON L.LINK_SYS_CD=T.LINK_SYS_CD
+   WHERE 1=1
+   <if test="linkSysCd != null and linkSysCd != ''">AND (T.LINK_SYS_CD=#{linkSysCd} OR T.LINK_SYS_CD IS NULL)</if>
+   <if test="keyword != null and keyword != ''">AND (K.perfIdctCd=#{keyword} OR K.perfIdctNm LIKE CONCAT('%',#{keyword},'%'))</if>
+   ORDER BY K.perfIdctCd,T.THRSHLD_SN
+ </select>
+ <select id="selectThreshold" parameterType="long" resultType="map">
+   SELECT T.THRSHLD_SN AS thrshldSn,T.THRSHLD_PROFILE_NM AS profileNm,
+     T.LINK_SYS_CD AS linkSysCd,T.PERF_IDCT_CD AS perfIdctCd,
+     CASE T.PERF_IDCT_CD WHEN 'CPU_USGRT' THEN 'CPU 사용률' ELSE 'MEMORY 사용률' END AS perfIdctNm,
+     '%' AS unitNm,T.INFO_VL AS infoVl,T.WARNING_VL AS warningVl,
+     T.LOW_VL AS lowVl,T.HIGH_VL AS highVl,T.EMERGENCY_VL AS emergencyVl,
+     T.CONTN_NOCS AS contnNocs,T.USE_YN AS useYn
+   FROM web_thrshld_info T WHERE T.THRSHLD_SN=#{_parameter}
+ </select>
+ <select id="selectThresholdByIndicator" parameterType="string" resultType="map">
+   SELECT T.THRSHLD_SN AS thrshldSn,T.THRSHLD_PROFILE_NM AS profileNm,
+     T.LINK_SYS_CD AS linkSysCd,T.PERF_IDCT_CD AS perfIdctCd,
+     CASE T.PERF_IDCT_CD WHEN 'CPU_USGRT' THEN 'CPU 사용률' ELSE 'MEMORY 사용률' END AS perfIdctNm,
+     '%' AS unitNm,T.INFO_VL AS infoVl,T.WARNING_VL AS warningVl,
+     T.LOW_VL AS lowVl,T.HIGH_VL AS highVl,T.EMERGENCY_VL AS emergencyVl,
+     T.CONTN_NOCS AS contnNocs,T.USE_YN AS useYn
+   FROM web_thrshld_info T WHERE T.PERF_IDCT_CD=#{_parameter} ORDER BY T.THRSHLD_SN LIMIT 1
+ </select>
+ <insert id="insertThreshold" parameterType="map" useGeneratedKeys="true" keyProperty="thrshldSn" keyColumn="THRSHLD_SN">
+   INSERT INTO web_thrshld_info(THRSHLD_PROFILE_NM,LINK_SYS_CD,PERF_IDCT_CD,INFO_VL,WARNING_VL,
+    LOW_VL,HIGH_VL,EMERGENCY_VL,CONTN_NOCS,USE_YN,RGTR_ID)
+   VALUES(#{profileNm},NULLIF(#{linkSysCd},''),#{perfIdctCd},#{infoVl},#{warningVl},#{lowVl},
+    #{highVl},#{emergencyVl},#{contnNocs},#{useYn},#{rgtrId})
+ </insert>
+ <update id="updateThreshold" parameterType="map">
+   UPDATE web_thrshld_info SET THRSHLD_PROFILE_NM=#{profileNm},LINK_SYS_CD=NULLIF(#{linkSysCd},''),
+     PERF_IDCT_CD=#{perfIdctCd},INFO_VL=#{infoVl},WARNING_VL=#{warningVl},
+     LOW_VL=#{lowVl},HIGH_VL=#{highVl},EMERGENCY_VL=#{emergencyVl},
+     CONTN_NOCS=#{contnNocs},USE_YN=#{useYn},MDFCN_DT=NOW(),MDFR_ID=#{mdfrId}
+   WHERE THRSHLD_SN=#{thrshldSn}
+ </update>
+</mapper>

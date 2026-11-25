@@ -10,8 +10,8 @@ public class BaseVO implements Serializable {
     private String useYn;
     private Integer pageIndex = Integer.valueOf(1);
     private Integer pageSize = Integer.valueOf(20);
-    private Long rgtrSn;
-    private Long mdfrSn;
+    private String rgtrId;
+    private String mdfrId;
     private String regDt;
     private String mdfcnDt;
 
@@ -25,10 +25,10 @@ public class BaseVO implements Serializable {
     public void setPageIndex(Integer pageIndex) { this.pageIndex = pageIndex; }
     public Integer getPageSize() { return pageSize; }
     public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
-    public Long getRgtrSn() { return rgtrSn; }
-    public void setRgtrSn(Long rgtrSn) { this.rgtrSn = rgtrSn; }
-    public Long getMdfrSn() { return mdfrSn; }
-    public void setMdfrSn(Long mdfrSn) { this.mdfrSn = mdfrSn; }
+    public String getRgtrId() { return rgtrId; }
+    public void setRgtrId(String rgtrId) { this.rgtrId = rgtrId; }
+    public String getMdfrId() { return mdfrId; }
+    public void setMdfrId(String mdfrId) { this.mdfrId = mdfrId; }
     public String getRegDt() { return regDt; }
     public void setRegDt(String regDt) { this.regDt = regDt; }
     public String getMdfcnDt() { return mdfcnDt; }

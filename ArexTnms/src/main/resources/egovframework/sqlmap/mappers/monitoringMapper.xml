@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.co.TRSolution.tnms.monitoring.mapper.MonitoringMapper">
+    <resultMap id="equipmentMap" type="equipmentVO">
+        <id property="eqpmntSn" column="EQPMNT_SN"/>
+        <result property="eqpmntMngNo" column="EQPMNT_MNG_NO"/>
+        <result property="eqpmntNm" column="EQPMNT_NM"/>
+        <result property="eqpmntSeCd" column="EQPMNT_SE_CD"/>
+        <result property="eqpmntClsfCd" column="EQPMNT_CLSF_CD"/>
+        <result property="eqpmntClsfNm" column="EQPMNT_CLSF_NM"/>
+        <result property="linkSysCd" column="LINK_SYS_CD"/>
+        <result property="linkSysNm" column="LINK_SYS_NM"/>
+        <result property="emsId" column="EMS_ID"/>
+        <result property="gatewayDeviceId" column="GATEWAY_DEVICE_ID"/>
+        <result property="gatewayManaged" column="GATEWAY_MANAGED"/>
+    <result property="deviceMaker" column="DEVICE_MAKER"/>
+        <result property="serverIp" column="SERVER_IP"/>
+    <result property="deviceCheck" column="DEVICE_CHECK"/>
+        <result property="diskUsgrt" column="DISK_USGRT"/>
+        <result property="usageDt" column="USAGE_DT"/>
+        <result property="usageFreshYn" column="USAGE_FRESH_YN"/>
+        <result property="pingAlive" column="PING_ALIVE"/>
+        <result property="testYn" column="TEST_YN"/>
+        <result property="stnCd" column="STN_CD"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="instlPlcNm" column="INSTL_PLC_NM"/>
+        <result property="eqpmntIpAddr" column="EQPMNT_IP_ADDR"/>
+        <result property="macAddr" column="MAC_ADDR"/>
+        <result property="eqpmntMdlNm" column="EQPMNT_MDL_NM"/>
+        <result property="eqpmntExpln" column="EQPMNT_EXPLN"/>
+        <result property="cntnYn" column="CNTN_YN"/>
+        <result property="pingRspnsMs" column="PING_RSPNS_MS"/>
+        <result property="sttsCd" column="STTS_CD"/>
+        <result property="sttsNm" column="STTS_NM"/>
+        <result property="sttsExpln" column="STTS_EXPLN"/>
+        <result property="lastRspnsDt" column="LAST_RSPNS_DT"/>
+        <result property="clctDt" column="CLCT_DT"/>
+        <result property="totalNocs" column="TOTAL_NOCS"/>
+        <result property="normalNocs" column="NORMAL_NOCS"/>
+        <result property="cautionNocs" column="CAUTION_NOCS"/>
+        <result property="criticalNocs" column="CRITICAL_NOCS"/>
+        <result property="offlineNocs" column="OFFLINE_NOCS"/>
+        <result property="unknownNocs" column="UNKNOWN_NOCS"/>
+        <result property="flrNm" column="FLR_NM"/>
+        <result property="cmraQty" column="CMRA_QTY"/>
+        <result property="vmsNm" column="VMS_NM"/>
+        <result property="strgMthNm" column="STRG_MTH_NM"/>
+        <result property="cctvNm" column="CCTV_NM"/>
+        <result property="cnsmrNm" column="CNSMR_NM"/>
+        <result property="cctvMdlNm" column="CCTV_MDL_NM"/>
+        <result property="frmwrVerNo" column="FRMWR_VER_NO"/>
+        <result property="cctvIpAddr" column="CCTV_IP_ADDR"/>
+        <result property="cctvMacAddr" column="CCTV_MAC_ADDR"/>
+        <result property="acntNm" column="ACNT_NM"/>
+        <result property="vmsSrvrIpAddr" column="VMS_SRVR_IP_ADDR"/>
+        <result property="pbxEqpmNm" column="PBX_EQPM_NM"/>
+        <result property="cmpntNm" column="CMPNT_NM"/>
+        <result property="mtbfHr" column="MTBF_HR"/>
+        <result property="cpuUsgrt" column="CPU_USGRT"/>
+        <result property="mmryUsgrt" column="MMRY_USGRT"/>
+        <result property="ifUseNocs" column="IF_USE_NOCS"/>
+        <result property="ifTotalNocs" column="IF_TOTAL_NOCS"/>
+        <result property="lseEqpmntSnsCsv" column="LSE_EQPMNT_SNS_CSV"/>
+        <result property="lseEqpmntNms" column="LSE_EQPMNT_NMS"/>
+        <result property="useYn" column="USE_YN"/>
+        <result property="regDt" column="REG_DT"/>
+        <result property="mdfcnDt" column="MDFCN_DT"/>
+    </resultMap>
+
+    <resultMap id="stationMap" type="stationStatusVO">
+        <id property="stnCd" column="STN_CD"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="stnSeq" column="STN_SEQ"/>
+        <result property="mnlsStnYn" column="MNLS_STN_YN"/>
+        <result property="sttsCd" column="STTS_CD"/>
+        <result property="totalNocs" column="TOTAL_NOCS"/>
+        <result property="normalNocs" column="NORMAL_NOCS"/>
+        <result property="cautionNocs" column="CAUTION_NOCS"/>
+        <result property="criticalNocs" column="CRITICAL_NOCS"/>
+        <result property="offlineNocs" column="OFFLINE_NOCS"/>
+        <result property="unknownNocs" column="UNKNOWN_NOCS"/>
+        <result property="lastClctDt" column="LAST_CLCT_DT"/>
+    </resultMap>
+
+    <resultMap id="equipmentLinkMap" type="kr.co.TRSolution.tnms.monitoring.vo.EquipmentLinkVO">
+        <result property="fromEqpmntSn" column="FROM_EQPMNT_SN"/>
+        <result property="fromEqpmntNm" column="FROM_EQPMNT_NM"/>
+        <result property="toEqpmntSn" column="TO_EQPMNT_SN"/>
+        <result property="toEqpmntNm" column="TO_EQPMNT_NM"/>
+        <result property="linkTypeCd" column="LINK_TYPE_CD"/>
+        <result property="linkNm" column="LINK_NM"/>
+    </resultMap>
+
+    <resultMap id="scadaEventMap" type="kr.co.TRSolution.tnms.monitoring.vo.ScadaEventVO">
+        <id property="enexEvntSn" column="ENEX_EVNT_SN"/>
+        <result property="eqpmntSn" column="EQPMNT_SN"/>
+        <result property="eqpmntNm" column="EQPMNT_NM"/>
+        <result property="stnNm" column="STN_NM"/>
+        <result property="evntCd" column="EVNT_CD"/>
+        <result property="evntNm" column="EVNT_NM"/>
+        <result property="enexDt" column="ENEX_DT"/>
+        <result property="enexRsltCd" column="ENEX_RSLT_CD"/>
+        <result property="aprvYn" column="APRV_YN"/>
+        <result property="evntCn" column="EVNT_CN"/>
+    </resultMap>
+
+  <!-- 게이트웨이 설비종류: com_device_info 자체의 device_type만 조회. 별도 참조 테이블 없음. -->
+  <select id="selectEquipmentClassifications" parameterType="string" resultType="map">
+    SELECT DISTINCT E.device_type AS eqpmntClsfCd,
+           E.device_type AS eqpmntClsfNm,
+           E.device_type AS eqpmNm
+      FROM com_device_info E
+     WHERE E.use_yn='Y' AND E.device_type IS NOT NULL AND E.device_type != ''
+       AND E.ems_id=(SELECT SM.ems_id FROM vw_tnms_system_map SM WHERE SM.link_sys_cd=#{_parameter})
+     ORDER BY E.device_type
+  </select>
+  <!-- com_device_info is the single equipment source. Never write ping_alive/ping_dt (gateway-owned). -->
+  <insert id="insertGatewayDevice" parameterType="equipmentVO">
+    INSERT INTO com_device_info
+       (ems_id,device_id,device_nm,device_type,device_ip,device_station,stn_cd,
+        device_maker,device_model,server_ip,device_desc,device_check,test_yn,use_yn,reg_id)
+    VALUES (#{emsId},#{eqpmntMngNo},#{eqpmntNm},#{eqpmntSeCd},#{eqpmntIpAddr},#{instlPlcNm},
+       #{stnCd},#{deviceMaker},#{eqpmntMdlNm},#{serverIp},#{eqpmntExpln},#{deviceCheck},#{testYn},#{useYn},#{regId})
+  </insert>
+  <update id="updateGatewayDevice" parameterType="equipmentVO">
+    UPDATE com_device_info SET device_nm=#{eqpmntNm},device_type=#{eqpmntSeCd},device_ip=#{eqpmntIpAddr},
+      device_station=#{instlPlcNm},stn_cd=#{stnCd},device_maker=#{deviceMaker},device_model=#{eqpmntMdlNm},
+      server_ip=#{serverIp},device_desc=#{eqpmntExpln},device_check=#{deviceCheck},test_yn=#{testYn},use_yn=#{useYn},
+      mod_dt=NOW(),mod_id=#{modId}
+    WHERE ems_id=#{emsId} AND device_id=#{gatewayDeviceId}
+  </update>
+  <delete id="deleteGatewayDevice" parameterType="map">
+    DELETE FROM com_device_info WHERE ems_id=#{emsId} AND device_id=#{deviceId}
+  </delete>
+  <select id="countGatewayDevice" parameterType="map" resultType="int">
+    SELECT COUNT(*) FROM com_device_info WHERE ems_id=#{emsId} AND device_id=#{deviceId}
+  </select>
+</mapper>

@@ -5,17 +5,22 @@ import java.util.List;
 import egovframework.rte.psl.dataaccess.mapper.Mapper;
 import kr.co.TRSolution.tnms.auth.vo.AuthVO;
 import kr.co.TRSolution.tnms.auth.vo.MenuAuthVO;
+import kr.co.TRSolution.tnms.auth.vo.SystemAuthVO;
 
 @Mapper("authMapper")
 public interface AuthMapper {
     List<AuthVO> selectAuthList();
-    AuthVO selectAuth(Long authrtSn);
+    AuthVO selectAuth(String authrtCd);
+    int countAuthCode(AuthVO authVO);
     int countAuthName(AuthVO authVO);
-    int countAuthUsers(Long authrtSn);
+    int countAuthUsers(String authrtCd);
     int insertAuth(AuthVO authVO);
     int updateAuth(AuthVO authVO);
-    int deleteAuthMenus(Long authrtSn);
-    int deleteAuth(Long authrtSn);
-    List<MenuAuthVO> selectMenuAuthList(Long authrtSn);
+    int deleteAuthMenus(String authrtCd);
+    int disableAuth(AuthVO authVO);
+    List<MenuAuthVO> selectMenuAuthList(String authrtCd);
     int insertMenuAuth(MenuAuthVO menuAuthVO);
+    List<SystemAuthVO> selectSystemAuthList(String authrtCd);
+    int deleteSystemAuths(String authrtCd);
+    int insertSystemAuth(java.util.Map<String, Object> params);
 }

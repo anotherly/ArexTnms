@@ -1,0 +1,264 @@
+/* TNMS 2026-10-15: 대시보드 전용 기본/확장 및 Light/Dark.
+   header.jsp의 테마 버튼은 대시보드에서만 렌더링되고,
+   iframe 내부 클래스만 이용하므로 다른 메뉴에는 적용되지 않는다. */
+
+/* 헤더의 기존 기본/확장 스위치와 같은 스타일로 Light/Dark를 배치. */
+.dashboard-theme-switch{
+  display:flex;flex:0 0 auto;gap:2px;padding:3px;
+  border:1px solid rgba(255,255,255,.55);border-radius:8px;
+  background:transparent;
+}
+.dashboard-theme-switch button{
+  height:28px;min-width:53px;padding:0 12px;border:0;border-radius:5px;
+  background:transparent;color:#d7e4f5;font:700 12px Pretendard,sans-serif;
+  cursor:pointer;
+}
+.dashboard-theme-switch button.active{background:#fff;color:#0b1f3a}
+.dashboard-theme-switch button:focus-visible,
+.dashboard-mode-switch button:focus-visible{outline:2px solid #8bc8ff;outline-offset:2px}
+body.dashboard-theme-dark .dashboard-content{background:#081321}
+body.dashboard-theme-dark .planner-dashboard-frame{background:#081321}
+@media(max-width:1120px){
+  .topbar-left{gap:9px}
+  .dashboard-mode-switch button{padding:0 8px}
+  .dashboard-theme-switch button{min-width:45px;padding:0 8px}
+}
+
+/* 기본모드 = 분석 통계 미표시, 남은 공간을 본문이 채움.
+   확장모드 = 하단 분석 통계 표시. 페이지 전환 점은 항상 유지. */
+body.embedded-dashboard.dashboard-basic .analytics-grid{display:none!important}
+body.embedded-dashboard.dashboard-basic.dashboard-type-map .dashboard{
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+}
+body.embedded-dashboard.dashboard-basic.dashboard-type-system .dashboard{
+  grid-template-rows:minmax(72px,10.5%) minmax(0,1fr) 18px!important;
+}
+body.embedded-dashboard .page-dots{display:flex!important}
+
+/* 공통 다크 팔레트. 색은 상태 코드별 녹색/황색/적색/회색을 덮지 않는다. */
+body.embedded-dashboard.dashboard-dark{
+  --bg:#081321;
+  --card:#131f2e;
+  --text:#e6eef9;
+  --muted:#9aacc3;
+  --line:#283b52;
+  --navy:#0b336d;
+  --nav:#092c61;
+  --nav2:#071e43;
+  color:var(--text);background:var(--bg);
+  color-scheme:dark;
+}
+body.dashboard-dark .app-shell{background:var(--bg)}
+body.dashboard-dark .dashboard{color:var(--text)}
+body.dashboard-dark .kpi-card,
+body.dashboard-dark .analytics-card{
+  background:#141f2d;border-color:#27394f;
+  box-shadow:0 1px 3px rgba(0,0,0,.14);color:#e3ebf7;
+}
+body.dashboard-dark .kpi-card b{color:#a8b9d0}
+body.dashboard-dark .kpi-card strong{color:#fff}
+body.dashboard-dark .kpi-card .urgent,
+body.dashboard-dark .kpi-card em{
+  background:rgba(225,55,62,.16);color:#ff7379;
+}
+body.dashboard-dark .analytics-card h3,
+body.dashboard-dark .analytics-card h4,
+body.dashboard-dark .analytics-card strong{color:#dfe9f8}
+body.dashboard-dark .analytics-head small,
+body.dashboard-dark .fault-title small{color:#8c9fb9}
+body.dashboard-dark .hm-labels,
+body.dashboard-dark .hm-scale,
+body.dashboard-dark .days,
+body.dashboard-dark .heat-scale{color:#91a6c0}
+body.dashboard-dark .heatmap i,
+body.dashboard-dark .heatmap .l1{background:#1c3454}
+body.dashboard-dark .heatmap .l2{background:#244a7b}
+body.dashboard-dark .heatmap .l3{background:#3166a9}
+body.dashboard-dark .heatmap .l4{background:#488fea}
+body.dashboard-dark .hm-scale b,
+body.dashboard-dark .heat-scale b{background:linear-gradient(90deg,#1c3454,#285389,#438ce9)}
+body.dashboard-dark .donut:after{background:#141f2d}
+body.dashboard-dark .donut b,
+body.dashboard-dark .donut strong{color:#eaf1fd}
+body.dashboard-dark .fault-legend,
+body.dashboard-dark .cause-list,
+body.dashboard-dark .repeat-card{color:#bfcfe3}
+body.dashboard-dark .cause-list p>b{background:#29415e}
+body.dashboard-dark .cause-list p>b:before{background:#74b5f6}
+body.dashboard-dark .repeat-card b{color:#dde9f8}
+body.dashboard-dark .page-dots button{background:#415570}
+body.dashboard-dark .page-dots button.active{background:#3b93ff}
+body.dashboard-dark .detail-modal{background:#18283c;color:#e8f1ff}
+body.dashboard-dark .detail-modal p{color:#a8bed5}
+
+/* 01: 공항철도 지도형 */
+body.dashboard-dark.dashboard-type-map .map-card{
+  background:#131f2d;border-color:#27394f;
+}
+body.dashboard-dark.dashboard-type-map .card-head h2{color:#e6effc}
+body.dashboard-dark.dashboard-type-map .legend{color:#b5c9de}
+body.dashboard-dark.dashboard-type-map .map-wrap{
+  background:#0d1c2b!important;
+}
+body.dashboard-dark.dashboard-type-map .map-scene{
+  background:#15273b!important;
+  box-shadow:inset 0 0 0 1px #294058!important;
+}
+body.dashboard-dark.dashboard-type-map .map-scene::before{
+  background:linear-gradient(180deg,rgba(4,20,44,.3),rgba(4,17,39,.38))!important;
+}
+/* 기존 지도 리소스를 그대로 활용하면서 야간 대비만 조정. */
+body.dashboard-dark.dashboard-type-map .map-bg,
+body.dashboard-dark.dashboard-type-map .map-wrap.panel-open .map-bg{
+  filter:brightness(.48) saturate(.74) contrast(1.28) hue-rotate(8deg)!important;
+  opacity:1!important;
+}
+body.dashboard-dark.dashboard-type-map .route-halo{
+  stroke:rgba(5,26,54,.94)!important;
+}
+body.dashboard-dark.dashboard-type-map .route-line{
+  stroke:#379eff!important;
+  filter:drop-shadow(0 0 2px rgba(20,119,218,.3));
+}
+body.dashboard-dark.dashboard-type-map .route-svg .route-node,
+body.dashboard-dark.dashboard-type-map .station-hit .route-node{
+  fill:#10273d!important;
+}
+body.dashboard-dark.dashboard-type-map .station-label{
+  background:rgba(17,34,52,.97)!important;
+  border-color:#415b78!important;
+  color:#e1edfb!important;
+  box-shadow:0 2px 9px rgba(2,10,20,.46)!important;
+}
+body.dashboard-dark.dashboard-type-map .station-hit.station-selected .station-label{
+  box-shadow:0 0 0 2px rgba(57,159,245,.36),0 2px 9px rgba(2,10,20,.4)!important;
+}
+body.dashboard-dark.dashboard-type-map .watch-strip{
+  background:#142439!important;
+  border-color:#29405a!important;
+  box-shadow:inset 0 0 0 1px #29405a!important;
+}
+body.dashboard-dark.dashboard-type-map .watch-strip strong{color:#bdd0e7}
+body.dashboard-dark.dashboard-type-map .watch-strip .watch-chip{
+  background:#1c324b;color:#d6e5f5;border-color:#39536e;
+}
+body.dashboard-dark.dashboard-type-map .watch-strip .watch-chip:hover,
+body.dashboard-dark.dashboard-type-map .watch-strip .watch-chip.point-active{
+  background:#21476a;color:#f4faff;border-color:#469bee;
+}
+body.dashboard-dark.dashboard-type-map .watch-chip.db-mnls{
+  background:#193a55!important;color:#76cbfa!important;
+}
+body.dashboard-dark.dashboard-type-map .watch-chip.db-mnls.point-active{
+  background:#1b4d70!important;color:#a6e0ff!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel{
+  background:#152337!important;border-color:#2e4360!important;color:#e4eefc!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel-head{
+  background:#192a40!important;border-bottom-color:#2b415c!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel-head h3{
+  color:#f1f6ff!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel-head p{
+  color:#a6b8d1!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row{
+  background:#182c42!important;border-color:#304762!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row.danger{
+  background:rgba(185,48,58,.19)!important;border-color:rgba(244,78,90,.42)!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row.warn{
+  background:rgba(173,105,22,.18)!important;border-color:rgba(247,164,50,.4)!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row.success{
+  background:rgba(24,120,76,.17)!important;border-color:rgba(46,174,107,.37)!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row.off{
+  background:rgba(98,112,133,.14)!important;border-color:#42536b!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row b{
+  color:#e8f0ff!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row small{
+  color:#a4b6ce!important;
+}
+body.dashboard-dark.dashboard-type-map .station-panel .system-row em{
+  background:rgba(0,0,0,.17);color:#cfe0f3;
+}
+body.dashboard-dark.dashboard-type-map .close-panel{color:#b7cce2}
+
+/* 02: 역사 육각형형 */
+body.dashboard-dark.dashboard-type-system .main-card{
+  background:#111d2b;border-color:#273b51;
+}
+body.dashboard-dark.dashboard-type-system .lookup-panel{color:#e6effb}
+body.dashboard-dark.dashboard-type-system .title-row p{color:#9cb1c8}
+body.dashboard-dark.dashboard-type-system .system-step{
+  border-bottom-color:#294059;
+}
+body.dashboard-dark.dashboard-type-system .system-tabs button{
+  background:#17283c;border-color:#304762;color:#b9cde0;
+}
+body.dashboard-dark.dashboard-type-system .system-tabs button:hover{
+  background:#254363;color:#fff;
+}
+body.dashboard-dark.dashboard-type-system .system-tabs button.active{
+  background:#154886;color:#f5faff;border-color:#3b8efa;
+}
+body.dashboard-dark.dashboard-type-system .step-label>span{
+  background:#1a5591;color:#fff;
+}
+body.dashboard-dark.dashboard-type-system .station-legend{
+  color:#b1c2d7;
+}
+body.dashboard-dark.dashboard-type-system .station-network{
+  background:radial-gradient(ellipse at 49% 50%,rgba(26,58,77,.15),transparent 75%);
+}
+body.dashboard-dark.dashboard-type-system .station-node-content{
+  color:#c9e9d8;
+}
+body.dashboard-dark.dashboard-type-system .station-counts{
+  color:#9eb2c9;
+}
+body.dashboard-dark.dashboard-type-system .station-node.is-selected .station-node-content,
+body.dashboard-dark.dashboard-type-system .station-node.is-selected .station-counts{color:#fff}
+body.dashboard-dark.dashboard-type-system .station-detail{
+  background:#152338;border-color:#2b405b;color:#e8f0fd;
+}
+body.dashboard-dark.dashboard-type-system .detail-heading p,
+body.dashboard-dark.dashboard-type-system .detail-meta,
+body.dashboard-dark.dashboard-type-system .detail-section dt,
+body.dashboard-dark.dashboard-type-system .detail-section small,
+body.dashboard-dark.dashboard-type-system .performance-card>p{
+  color:#9cafca;
+}
+body.dashboard-dark.dashboard-type-system .detail-section{
+  background:#1b2d44;border-color:#304762;
+}
+body.dashboard-dark.dashboard-type-system .detail-section dd,
+body.dashboard-dark.dashboard-type-system .event-line strong,
+body.dashboard-dark.dashboard-type-system .detail-section h4{
+  color:#e5eefc;
+}
+body.dashboard-dark.dashboard-type-system .meter{
+  background:#324963;
+}
+body.dashboard-dark.dashboard-type-system .back-button{
+  color:#a8d1ff;
+}
+body.dashboard-dark.dashboard-type-system .status-chip.normal{
+  background:rgba(12,173,99,.15);
+}
+body.dashboard-dark.dashboard-type-system .status-chip.warning{
+  background:rgba(245,154,0,.16);
+}
+body.dashboard-dark.dashboard-type-system .status-chip.danger{
+  background:rgba(241,56,56,.17);
+}
+body.dashboard-dark.dashboard-type-system .status-chip.unknown,
+body.dashboard-dark.dashboard-type-system .status-chip.offline{
+  background:rgba(130,144,166,.17);color:#aebed3;
+}

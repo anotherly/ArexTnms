@@ -27,6 +27,12 @@ public class UserController extends BaseController {
     @Resource(name = "userService") private UserService userService;
     @Resource(name = "auditService") private AuditService auditService;
 
+    @RequestMapping(value = "/user/list.do", method = RequestMethod.GET)
+    public String userPage() { return "user/list"; }
+
+    @RequestMapping(value = "/user/applications.do", method = RequestMethod.GET)
+    public String applicationsPage() { return "redirect:/user/list.do?screen=users"; }
+
     @RequestMapping(value = "/user/list.ajax", method = RequestMethod.GET)
     public ModelAndView list(@ModelAttribute UserVO searchVO) {
         try { return success(userService.selectUserList(searchVO)); }
@@ -34,8 +40,8 @@ public class UserController extends BaseController {
     }
 
     @RequestMapping(value = "/user/detail.ajax", method = RequestMethod.GET)
-    public ModelAndView detail(@RequestParam("userSn") Long userSn) {
-        try { return success(userService.selectUser(userSn)); }
+    public ModelAndView detail(@RequestParam("userId") String userId) {
+        try { return success(userService.selectUser(userId)); }
         catch (Exception e) { return fail(message(e)); }
     }
 
@@ -70,7 +76,7 @@ public class UserController extends BaseController {
         try {
             userService.updateUser(userVO, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "사용자 계정 설정", "MDFCN",
-                    String.valueOf(userVO.getUserSn()), "사용자 정보 수정", "SUCCESS");
+                    userVO.getUserId(), "사용자 정보 수정", "SUCCESS");
             return success("사용자 정보를 수정했습니다.", null);
         } catch (Exception e) {
             logger.warn("사용자 수정 실패", e);
@@ -79,23 +85,23 @@ public class UserController extends BaseController {
     }
 
     @RequestMapping(value = "/user/delete.ajax", method = RequestMethod.POST)
-    public ModelAndView delete(@RequestParam("userSn") Long userSn, HttpServletRequest request) {
+    public ModelAndView delete(@RequestParam("userId") String userId, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            userService.deleteUser(userSn, actor);
+            userService.deleteUser(userId, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "사용자 계정 설정", "DEL",
-                    String.valueOf(userSn), "사용자 삭제", "SUCCESS");
+                    userId, "사용자 삭제", "SUCCESS");
             return success("사용자를 삭제했습니다.", null);
         } catch (Exception e) { return fail(message(e)); }
     }
 
     @RequestMapping(value = "/user/unlock.ajax", method = RequestMethod.POST)
-    public ModelAndView unlock(@RequestParam("userSn") Long userSn, HttpServletRequest request) {
+    public ModelAndView unlock(@RequestParam("userId") String userId, HttpServletRequest request) {
         UserVO actor = loginUser(request);
         try {
-            userService.unlockUser(userSn, actor);
+            userService.unlockUser(userId, actor);
             auditService.record(actor, ClientIpUtil.getClientIp(request), "사용자 계정 설정", "MDFCN",
-                    String.valueOf(userSn), "계정 잠금 해제", "SUCCESS");
+                    userId, "계정 잠금 해제", "SUCCESS");
             return success("계정 잠금을 해제했습니다.", null);
         } catch (Exception e) { return fail(message(e)); }
     }
